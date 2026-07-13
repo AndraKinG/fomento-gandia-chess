@@ -26,4 +26,19 @@ describe("parseOrdenFuerza", () => {
     const r = parseOrdenFuerza("4; Uno, A\n4; Dos, B");
     expect(r.errores).toEqual([{ linea: 2, motivo: "Número 4 duplicado" }]);
   });
+  it("no marca un numero como visto si la linea se rechaza por falta de nombre", () => {
+    const r = parseOrdenFuerza("5; \n5; Correcto, Nombre");
+    expect(r.filas).toHaveLength(1);
+    expect(r.errores).toEqual([{ linea: 1, motivo: "Falta el nombre" }]);
+  });
+  it("rechaza fide_id no numerico", () => {
+    const r = parseOrdenFuerza("1; Nombre, X; 12a45");
+    expect(r.filas).toHaveLength(0);
+    expect(r.errores).toEqual([{ linea: 1, motivo: "ID federativo no numérico" }]);
+  });
+  it("rechaza feda_id no numerico", () => {
+    const r = parseOrdenFuerza("1; Nombre, X; 12345; 55ab");
+    expect(r.filas).toHaveLength(0);
+    expect(r.errores).toEqual([{ linea: 1, motivo: "ID federativo no numérico" }]);
+  });
 });

@@ -37,7 +37,7 @@ create table public.force_order (
   numero int not null,
   bis_index int not null default 0,
   unique (season_id, player_id),
-  unique (season_id, numero, bis_index)
+  unique (season_id, numero, bis_index) deferrable initially deferred
 );
 
 create table public.link_requests (

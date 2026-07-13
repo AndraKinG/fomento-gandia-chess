@@ -1,7 +1,13 @@
+import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { importarOrdenFuerza } from "./actions";
 
-export default async function OrdenFuerzaPage() {
+export default async function OrdenFuerzaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ msg?: string; tipo?: string }>;
+}) {
+  const { msg, tipo } = await searchParams;
   const supabase = await createServerSupabase();
   const { data: season } = await supabase
     .from("seasons").select("id, nombre").eq("activa", true).maybeSingle();
@@ -15,15 +21,31 @@ export default async function OrdenFuerzaPage() {
 
   async function accion(formData: FormData) {
     "use server";
-    await importarOrdenFuerza(
+    const resultado = await importarOrdenFuerza(
       String(formData.get("season")),
       String(formData.get("texto"))
     );
+    const params = new URLSearchParams({
+      msg: resultado.ok ?? resultado.error ?? "",
+      tipo: resultado.ok ? "ok" : "error",
+    });
+    redirect(`/admin/orden-fuerza?${params.toString()}`);
   }
 
   return (
     <main className="mx-auto max-w-md p-4">
       <h1 className="text-xl font-bold">Orden de fuerza</h1>
+      {msg ? (
+        <p
+          className={`mt-4 rounded p-3 text-sm ${
+            tipo === "ok"
+              ? "bg-green-100 text-green-800"
+              : "bg-red-100 text-red-800"
+          }`}
+        >
+          {msg}
+        </p>
+      ) : null}
       {orden && orden.length > 0 ? (
         <ol className="mt-4 space-y-1">
           {orden.map((f) => {

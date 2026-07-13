@@ -8,6 +8,7 @@ export type FilaOrden = {
 export type ErrorLinea = { linea: number; motivo: string };
 
 const NUM_RE = /^(\d+)(bis)?$/i;
+const ID_RE = /^\d+$/;
 
 export function parseOrdenFuerza(texto: string): {
   filas: FilaOrden[];
@@ -36,18 +37,24 @@ export function parseOrdenFuerza(texto: string): {
       });
       return;
     }
-    vistos.add(clave);
     const nombre = cols[1] ?? "";
     if (!nombre) {
       errores.push({ linea, motivo: "Falta el nombre" });
       return;
     }
+    const fideId = cols[2] || null;
+    const fedaId = cols[3] || null;
+    if ((fideId && !ID_RE.test(fideId)) || (fedaId && !ID_RE.test(fedaId))) {
+      errores.push({ linea, motivo: "ID federativo no numérico" });
+      return;
+    }
+    vistos.add(clave);
     filas.push({
       numero,
       bisIndex,
       nombre,
-      fideId: cols[2] || null,
-      fedaId: cols[3] || null,
+      fideId,
+      fedaId,
     });
   });
   return { filas, errores };
