@@ -11,6 +11,9 @@ export default function AdminPage() {
         <Link className="rounded border p-3" href="/admin/elo">
           Actualización de ELO
         </Link>
+        <Link className="rounded border p-3" href="/admin/push">
+          Notificaciones push
+        </Link>
       </nav>
     </main>
   );
