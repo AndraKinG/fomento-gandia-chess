@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { actualizarEloFeda } from "@/app/admin/elo/actions";
+import { actualizarEloFedaCore } from "@/lib/import/feda-apply";
 
 export async function GET(request: NextRequest) {
   if (
@@ -7,6 +7,6 @@ export async function GET(request: NextRequest) {
   ) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
-  const resultado = await actualizarEloFeda();
+  const resultado = await actualizarEloFedaCore();
   return NextResponse.json(resultado);
 }

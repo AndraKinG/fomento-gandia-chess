@@ -1,44 +1,43 @@
 "use server";
 
-import { createAdminClient } from "@/lib/supabase/admin";
-import { obtenerUrlUltimaListaFeda, parseListaFeda } from "@/lib/import/feda";
+import { createServerSupabase } from "@/lib/supabase/server";
+import { actualizarEloFedaCore, aplicarListaFedaCore } from "@/lib/import/feda-apply";
 
-const URL_PAGINA_ELO_FEDA = "https://feda.org/feda2k16/elo-feda/";
+/** true si el usuario autenticado en la sesión actual es admin. */
+async function esAdmin(): Promise<boolean> {
+  const supabase = await createServerSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  const { data: profile } = await supabase
+    .from("profiles").select("is_admin").eq("id", user.id).single();
+  return Boolean(profile?.is_admin);
+}
 
 /**
  * Descarga la página oficial de listas ELO FEDA, localiza el enlace .xlsx
  * más reciente y aplica esa lista a los jugadores del club.
- * Solo debe invocarse desde el cron (con CRON_SECRET) o desde páginas bajo
- * el guard de /admin.
+ * Acción de servidor gateada por sesión admin: NO la invoca el cron
+ * (que usa `actualizarEloFedaCore` directamente tras validar `CRON_SECRET`).
  */
 export async function actualizarEloFeda(): Promise<{
   actualizados: number;
   error?: string;
 }> {
-  const pagina = await fetch(URL_PAGINA_ELO_FEDA, {
-    headers: { "user-agent": "FomentoGandiaClubApp/1.0" },
-  });
-  const url = obtenerUrlUltimaListaFeda(await pagina.text());
-  if (!url) return { actualizados: 0, error: "No se encontró la lista FEDA" };
-  const fichero = await fetch(url);
-  return aplicarListaFeda(await fichero.arrayBuffer());
+  if (!(await esAdmin())) {
+    return { actualizados: 0, error: "Solo el admin puede hacer esto" };
+  }
+  return actualizarEloFedaCore();
 }
 
-/** Aplica una lista FEDA (xlsx) ya descargada/subida a los jugadores del club. */
+/**
+ * Aplica una lista FEDA (xlsx) ya descargada/subida a los jugadores del club.
+ * Acción de servidor gateada por sesión admin.
+ */
 export async function aplicarListaFeda(
   buffer: ArrayBuffer
 ): Promise<{ actualizados: number; error?: string }> {
-  const mapa = parseListaFeda(buffer);
-  const admin = createAdminClient();
-  const { data: players } = await admin
-    .from("players").select("id, feda_id").not("feda_id", "is", null);
-  let actualizados = 0;
-  for (const p of players ?? []) {
-    const elo = mapa.get(p.feda_id!);
-    if (elo !== undefined) {
-      await admin.from("players").update({ elo_feda: elo }).eq("id", p.id);
-      actualizados++;
-    }
+  if (!(await esAdmin())) {
+    return { actualizados: 0, error: "Solo el admin puede hacer esto" };
   }
-  return { actualizados };
+  return aplicarListaFedaCore(buffer);
 }

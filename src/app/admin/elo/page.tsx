@@ -1,18 +1,69 @@
+import { redirect } from "next/navigation";
 import { aplicarListaFeda, actualizarEloFeda } from "./actions";
 
-export default function EloAdminPage() {
+export default async function EloAdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ msg?: string; tipo?: string }>;
+}) {
+  const { msg, tipo } = await searchParams;
+
   async function subirFichero(formData: FormData) {
     "use server";
-    const file = formData.get("fichero") as File;
-    await aplicarListaFeda(await file.arrayBuffer());
+    const fichero = formData.get("fichero");
+    if (!(fichero instanceof File) || fichero.size === 0) {
+      redirect(
+        `/admin/elo?${new URLSearchParams({
+          msg: "Selecciona un fichero .xlsx",
+          tipo: "error",
+        }).toString()}`
+      );
+    }
+    const file = fichero as File;
+    let resultado: { actualizados: number; error?: string };
+    try {
+      resultado = await aplicarListaFeda(await file.arrayBuffer());
+    } catch {
+      resultado = {
+        actualizados: 0,
+        error: "El fichero no es una lista FEDA válida (.xlsx)",
+      };
+    }
+    const params = new URLSearchParams({
+      msg:
+        resultado.error ??
+        `ELO FEDA actualizado: ${resultado.actualizados} jugadores`,
+      tipo: resultado.error ? "error" : "ok",
+    });
+    redirect(`/admin/elo?${params.toString()}`);
   }
+
   async function refrescarFeda() {
     "use server";
-    await actualizarEloFeda();
+    const resultado = await actualizarEloFeda();
+    const params = new URLSearchParams({
+      msg:
+        resultado.error ??
+        `ELO FEDA actualizado: ${resultado.actualizados} jugadores`,
+      tipo: resultado.error ? "error" : "ok",
+    });
+    redirect(`/admin/elo?${params.toString()}`);
   }
+
   return (
     <main className="mx-auto max-w-md p-4">
       <h1 className="text-xl font-bold">Actualización de ELO</h1>
+      {msg ? (
+        <p
+          className={`mt-4 rounded p-3 text-sm ${
+            tipo === "ok"
+              ? "bg-green-100 text-green-800"
+              : "bg-red-100 text-red-800"
+          }`}
+        >
+          {msg}
+        </p>
+      ) : null}
       <form action={refrescarFeda} className="mt-4">
         <button className="rounded bg-black p-3 text-sm font-semibold text-white">
           Actualizar FEDA ahora (descarga lista oficial)
@@ -22,13 +73,8 @@ export default function EloAdminPage() {
         <label className="text-sm font-medium">
           Respaldo manual: subir lista FEDA (.xlsx)
         </label>
-        <input
-          type="file"
-          name="fichero"
-          accept=".xlsx"
-          required
-          className="rounded border p-2 text-sm"
-        />
+        <input type="file" name="fichero" accept=".xlsx" required
+          className="rounded border p-2 text-sm" />
         <button className="rounded border p-2 text-sm">Aplicar fichero</button>
       </form>
     </main>
