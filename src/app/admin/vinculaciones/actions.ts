@@ -1,17 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-async function esAdmin(): Promise<boolean> {
-  const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
-  const { data } = await supabase
-    .from("profiles").select("is_admin").eq("id", user.id).single();
-  return Boolean(data?.is_admin);
-}
+import { esAdmin } from "@/lib/auth/es-admin";
 
 export async function aprobarVinculo(requestId: string) {
   if (!(await esAdmin())) return;

@@ -1,6 +1,5 @@
 {
   "crons": [
-    { "path": "/api/cron/elo-fide", "schedule": "0 6 3 * *" },
-    { "path": "/api/cron/elo-feda", "schedule": "0 6 4 * *" }
+    { "path": "/api/cron/elo-fide", "schedule": "0 6 3 * *" }
   ]
 }
