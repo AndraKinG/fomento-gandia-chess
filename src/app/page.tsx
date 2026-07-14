@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { Cabecera } from "@/components/ui/Cabecera";
+import { Banner } from "@/components/ui/Banner";
+import { EstadoVacio } from "@/components/ui/EstadoVacio";
 
 export default async function Home() {
   const supabase = await createServerSupabase();
@@ -12,19 +15,28 @@ export default async function Home() {
   const pendiente = (pendientes ?? []).length > 0;
 
   return (
-    <main className="mx-auto max-w-sm p-6">
-      <h1 className="text-xl font-bold">Hola, {user?.email}</h1>
-      {!profile?.player_id && !pendiente && (
-        <Link href="/vincular"
-          className="mt-4 block rounded bg-amber-100 p-3 text-sm text-amber-900">
-          Aún no estás vinculado a tu ficha del club → hazlo aquí
-        </Link>
-      )}
-      {!profile?.player_id && pendiente && (
-        <p className="mt-4 rounded bg-blue-100 p-3 text-sm text-blue-900">
-          Solicitud de vinculación pendiente de aprobación.
-        </p>
-      )}
+    <main className="min-h-dvh bg-fondo pb-10">
+      <Cabecera titulo="Fomento de Gandia" subtitulo={`Hola, ${user?.email}`} />
+      <div className="mx-auto max-w-md space-y-4 p-4">
+        {!profile?.player_id && !pendiente && (
+          <Banner tipo="aviso">
+            Aún no estás vinculado a tu ficha del club →{" "}
+            <Link href="/vincular" className="font-semibold underline">
+              hazlo aquí
+            </Link>
+          </Banner>
+        )}
+        {!profile?.player_id && pendiente && (
+          <Banner tipo="ok">
+            Solicitud de vinculación pendiente de aprobación.
+          </Banner>
+        )}
+        <EstadoVacio
+          icono="♟"
+          titulo="Aún no hay jornadas"
+          detalle="Cuando arranque el interclubs verás aquí tu próxima jornada"
+        />
+      </div>
     </main>
   );
 }

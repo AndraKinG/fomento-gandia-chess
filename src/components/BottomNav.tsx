@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 
 const items = [
   { href: "/", label: "Inicio", icon: "🏠" },
-  { href: "/perfil", label: "Perfil", icon: "♟" },
+  { href: "/equipos", label: "Equipos", icon: "♟" },
+  { href: "/perfil", label: "Perfil", icon: "👤" },
 ];
 
 export function BottomNav({ esAdmin }: { esAdmin: boolean }) {
@@ -15,19 +16,22 @@ export function BottomNav({ esAdmin }: { esAdmin: boolean }) {
     : items;
   if (["/login", "/registro"].some((p) => pathname.startsWith(p))) return null;
   return (
-    <nav className="fixed inset-x-0 bottom-0 flex justify-around border-t bg-white p-2">
-      {all.map((i) => (
-        <Link key={i.href} href={i.href}
-          className={`flex flex-col items-center px-3 text-xs ${
-            pathname === i.href ||
-            (i.href !== "/" && pathname.startsWith(i.href + "/"))
-              ? "font-bold"
-              : "text-gray-500"
-          }`}>
-          <span className="text-lg">{i.icon}</span>
-          {i.label}
-        </Link>
-      ))}
+    <nav className="fixed inset-x-0 bottom-0 flex justify-around border-t border-borde bg-tarjeta p-2">
+      {all.map((i) => {
+        const activo =
+          pathname === i.href ||
+          (i.href !== "/" && pathname.startsWith(i.href + "/"));
+        return (
+          <Link key={i.href} href={i.href}
+            aria-current={activo ? "page" : undefined}
+            className={`flex flex-col items-center px-3 text-xs ${
+              activo ? "font-bold text-acento" : "text-tinta-suave"
+            }`}>
+            <span className="text-lg">{i.icon}</span>
+            {i.label}
+          </Link>
+        );
+      })}
     </nav>
   );
 }
