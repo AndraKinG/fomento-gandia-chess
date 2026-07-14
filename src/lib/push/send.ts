@@ -46,3 +46,18 @@ export async function enviarPushAUsuario(
     )
   );
 }
+
+/**
+ * Envía el mismo push a varios usuarios en paralelo (batch). Devuelve
+ * cuántos envíos se intentaron sin lanzar excepción (`enviarPushAUsuario` ya
+ * absorbe internamente los fallos de entrega individuales).
+ */
+export async function enviarPushAMuchos(
+  userIds: string[],
+  payload: { title: string; body: string; url?: string }
+): Promise<number> {
+  const resultados = await Promise.allSettled(
+    userIds.map((userId) => enviarPushAUsuario(userId, payload))
+  );
+  return resultados.filter((r) => r.status === "fulfilled").length;
+}
