@@ -13,6 +13,7 @@ import { parseEloFideDesdePerfil } from "@/lib/import/fide";
 export async function actualizarEloFideCore(): Promise<{
   actualizados: number;
   errores: number;
+  detalle?: string[];
 }> {
   const admin = createAdminClient();
   const { data: players } = await admin
@@ -20,22 +21,30 @@ export async function actualizarEloFideCore(): Promise<{
 
   let actualizados = 0;
   let errores = 0;
+  const detalle: string[] = [];
   for (const p of players ?? []) {
     try {
       const res = await fetch(`https://ratings.fide.com/profile/${p.fide_id}`, {
         headers: { "user-agent": "FomentoGandiaClubApp/1.0" },
       });
-      const elo = parseEloFideDesdePerfil(await res.text());
-      if (elo !== null) {
-        await admin.from("players").update({ elo_fide: elo }).eq("id", p.id);
-        actualizados++;
-      } else {
+      if (!res.ok) {
         errores++;
+        if (detalle.length < 3) detalle.push(`${p.fide_id}: HTTP ${res.status}`);
+      } else {
+        const elo = parseEloFideDesdePerfil(await res.text());
+        if (elo !== null) {
+          await admin.from("players").update({ elo_fide: elo }).eq("id", p.id);
+          actualizados++;
+        } else {
+          errores++;
+          if (detalle.length < 3) detalle.push(`${p.fide_id}: sin rating en el HTML`);
+        }
       }
-    } catch {
+    } catch (e) {
       errores++;
+      if (detalle.length < 3) detalle.push(`${p.fide_id}: ${String(e).slice(0, 120)}`);
     }
     await new Promise((r) => setTimeout(r, 500)); // cortesía con el servidor FIDE
   }
-  return { actualizados, errores };
+  return { actualizados, errores, ...(detalle.length ? { detalle } : {}) };
 }
