@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type Tema = "sistema" | "claro" | "oscuro";
 const ORDEN: Tema[] = ["sistema", "claro", "oscuro"];
@@ -16,12 +16,17 @@ function aplicar(tema: Tema) {
   document.documentElement.classList.toggle("dark", oscuro);
 }
 
+// Inicializador perezoso: lee `localStorage` ya en el primer render del
+// cliente (guardado con `typeof window` porque en el render de servidor
+// `window` no existe y debe devolver "sistema"). Así se evita el parpadeo
+// de la etiqueta "sistema" que aparecía antes de un `useEffect` posterior.
+function temaInicial(): Tema {
+  if (typeof window === "undefined") return "sistema";
+  return (localStorage.getItem("tema") as Tema | null) ?? "sistema";
+}
+
 export function ThemeToggle() {
-  const [tema, setTema] = useState<Tema>("sistema");
-  useEffect(() => {
-    const guardado = (localStorage.getItem("tema") as Tema | null) ?? "sistema";
-    setTema(guardado);
-  }, []);
+  const [tema, setTema] = useState<Tema>(temaInicial);
   function ciclar() {
     const siguiente = ORDEN[(ORDEN.indexOf(tema) + 1) % ORDEN.length];
     setTema(siguiente);

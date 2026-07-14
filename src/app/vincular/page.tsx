@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { Cabecera } from "@/components/ui/Cabecera";
+import { Tarjeta } from "@/components/ui/Tarjeta";
+import { ChipElo } from "@/components/ui/ChipElo";
+import { Banner } from "@/components/ui/Banner";
 import { solicitarVinculo } from "./actions";
 
 export default async function VincularPage({
@@ -33,37 +37,42 @@ export default async function VincularPage({
   const libres = (players ?? []).filter((p) => !ocupados.has(p.id));
 
   return (
-    <main className="mx-auto max-w-md p-4">
-      <h1 className="text-xl font-bold">¿Quién eres?</h1>
-      <p className="mt-1 text-sm text-gray-600">
-        Busca tu nombre en la lista del club. El admin confirmará tu vinculación.
-      </p>
-      {error && (
-        <p className="mt-4 rounded bg-red-100 p-3 text-sm text-red-800">{error}</p>
-      )}
-      <ul className="mt-4 space-y-2">
-        {libres.map((p) => (
-          <li key={p.id} className="flex items-center justify-between rounded border p-3">
-            <span>
-              {p.nombre}
-              <span className="ml-2 text-xs text-gray-500">
-                FIDE {p.elo_fide ?? "—"}
-              </span>
-            </span>
-            <form
-              action={async () => {
-                "use server";
-                const r = await solicitarVinculo(p.id);
-                if (r?.error) redirect("/vincular?error=" + encodeURIComponent(r.error));
-              }}
-            >
-              <button className="rounded bg-black px-3 py-1 text-sm text-white">
-                Soy yo
-              </button>
-            </form>
-          </li>
-        ))}
-      </ul>
+    <main className="min-h-dvh bg-fondo pb-10">
+      <Cabecera
+        titulo="¿Quién eres?"
+        subtitulo="Busca tu nombre en la lista del club"
+      />
+      <div className="mx-auto max-w-md space-y-4 p-4">
+        <p className="text-sm text-tinta-suave">
+          El admin confirmará tu vinculación.
+        </p>
+        {error && <Banner tipo="error">{error}</Banner>}
+        <ul className="space-y-2">
+          {libres.map((p) => (
+            <li key={p.id}>
+              <Tarjeta className="flex items-center justify-between">
+                <span className="text-tinta">
+                  {p.nombre}
+                  <span className="ml-2">
+                    <ChipElo valor={p.elo_fide} etiqueta="FIDE" />
+                  </span>
+                </span>
+                <form
+                  action={async () => {
+                    "use server";
+                    const r = await solicitarVinculo(p.id);
+                    if (r?.error) redirect("/vincular?error=" + encodeURIComponent(r.error));
+                  }}
+                >
+                  <button className="rounded-xl bg-acento px-4 py-1.5 text-sm font-semibold text-sobre-acento">
+                    Soy yo
+                  </button>
+                </form>
+              </Tarjeta>
+            </li>
+          ))}
+        </ul>
+      </div>
     </main>
   );
 }

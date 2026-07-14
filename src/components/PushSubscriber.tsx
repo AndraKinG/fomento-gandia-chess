@@ -63,7 +63,7 @@ export function ActivarNotificaciones() {
 
   if (estado === "activado") {
     return (
-      <p className="rounded bg-black p-3 text-center text-white font-semibold">
+      <p className="rounded-xl border border-borde bg-tarjeta p-3 text-center font-semibold text-tinta">
         Notificaciones activadas ✓
       </p>
     );
@@ -71,7 +71,7 @@ export function ActivarNotificaciones() {
 
   if (estado === "denegado") {
     return (
-      <p className="rounded bg-black p-3 text-center text-white font-semibold">
+      <p className="rounded-xl border border-borde bg-tarjeta p-3 text-center font-semibold text-tinta">
         Permiso denegado
       </p>
     );
@@ -80,7 +80,7 @@ export function ActivarNotificaciones() {
   return (
     <button
       onClick={() => activar().catch(() => {})}
-      className="rounded bg-black p-3 text-white font-semibold w-full"
+      className="w-full rounded-xl bg-degradado-club p-3 font-semibold text-sobre-acento"
     >
       Activar notificaciones
     </button>
