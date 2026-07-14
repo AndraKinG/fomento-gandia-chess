@@ -349,3 +349,22 @@ Lógica del core (documentar en comentarios):
 - **Cobertura spec 1B** (§3 datos: teams/team_captains/matches/availability ✓, lineups/board_results/standings quedan para 1C con su migración 0005; §4 importadores 1 y 2 ✓, el 3 (resultados) es de 1C; §5 disponibilidad+cron ✓ con el viernes-sync diferido a 1C; pantallas: equipos/detalle/plantilla/disponibilidad/home ✓, jornada-detalle con convocatoria es de 1C).
 - **Placeholders:** los valores "ajustar al fixture real" de los tests de parsers siguen el método fixture-first validado; no son huecos sino el procedimiento.
 - **Consistencia:** `es_capitan_de` se usa en RLS y vía RPC en la página plantilla; `elo_oficial` vive en force_order (por temporada) y lo consumirá el validador 1C; nombres de estados de availability idénticos a los props de BotonesDisponibilidad de 1A.
+
+---
+
+## Anexo: matriz de permisos (confirmada por el usuario, vinculante para todas las tareas)
+
+| Acción | Jugador | Capitán (solo SU equipo) | Admin |
+|---|:-:|:-:|:-:|
+| Ver equipos/calendario/orden de fuerza/clasificación | ✅ | ✅ | ✅ |
+| Marcar SU disponibilidad | ✅ | ✅ | ✅ |
+| Ver disponibilidad de otros | ❌ | ✅ (su equipo) | ✅ |
+| Ver plantilla del equipo | ❌ | ✅ (su equipo) | ✅ |
+| Editar jornada (sede/hora) | ❌ | ✅ (su equipo, solo update) | ✅ (todo) |
+| Convocatorias y resultados (1C) | ❌ | ✅ (su equipo) | ✅ |
+| Crear equipos / nombrar capitanes | ❌ | ❌ | ✅ |
+| Sincronizar FACV | ❌ | ❌ | ✅ |
+| Vinculaciones / ELOs / push de prueba | ❌ | ❌ | ✅ |
+| Panel /admin | ❌ | ❌ | ✅ |
+
+Aplicación en 3 capas: (1) **RLS en Postgres = garantía dura** (`es_capitan_de` + `is_admin`); (2) las **server actions re-verifican SIEMPRE** antes de tocar el admin client; (3) la **UI oculta** lo no permitido (nunca es la única barrera). El capitán se identifica vía `team_captains` × `profiles.player_id`; sus herramientas viven en `/equipos/[id]`, nunca en `/admin`. Los revisores de cada tarea deben comprobar esta matriz.
