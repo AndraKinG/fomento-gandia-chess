@@ -1,4 +1,5 @@
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { solicitarVinculo } from "./actions";
 
 export default async function VincularPage() {
@@ -8,9 +9,20 @@ export default async function VincularPage() {
     .select("id, nombre, elo_fide, elo_feda")
     .eq("activo", true)
     .order("nombre");
-  const { data: vinculados } = await supabase
-    .from("profiles").select("player_id").not("player_id", "is", null);
-  const ocupados = new Set((vinculados ?? []).map((v) => v.player_id));
+
+  // RLS en `profiles` solo deja ver la fila propia a un no-admin, así que con el
+  // cliente de usuario esta consulta no vería vinculaciones de otras personas.
+  // Usamos el cliente admin SOLO para leer `player_id` (ningún otro dato personal
+  // sale del servidor) y así calcular qué fichas están ya ocupadas.
+  const admin = createAdminClient();
+  const [{ data: vinculados }, { data: pendientes }] = await Promise.all([
+    admin.from("profiles").select("player_id").not("player_id", "is", null),
+    admin.from("link_requests").select("player_id").eq("status", "pendiente"),
+  ]);
+  const ocupados = new Set([
+    ...(vinculados ?? []).map((v) => v.player_id),
+    ...(pendientes ?? []).map((r) => r.player_id),
+  ]);
   const libres = (players ?? []).filter((p) => !ocupados.has(p.id));
 
   return (
