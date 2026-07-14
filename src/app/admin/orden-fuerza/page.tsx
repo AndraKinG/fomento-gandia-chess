@@ -49,7 +49,7 @@ export default async function OrdenFuerzaPage({
               };
               return (
                 <li key={`${f.numero}-${f.bis_index}`}>
-                  <Tarjeta className="flex items-center gap-3 p-3">
+                  <Tarjeta compacta className="flex items-center gap-3">
                     <span
                       className={`grid h-8 w-8 shrink-0 place-items-center rounded-full bg-acento-fuerte font-semibold text-sobre-acento ${
                         f.bis_index ? "text-[0.65rem]" : "text-sm"

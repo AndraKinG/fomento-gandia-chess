@@ -13,6 +13,7 @@
   --tinta-suave: #64748b;
   --acento: #0ea5e9;
   --acento-fuerte: #0369a1;
+  --acento-texto: #0369a1;
   --sobre-acento: #ffffff;
 }
 
@@ -27,6 +28,7 @@
   --tinta-suave: #8fa8c4;
   --acento: #60a5fa;
   --acento-fuerte: #2563eb;
+  --acento-texto: #60a5fa;
   --sobre-acento: #ffffff;
 }
 
@@ -40,6 +42,7 @@
   --color-tinta-suave: var(--tinta-suave);
   --color-acento: var(--acento);
   --color-acento-fuerte: var(--acento-fuerte);
+  --color-acento-texto: var(--acento-texto);
   --color-sobre-acento: var(--sobre-acento);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);

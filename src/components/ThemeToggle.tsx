@@ -34,11 +34,23 @@ function leerTemaServidor(): Tema {
 }
 
 function suscribir(cb: () => void) {
-  window.addEventListener("storage", cb);
-  window.addEventListener(EVENTO_TEMA, cb);
+  const mediaOscuro = window.matchMedia("(prefers-color-scheme: dark)");
+  // Cuando el SO cambia de tema (modo "sistema") o cambia `localStorage`
+  // (otra pestaña / el propio ciclado), hay que reaplicar la clase `.dark`,
+  // no solo notificar a React: `leerTema()` no cambia de valor en el caso
+  // "sistema", así que `useSyncExternalStore` no re-renderizaría el botón,
+  // pero el DOM sí necesita la actualización visual.
+  const notificar = () => {
+    aplicar(leerTema());
+    cb();
+  };
+  window.addEventListener("storage", notificar);
+  window.addEventListener(EVENTO_TEMA, notificar);
+  mediaOscuro.addEventListener("change", notificar);
   return () => {
-    window.removeEventListener("storage", cb);
-    window.removeEventListener(EVENTO_TEMA, cb);
+    window.removeEventListener("storage", notificar);
+    window.removeEventListener(EVENTO_TEMA, notificar);
+    mediaOscuro.removeEventListener("change", notificar);
   };
 }
 

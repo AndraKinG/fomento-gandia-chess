@@ -46,7 +46,7 @@ export default async function PerfilPage() {
         )}
         {!p && (
           <p className="text-center text-sm">
-            <Link href="/vincular" className="font-semibold text-acento-fuerte underline dark:text-acento">
+            <Link href="/vincular" className="font-semibold text-acento-texto underline">
               Vincular mi ficha
             </Link>
           </p>

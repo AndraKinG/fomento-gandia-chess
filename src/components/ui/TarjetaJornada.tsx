@@ -8,7 +8,7 @@ export function TarjetaJornada({
 }) {
   return (
     <Tarjeta destacada>
-      <p className="text-[11px] font-bold uppercase tracking-wide text-acento-fuerte dark:text-acento">
+      <p className="text-[11px] font-bold uppercase tracking-wide text-acento-texto">
         Próxima jornada · {equipo}
       </p>
       <p className="mt-1 text-lg font-bold text-tinta">vs. {rival}</p>

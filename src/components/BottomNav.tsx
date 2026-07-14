@@ -25,7 +25,7 @@ export function BottomNav({ esAdmin }: { esAdmin: boolean }) {
           <Link key={i.href} href={i.href}
             aria-current={activo ? "page" : undefined}
             className={`flex flex-col items-center px-3 text-xs ${
-              activo ? "font-bold text-acento-fuerte dark:text-acento" : "text-tinta-suave"
+              activo ? "font-bold text-acento-texto" : "text-tinta-suave"
             }`}>
             <span className="text-lg">{i.icon}</span>
             {i.label}

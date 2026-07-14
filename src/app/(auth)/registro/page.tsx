@@ -51,7 +51,7 @@ export default async function RegistroPage({
               type="password"
               required
               minLength={8}
-              placeholder="Contraseña (mín. 8)"
+              placeholder="••••••••"
               className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta placeholder:text-tinta-suave"
             />
           </div>
@@ -61,7 +61,7 @@ export default async function RegistroPage({
         </form>
         <p className="text-center text-sm text-tinta">
           ¿Ya tienes cuenta?{" "}
-          <Link className="text-acento-fuerte underline dark:text-acento" href="/login">
+          <Link className="text-acento-texto underline" href="/login">
             Entra
           </Link>
         </p>
