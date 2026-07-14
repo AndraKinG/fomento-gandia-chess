@@ -36,7 +36,9 @@ export function ThemeToggle() {
   return (
     <button onClick={ciclar}
       className="rounded-xl border border-borde bg-tarjeta px-4 py-2 text-sm text-tinta">
-      {ETIQUETA[tema]}
+      {/* Servidor siempre renderiza "sistema"; cliente conoce el tema guardado en hydration.
+          La divergencia es intencional (localStorage guardado vs. default de servidor). */}
+      <span suppressHydrationWarning>{ETIQUETA[tema]}</span>
     </button>
   );
 }
