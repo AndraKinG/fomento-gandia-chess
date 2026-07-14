@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { normalizaNombre, parseCalendarioFACV, URL_CALENDARIO } from "@/lib/import/facv-calendario";
+import { normalizaNombre, offsetMadrid, parseCalendarioFACV, URL_CALENDARIO } from "@/lib/import/facv-calendario";
 
 type Sufijo = "A" | "B" | "C";
 
@@ -32,6 +32,7 @@ function sufijoEquipo(nombre: string): Sufijo {
 export async function sincronizarCalendarioFACVCore(): Promise<{
   creadas: number;
   actualizadas: number;
+  omitidas: number;
   porEquipo?: Record<string, number>;
   error?: string;
 }> {
@@ -41,7 +42,7 @@ export async function sincronizarCalendarioFACVCore(): Promise<{
     const { data: season } = await admin
       .from("seasons").select("id").eq("activa", true).maybeSingle();
     if (!season) {
-      return { creadas: 0, actualizadas: 0, error: "No hay ninguna temporada activa" };
+      return { creadas: 0, actualizadas: 0, omitidas: 0, error: "No hay ninguna temporada activa" };
     }
 
     const { data: equipos } = await admin
@@ -50,6 +51,7 @@ export async function sincronizarCalendarioFACVCore(): Promise<{
       return {
         creadas: 0,
         actualizadas: 0,
+        omitidas: 0,
         error: "No hay equipos dados de alta en la temporada activa; créalos primero",
       };
     }
@@ -69,6 +71,7 @@ export async function sincronizarCalendarioFACVCore(): Promise<{
       return {
         creadas: 0,
         actualizadas: 0,
+        omitidas: 0,
         error: `No se pudo descargar el calendario (HTTP ${pagina.status})`,
       };
     }
@@ -78,6 +81,7 @@ export async function sincronizarCalendarioFACVCore(): Promise<{
       return {
         creadas: 0,
         actualizadas: 0,
+        omitidas: 0,
         error: "La página no contiene encuentros del club (¿rediseño de la web FACV?)",
       };
     }
@@ -93,6 +97,7 @@ export async function sincronizarCalendarioFACVCore(): Promise<{
 
     let creadas = 0;
     let actualizadas = 0;
+    let omitidas = 0;
     const porEquipo: Record<string, number> = {};
 
     for (const j of jornadas) {
@@ -100,14 +105,22 @@ export async function sincronizarCalendarioFACVCore(): Promise<{
       const nombreEquipoFila = esLocal ? j.local : j.visitante;
       const rival = esLocal ? j.visitante : j.local;
       const equipo = equipoIdPorSufijo.get(sufijoEquipo(nombreEquipoFila));
-      if (!equipo) continue; // no hay equipo dado de alta para ese sufijo: se ignora la jornada
+      if (!equipo) {
+        omitidas++; // no hay equipo dado de alta para ese sufijo: se ignora la jornada
+        continue;
+      }
+
+      // Las fechas de FACV son hora local de Madrid, sin zona horaria: se les
+      // añade aquí el offset correspondiente (invierno/verano) para que se
+      // guarden correctamente en la columna timestamptz.
+      const fechaHora = j.fecha ? `${j.fecha}${offsetMadrid(j.fecha)}` : null;
 
       const valores = {
         team_id: equipo.id,
         ronda: j.ronda,
         rival,
         es_local: esLocal,
-        fecha_hora: j.fecha,
+        fecha_hora: fechaHora,
         estado: "pendiente" as const,
       };
 
@@ -115,18 +128,18 @@ export async function sincronizarCalendarioFACVCore(): Promise<{
       const idExistente = existentePorClave.get(clave);
       if (idExistente) {
         const { error } = await admin.from("matches").update(valores).eq("id", idExistente);
-        if (error) return { creadas, actualizadas, error: error.message };
+        if (error) return { creadas, actualizadas, omitidas, error: error.message };
         actualizadas++;
       } else {
         const { error } = await admin.from("matches").insert(valores);
-        if (error) return { creadas, actualizadas, error: error.message };
+        if (error) return { creadas, actualizadas, omitidas, error: error.message };
         creadas++;
       }
       porEquipo[equipo.nombre] = (porEquipo[equipo.nombre] ?? 0) + 1;
     }
 
-    return { creadas, actualizadas, porEquipo };
+    return { creadas, actualizadas, omitidas, porEquipo };
   } catch {
-    return { creadas: 0, actualizadas: 0, error: "Error al procesar el calendario FACV" };
+    return { creadas: 0, actualizadas: 0, omitidas: 0, error: "Error al procesar el calendario FACV" };
   }
 }

@@ -51,6 +51,40 @@ function decodeEntidades(texto: string): string {
     .trim();
 }
 
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+/** Día (1-31) del último domingo de `mes` (1-12) en `anio`, ambos meses de 31 días. */
+function ultimoDomingo(anio: number, mes: number): number {
+  const diaDeSemana = new Date(Date.UTC(anio, mes - 1, 31)).getUTCDay(); // 0 = domingo
+  return 31 - diaDeSemana;
+}
+
+/**
+ * Offset horario de Madrid (Europe/Madrid) para una fecha-hora local naive
+ * ("YYYY-MM-DDTHH:mm[:ss]"), calculado aritméticamente sin depender del reloj
+ * del sistema (nada de `Date.now`) ni de librerías de zonas horarias.
+ *
+ * Regla española de horario de verano: +02:00 desde el último domingo de
+ * marzo (02:00) hasta el último domingo de octubre (03:00); el resto del año,
+ * +01:00. Simplificación asumida (suficiente para esta app, que no agenda
+ * partidas de madrugada): la decisión se toma por FECHA, no por hora exacta
+ * del cambio — el propio día del último domingo de marzo ya cuenta como
+ * verano, y el propio día del último domingo de octubre ya cuenta como
+ * invierno.
+ */
+export function offsetMadrid(fechaISO: string): "+01:00" | "+02:00" {
+  const anio = Number(fechaISO.slice(0, 4));
+  const mesDia = fechaISO.slice(5, 10); // "MM-DD"
+
+  const inicioVerano = `03-${pad2(ultimoDomingo(anio, 3))}`;
+  const finVerano = `10-${pad2(ultimoDomingo(anio, 10))}`;
+
+  const esVerano = mesDia >= inicioVerano && mesDia < finVerano;
+  return esVerano ? "+02:00" : "+01:00";
+}
+
 /** Quita acentos y pasa a minúsculas para comparar nombres de club/equipo. */
 export function normalizaNombre(texto: string): string {
   return texto

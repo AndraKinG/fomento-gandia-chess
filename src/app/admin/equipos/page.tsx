@@ -113,9 +113,12 @@ export default async function EquiposPage({
   async function accionSincronizarCalendario() {
     "use server";
     const resultado = await sincronizarCalendarioFACV();
+    const omitidasMsg = resultado.omitidas > 0
+      ? ` (${resultado.omitidas} encuentros omitidos: equipo no registrado)`
+      : "";
     const params = new URLSearchParams({
       msg: resultado.error
-        ?? `Calendario sincronizado: ${resultado.creadas} jornadas creadas, ${resultado.actualizadas} actualizadas`,
+        ?? `Calendario sincronizado: ${resultado.creadas} jornadas creadas, ${resultado.actualizadas} actualizadas${omitidasMsg}`,
       tipo: resultado.error ? "error" : "ok",
     });
     redirect(`/admin/equipos?${params.toString()}`);

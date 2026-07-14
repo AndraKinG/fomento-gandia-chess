@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { esAdmin } from "@/lib/auth/es-admin";
 import { sincronizarCalendarioFACVCore } from "@/lib/import/facv-calendario-apply";
+import { offsetMadrid } from "@/lib/import/facv-calendario";
 
 type Resultado = { ok?: string; error?: string };
 
@@ -109,11 +110,12 @@ export async function quitarCapitan(teamId: string, playerId: string): Promise<R
 export async function sincronizarCalendarioFACV(): Promise<{
   creadas: number;
   actualizadas: number;
+  omitidas: number;
   porEquipo?: Record<string, number>;
   error?: string;
 }> {
   if (!(await esAdmin())) {
-    return { creadas: 0, actualizadas: 0, error: "Solo el admin puede hacer esto" };
+    return { creadas: 0, actualizadas: 0, omitidas: 0, error: "Solo el admin puede hacer esto" };
   }
   const resultado = await sincronizarCalendarioFACVCore();
   if (!resultado.error) revalidatePath("/admin/equipos");
@@ -139,11 +141,16 @@ export async function crearJornada(formData: FormData): Promise<Resultado> {
     return { error: "Indica si el equipo juega como local o visitante" };
   }
 
+  // El input datetime-local llega en hora local de Madrid sin zona horaria;
+  // se le añade el offset correspondiente antes de guardarlo en la columna
+  // timestamptz (mismo criterio que la sincronización FACV).
+  const fechaHora = fechaRaw ? `${fechaRaw}${offsetMadrid(fechaRaw)}` : null;
+
   const admin = createAdminClient();
   const { error } = await admin.from("matches").insert({
     team_id: teamId,
     ronda,
-    fecha_hora: fechaRaw || null,
+    fecha_hora: fechaHora,
     rival,
     es_local: esLocalRaw === "true",
     sede: sede || null,

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { parseCalendarioFACV } from "./facv-calendario";
+import { offsetMadrid, parseCalendarioFACV } from "./facv-calendario";
 
 const html = readFileSync(join(__dirname, "fixtures", "facv-calendario.html"), "utf-8");
 
@@ -145,5 +145,31 @@ describe("parseCalendarioFACV", () => {
         visitante: "Fomento de Gandía",
       },
     ]);
+  });
+});
+
+describe("offsetMadrid", () => {
+  it("horario de invierno (enero)", () => {
+    expect(offsetMadrid("2026-01-10T17:00:00")).toBe("+01:00");
+  });
+
+  it("horario de verano (abril)", () => {
+    expect(offsetMadrid("2026-04-15T17:00:00")).toBe("+02:00");
+  });
+
+  it("frontera de marzo: el último domingo (29) ya es verano", () => {
+    expect(offsetMadrid("2026-03-29T12:00:00")).toBe("+02:00");
+  });
+
+  it("frontera de marzo: el día anterior (28) todavía es invierno", () => {
+    expect(offsetMadrid("2026-03-28T12:00:00")).toBe("+01:00");
+  });
+
+  it("frontera de octubre: el último domingo (25) ya es invierno", () => {
+    expect(offsetMadrid("2026-10-25T12:00:00")).toBe("+01:00");
+  });
+
+  it("frontera de octubre: el día anterior (24) todavía es verano", () => {
+    expect(offsetMadrid("2026-10-24T12:00:00")).toBe("+02:00");
   });
 });
