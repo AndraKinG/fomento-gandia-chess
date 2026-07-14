@@ -1,12 +1,13 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { login } from "../actions";
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ registrado?: string }>;
+  searchParams: Promise<{ registrado?: string; error?: string }>;
 }) {
-  const { registrado } = await searchParams;
+  const { registrado, error } = await searchParams;
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 p-6">
       <h1 className="text-2xl font-bold">Fomento de Gandia · Ajedrez</h1>
@@ -15,7 +16,17 @@ export default async function LoginPage({
           Cuenta creada. Revisa tu email para confirmarla y luego inicia sesión.
         </p>
       )}
-      <form action={async (formData) => { "use server"; await login(formData); }} className="flex flex-col gap-3">
+      {error && (
+        <p className="rounded bg-red-100 p-3 text-sm text-red-800">{error}</p>
+      )}
+      <form
+        action={async (formData) => {
+          "use server";
+          const r = await login(formData);
+          if (r?.error) redirect("/login?error=" + encodeURIComponent(r.error));
+        }}
+        className="flex flex-col gap-3"
+      >
         <input name="email" type="email" required placeholder="Email"
           className="rounded border p-3" />
         <input name="password" type="password" required placeholder="Contraseña"

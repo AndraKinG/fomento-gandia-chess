@@ -19,7 +19,16 @@ export async function registro(formData: FormData): Promise<{ error?: string }> 
     email: String(formData.get("email")),
     password: String(formData.get("password")),
   });
-  if (error) return { error: error.message };
+  if (error) {
+    const yaExiste =
+      error.code === "user_already_exists" ||
+      error.message === "User already registered";
+    return {
+      error: yaExiste
+        ? "Ya existe una cuenta con ese email"
+        : "No se pudo crear la cuenta. Revisa el email y la contraseña (mínimo 8 caracteres).",
+    };
+  }
   redirect("/login?registrado=1");
 }
 
