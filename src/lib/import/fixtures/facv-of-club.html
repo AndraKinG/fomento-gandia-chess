@@ -1,0 +1,1036 @@
+
+
+
+<!doctype html>
+
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="icon"
+          type="image/jpg"
+          href="../../public/images/0_icon1_facv.jpg">
+
+    <meta property="og:image"
+          content="https://www.facv.org/appwebfacv/public/images/0_icon1_facv.jpg">
+
+    <link rel="stylesheet"
+          media="all"
+          href="/appwebfacv/public/stylesheets/staff.css">
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css">
+
+    <title>Orden de Fuerzas Fomento Gandia	    </title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+</head>
+
+<body>
+
+    <style>
+        .of-hero { border-radius: 18px; }
+        .of-card { border-radius: 18px; }
+        .of-table th { white-space: nowrap; }
+        .of-avatar img { border-radius: 999px; object-fit: cover; }
+
+        /* Buscador fijo arriba */
+        .sticky-tools{ position: sticky; top:0; z-index: 20; }
+
+        /* Ajuste de anchos para que "Jugador" no se coma la pantalla */
+        .col-of    { width: 70px; }
+        .col-foto  { width: 70px; }
+        .col-elo   { width: 90px; }
+        .col-band  { width: 90px; }
+        .col-fide  { width: 170px; }
+
+        /* La columna Jugador tendrá un ancho razonable + ellipsis */
+        td.col-jugador, th.col-jugador {
+            width: 420px;
+            max-width: 420px;
+        }
+        td.col-jugador .cut {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 992px){
+            td.col-jugador, th.col-jugador { width: 280px; max-width: 280px; }
+        }
+        /* Contenedor “bonito” para que no se coma toda la pantalla en escritorio */
+        .of-narrow {
+            width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        @media (min-width: 992px) { /* lg */
+            .of-narrow { width: 70%; }
+        }
+        .of-narrow .table { width: 100%; }
+        /* En móvil, la tabla siempre scroll horizontal si hace falta */
+        .table-responsive { overflow-x: auto; }
+        /*.chess-title{*/
+        /*    font-weight: normal;*/
+        /*    color: #555;*/
+        /*}*/
+        /*td.col-jugador .chess-title{*/
+        /*    font-weight: 400 !important;*/
+        /*}*/
+        .chess-title {
+            background-color: red;    /* Fondo rojo */
+            color: white;             /* Texto en blanco */
+            font-weight: bold;        /* Texto en negrita */
+            font-size: 0.7em;         /* Un poco más pequeño que el texto normal */
+            padding: 3px;         /* Espaciado interno para que se vea como un recuadro */
+            border-radius: 3px;       /* Bordes redondeados (opcional) */
+            margin: 2px;
+            letter-spacing: 1px
+            /*font-weight: 400 !important;*/
+        }
+        .exento-margen {
+            font-size: 60% !important;   /* o 9px, 8pt… */
+            color: #777 !important;
+            margin-top: 2px;
+            line-height: 1.1;
+        }
+
+    </style>
+
+    <div id="content">
+
+        <div class="container-fluid py-4">
+
+            <!-- HERO / CABECERA (sin línea generado/club y sin estadísticas) -->
+            <div class="card shadow-sm border-0 of-hero mb-3">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <img src="fecv-peque-color.jpg" alt="FACV" style="height:54px;width:auto;">
+                            <div>
+                                <div class="text-muted small">Federació d'Escacs de la Comunitat Valenciana</div>
+                                <h2 class="mb-0">Orden de Fuerza — Club Ajedrez Fomento de Gandia</h2>
+                            </div>
+                        </div>
+
+                        <div class="text-end">
+                            <a class="btn btn-primary btn-sm" href="/appwebfacv/public/staff/of_club/of_publico_pdf_general.php?id=56">
+                                <i class="bi bi-filetype-pdf me-1"></i>Descargar PDF
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BUSCADOR -->
+            <!-- BUSCADOR + TABLA -->
+            <div class="of-narrow">
+
+                <!-- BUSCADOR -->
+                <div class="sticky-tools bg-white pb-2">
+                    <div class="card shadow-sm border-0 of-card">
+                        <div class="card-body py-3">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-12 col-md-8">
+                                    <label class="form-label mb-1 small text-muted">Buscar jugador (nombre / FIDE ID)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                        <input id="q" type="text" class="form-control" placeholder="Ej: García, Ilinca, 2212345…">
+                                        <button id="btnClear" class="btn btn-outline-secondary" type="button">Limpiar</button>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-4 text-md-end">
+                                    <span class="text-muted small">Mostrando: <span id="nShown" class="fw-semibold">46</span> / 46</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TABLA -->
+                <div class="card shadow-sm border-0 of-card mt-3">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle of-table w-100" id="t">
+                                <thead class="table-light">
+                                <tr>
+                                    <th class="text-center col-of">OF</th>
+                                    <th class="col-foto"></th>
+                                    <th class="col-jugador">Jugador</th>
+                                    <th class="text-end col-elo">ELO</th>
+                                    <th class="text-center col-band d-none d-md-table-cell">Bandera</th>
+                                    <th class="col-fide d-none d-md-table-cell">FIDE ID</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                                                                                        <tr data-search="josé manuel crecente penalba 2271265">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">1</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">José Manuel Crecente Penalba</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            2087<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/2271265">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>2271265                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="elías frasquet solbes 2256711">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">2</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Elías Frasquet Solbes</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            2057<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/2256711">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>2256711                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="juan emilio vercher sansaloni 2224526">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">3</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Juan Emilio Vercher Sansaloni</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1980<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/2224526">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>2224526                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="miguel muñoz martí 24535583">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">4</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Miguel Muñoz Martí</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1866<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/24535583">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>24535583                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="santiago garcía coll 54535638">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">5</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Santiago García Coll</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1884<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/54535638">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>54535638                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="manuel gonzález rodríguez 2217147">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">6</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Manuel González Rodríguez</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1950<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/2217147">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>2217147                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="luis vallalta martínez 22239499">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">7</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Luis Vallalta Martínez</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1946<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/22239499">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>22239499                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="juan fernando rubio cerdá 22241248">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">8</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Juan Fernando Rubio Cerdá</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1869<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/22241248">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>22241248                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="jairo manuel hernández gonzález 2286092">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">9</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Jairo Manuel Hernández González</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1855<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/2286092">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>2286092                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="josé galiana cremades 54744989">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">10</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">José Galiana Cremades</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1854<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/54744989">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>54744989                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="malte mauelshagen 34608036">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">11</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Malte Mauelshagen</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1843<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/GER.png' title='Española'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/34608036">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>34608036                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="emilio castillo pla 2258439">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">12</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Emilio Castillo Pla</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1811<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/2258439">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>2258439                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="lorenzo mafé coll 1306545">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">13</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Lorenzo Mafé Coll</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1884<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/SUI.png' title='Española'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/1306545">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>1306545                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="rubén grau peris 2278936">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">14</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Rubén Grau Peris</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1797<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/2278936">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>2278936                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="emilio briz gonzález 94792933">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">15</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Emilio Briz González</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1796<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/94792933">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>94792933                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="víctor pons gutiérrez 22239405">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">16</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Víctor Pons Gutiérrez</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1784<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/22239405">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>22239405                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="miguel cortell canet 2279916">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">17</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Miguel Cortell Canet</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1765<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/2279916">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>2279916                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="juan vicente sanfélix domínguez 2251051">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">18</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Juan Vicente Sanfélix Domínguez</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1765<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/2251051">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>2251051                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="ramón villanueva claramonte 32089210">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">19</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Ramón Villanueva Claramonte</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1854<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/32089210">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>32089210                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="llorenç pérez barberán 54703719">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">20</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Llorenç Pérez Barberán</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1758<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/54703719">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>54703719                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="eduardo gumbrevicius filho 523065702">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">21</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Eduardo Gumbrevicius Filho</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1727<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/523065702">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>523065702                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="rodion romaniuk 535042826">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">22</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Rodion Romaniuk</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1719<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/535042826">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>535042826                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="ximo almiñana almiñana 22275320">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">23</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Ximo Almiñana Almiñana</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1717<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/22275320">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>22275320                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="juan beltrán verdejo 24569020">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">24</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Juan Beltrán Verdejo</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1714<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/24569020">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>24569020                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="tristán delord 535042966">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">25</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Tristán Delord</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1679<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/535042966">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>535042966                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="borja gregori olivares 94774986">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">26</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                            <div class='d-inline-block text-center'><img class='img-thumbnail facv-zoomable' style='max-width:52px;' src='https://www.facv.org/appwebfacv/public/staff/perfil/BorjaGregoriOlivares.jpeg?v=1784037105' data-zoom-src='https://www.facv.org/appwebfacv/public/staff/perfil/BorjaGregoriOlivares.jpeg?v=1784037105'></div>                                        </td>
+                                        <td >
+                                                                                        <span class="cut">Borja Gregori Olivares</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1666<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/94774986">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>94774986                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="juan agustín muñoz cánoves 24581941">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">27</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Juan Agustín Muñoz Cánoves</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1658<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/24581941">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>24581941                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="rafael seguí pastor 94757020">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">28</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Rafael Seguí Pastor</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1633<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/94757020">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>94757020                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="joan martínez ribes 94797030">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">29</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Joan Martínez Ribes</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1627<div class='exento-margen'>ELO Blitz</div><!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/94797030">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>94797030                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="aaron rodrigo cáceres 535042648">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">30</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Aaron Rodrigo Cáceres</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1620<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/535042648">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>535042648                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="raphaël delord 535042958">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">31</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Raphaël Delord</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1618<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/535042958">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>535042958                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="alex bataller signes 94757011">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">32</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Alex Bataller Signes</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1602<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/94757011">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>94757011                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="sergio pérez costilla 523003553">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">33</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Sergio Pérez Costilla</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1550<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/523003553">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>523003553                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="Álvaro boronat castelló 535026553">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">34</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Álvaro Boronat Castelló</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1544<!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/535026553">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>535026553                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="luis vallalta pajarón 553026462">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">35</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Luis Vallalta Pajarón</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            <!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/553026462">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>553026462                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="juan josé sabater santonja 553025520">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">36</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Juan José Sabater Santonja</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            <!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/553025520">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>553025520                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="lorenzo aladrén giménez 553024613">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">37</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                            <div class='d-inline-block text-center'><img class='img-thumbnail facv-zoomable' style='max-width:52px;' src='https://www.facv.org/appwebfacv/public/staff/perfil/LorenzoAladrenGimenez.jpg?v=1784037105' data-zoom-src='https://www.facv.org/appwebfacv/public/staff/perfil/LorenzoAladrenGimenez.jpg?v=1784037105'></div>                                        </td>
+                                        <td >
+                                                                                        <span class="cut">Lorenzo Aladrén Giménez</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1649<div class='exento-margen'>ELO rápidas</div><!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/553024613">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>553024613                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="lucas marín faus 535088028">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">38</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Lucas Marín Faus</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            <!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/535088028">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>535088028                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="luca luvisi figueres wright 535042818">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">39</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Luca Luvisi Figueres Wright</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            <!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/535042818">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>535042818                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="hrachya aharonyan ghazaryan 535088036">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">40</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Hrachya Aharonyan Ghazaryan</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            <!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/535088036">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>535088036                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="aarón escrivá hernández 553025792">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">41</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Aarón Escrivá Hernández</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1402<div class='exento-margen'>ELO rápidas</div><!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/553025792">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>553025792                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="carlos gascón olivares 553025784">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">42</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Carlos Gascón Olivares</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            <!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/553025784">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>553025784                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="david cresencio soler 553025130">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">43</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">David Cresencio Soler</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            <!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/553025130">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>553025130                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="galin boyanov stoyanov 553025814">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">44</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Galin Boyanov Stoyanov</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            1441<div class='exento-margen'>ELO rápidas</div><!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/553025814">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>553025814                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="marcos castro hueso 553025806">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">45</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Marcos Castro Hueso</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            <!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/553025806">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>553025806                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                                                        <tr data-search="ishak el haouari 553037022">
+                                        <td class="text-center col-of">
+                                            <span class="badge text-bg-dark px-3 py-2">46</span>
+                                        </td>
+                                        <td class="of-avatar col-foto">
+                                                                                    </td>
+                                        <td >
+                                                                                        <span class="cut">Ishak El Haouari</span>
+                                        </td>
+                                        <td class="text-end col-elo">
+                                            <!--                                            -->                                        </td>
+                                        <td class="text-center col-band d-none d-md-table-cell">
+                                            <div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div>                                        </td>
+                                        <td class="col-fide d-none d-md-table-cell">
+                                                                                            <a class="text-decoration-none" target="_blank" rel="noopener" href="https://ratings.fide.com/profile/553037022">
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>553037022                                                </a>
+                                                                                    </td>
+                                    </tr>
+                                                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        (function(){
+            const q = document.getElementById('q');
+            const btn = document.getElementById('btnClear');
+            const rows = document.querySelectorAll('#t tbody tr');
+            const nShown = document.getElementById('nShown');
+
+            function apply(){
+                const term = (q.value || '').trim().toLowerCase();
+                let shown = 0;
+                rows.forEach(tr => {
+                    const hay = (tr.getAttribute('data-search') || '');
+                    const ok = (!term || hay.includes(term));
+                    tr.style.display = ok ? '' : 'none';
+                    if (ok) shown++;
+                });
+                if (nShown) nShown.textContent = String(shown);
+            }
+
+            q.addEventListener('input', apply);
+            btn.addEventListener('click', () => { q.value=''; apply(); q.focus(); });
+        })();
+    </script>
+
+
