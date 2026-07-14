@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { PushSubscriber } from "@/components/PushSubscriber";
 import { BottomNav } from "@/components/BottomNav";
@@ -19,6 +19,13 @@ export const metadata: Metadata = {
   title: "Fomento de Gandia · Ajedrez",
   description: "App del club de ajedrez Fomento de Gandia",
   manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#0369a1" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a1628" },
+  ],
 };
 
 export default async function RootLayout({
