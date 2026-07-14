@@ -225,7 +225,7 @@ export default async function EquiposPage({
                     }}
                     className="flex gap-2"
                   >
-                    <select name="playerId" required className={`flex-1 ${CAMPO}`}>
+                    <select name="playerId" required className={`min-w-0 flex-1 ${CAMPO}`}>
                       <option value="">Elige una ficha…</option>
                       {disponibles.map((f) => (
                         <option key={f.id} value={f.id}>{f.nombre}</option>
