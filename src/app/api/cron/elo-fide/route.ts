@@ -25,10 +25,10 @@ export async function GET(request: NextRequest) {
       } else {
         resultados[p.fide_id!] = "sin rating";
       }
-      await new Promise((r) => setTimeout(r, 500)); // cortesía con el servidor FIDE
     } catch (e) {
       resultados[p.fide_id!] = `error: ${String(e)}`;
     }
+    await new Promise((r) => setTimeout(r, 500)); // cortesía con el servidor FIDE
   }
   return NextResponse.json({ actualizados: resultados });
 }

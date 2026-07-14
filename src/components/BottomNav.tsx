@@ -19,7 +19,10 @@ export function BottomNav({ esAdmin }: { esAdmin: boolean }) {
       {all.map((i) => (
         <Link key={i.href} href={i.href}
           className={`flex flex-col items-center px-3 text-xs ${
-            pathname === i.href ? "font-bold" : "text-gray-500"
+            pathname === i.href ||
+            (i.href !== "/" && pathname.startsWith(i.href + "/"))
+              ? "font-bold"
+              : "text-gray-500"
           }`}>
           <span className="text-lg">{i.icon}</span>
           {i.label}

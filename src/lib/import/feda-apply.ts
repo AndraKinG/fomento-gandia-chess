@@ -16,13 +16,29 @@ export async function actualizarEloFedaCore(): Promise<{
   actualizados: number;
   error?: string;
 }> {
-  const pagina = await fetch(URL_PAGINA_ELO_FEDA, {
-    headers: { "user-agent": "FomentoGandiaClubApp/1.0" },
-  });
-  const url = obtenerUrlUltimaListaFeda(await pagina.text());
-  if (!url) return { actualizados: 0, error: "No se encontró la lista FEDA" };
-  const fichero = await fetch(url);
-  return aplicarListaFedaCore(await fichero.arrayBuffer());
+  try {
+    const pagina = await fetch(URL_PAGINA_ELO_FEDA, {
+      headers: { "user-agent": "FomentoGandiaClubApp/1.0" },
+    });
+    if (!pagina.ok) {
+      return {
+        actualizados: 0,
+        error: `No se pudo descargar la lista FEDA (HTTP ${pagina.status})`,
+      };
+    }
+    const url = obtenerUrlUltimaListaFeda(await pagina.text());
+    if (!url) return { actualizados: 0, error: "No se encontró la lista FEDA" };
+    const fichero = await fetch(url);
+    if (!fichero.ok) {
+      return {
+        actualizados: 0,
+        error: `No se pudo descargar la lista FEDA (HTTP ${fichero.status})`,
+      };
+    }
+    return aplicarListaFedaCore(await fichero.arrayBuffer());
+  } catch {
+    return { actualizados: 0, error: "Error al procesar la lista FEDA" };
+  }
 }
 
 /**
@@ -36,23 +52,27 @@ export async function actualizarEloFedaCore(): Promise<{
 export async function aplicarListaFedaCore(
   buffer: ArrayBuffer
 ): Promise<{ actualizados: number; error?: string }> {
-  const mapa = parseListaFeda(buffer);
-  if (mapa.size === 0) {
-    return {
-      actualizados: 0,
-      error: "El fichero no contiene columnas reconocibles (Id. FEDA / Elo)",
-    };
-  }
-  const admin = createAdminClient();
-  const { data: players } = await admin
-    .from("players").select("id, feda_id").not("feda_id", "is", null);
-  let actualizados = 0;
-  for (const p of players ?? []) {
-    const elo = mapa.get(p.feda_id!);
-    if (elo !== undefined) {
-      await admin.from("players").update({ elo_feda: elo }).eq("id", p.id);
-      actualizados++;
+  try {
+    const mapa = parseListaFeda(buffer);
+    if (mapa.size === 0) {
+      return {
+        actualizados: 0,
+        error: "El fichero no contiene columnas reconocibles (Id. FEDA / Elo)",
+      };
     }
+    const admin = createAdminClient();
+    const { data: players } = await admin
+      .from("players").select("id, feda_id").not("feda_id", "is", null);
+    let actualizados = 0;
+    for (const p of players ?? []) {
+      const elo = mapa.get(p.feda_id!);
+      if (elo !== undefined) {
+        await admin.from("players").update({ elo_feda: elo }).eq("id", p.id);
+        actualizados++;
+      }
+    }
+    return { actualizados };
+  } catch {
+    return { actualizados: 0, error: "Error al procesar la lista FEDA" };
   }
-  return { actualizados };
 }

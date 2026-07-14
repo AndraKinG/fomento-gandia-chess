@@ -1,20 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { esAdmin } from "@/lib/auth/es-admin";
 import { parseOrdenFuerza } from "@/lib/import/orden-fuerza-parser";
 
 export async function importarOrdenFuerza(
   seasonNombre: string,
   texto: string
 ): Promise<{ ok?: string; error?: string }> {
-  const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "No autenticado" };
-  const { data: profile } = await supabase
-    .from("profiles").select("is_admin").eq("id", user.id).single();
-  if (!profile?.is_admin) return { error: "Solo el admin puede importar" };
+  if (!(await esAdmin())) return { error: "Solo el admin puede importar" };
 
   // a. Parsear y validar todo antes de tocar la base de datos.
   const { filas, errores } = parseOrdenFuerza(texto);
@@ -40,6 +35,12 @@ export async function importarOrdenFuerza(
       const { data: existing } = await admin
         .from("players").select("id").or(or).maybeSingle();
       playerId = existing?.id ?? null;
+    } else {
+      // Sin fide_id/feda_id: buscar por nombre exacto para no duplicar el
+      // jugador si esta importación es un reintento tras un fallo previo.
+      const { data: existing } = await admin
+        .from("players").select("id").eq("nombre", fila.nombre).maybeSingle();
+      playerId = existing?.id ?? null;
     }
     if (!playerId) {
       const { data: created, error: createErr } = await admin
@@ -58,7 +59,11 @@ export async function importarOrdenFuerza(
 
   // c. Desactivar la temporada activa, crear la nueva e insertar todo el
   // orden de fuerza en una sola llamada. Si el insert masivo falla, se
-  // revierte manualmente el alta de la temporada.
+  // revierte manualmente el alta de la temporada y se restauran las
+  // temporadas que estaban activas antes de empezar.
+  const { data: previamenteActivas } = await admin
+    .from("seasons").select("id").eq("activa", true);
+
   const { error: deactivateErr } = await admin
     .from("seasons").update({ activa: false }).eq("activa", true);
   if (deactivateErr) return { error: deactivateErr.message };
@@ -79,6 +84,10 @@ export async function importarOrdenFuerza(
   );
   if (orderErr) {
     await admin.from("seasons").delete().eq("id", season.id);
+    const idsPrevios = (previamenteActivas ?? []).map((s) => s.id);
+    if (idsPrevios.length > 0) {
+      await admin.from("seasons").update({ activa: true }).in("id", idsPrevios);
+    }
     return { error: orderErr.message };
   }
 
