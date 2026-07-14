@@ -3,6 +3,7 @@ import { aplicarListaFeda, actualizarEloFeda, actualizarEloFide } from "./action
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Banner } from "@/components/ui/Banner";
+import { Boton } from "@/components/ui/Boton";
 
 export default async function EloAdminPage({
   searchParams,
@@ -71,14 +72,14 @@ export default async function EloAdminPage({
       <div className="mx-auto max-w-md space-y-4 p-4">
         {msg ? <Banner tipo={tipo === "ok" ? "ok" : "error"}>{msg}</Banner> : null}
         <form action={refrescarFide}>
-          <button className="w-full rounded-xl bg-degradado-club p-3 text-sm font-semibold text-sobre-acento">
+          <Boton variante="degradado" className="w-full text-sm">
             Actualizar FIDE ahora (perfiles fide.com)
-          </button>
+          </Boton>
         </form>
         <form action={refrescarFeda}>
-          <button className="w-full rounded-xl bg-degradado-club p-3 text-sm font-semibold text-sobre-acento">
+          <Boton variante="degradado" className="w-full text-sm">
             Actualizar FEDA ahora (descarga lista oficial)
-          </button>
+          </Boton>
         </form>
         <Banner tipo="aviso">
           Ojo: la lista automática de feda.org puede estar desactualizada

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { login } from "../actions";
 import { Banner } from "@/components/ui/Banner";
+import { Boton } from "@/components/ui/Boton";
 
 export default async function LoginPage({
   searchParams,
@@ -59,9 +60,7 @@ export default async function LoginPage({
               className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta placeholder:text-tinta-suave"
             />
           </div>
-          <button className="rounded-xl bg-degradado-club p-3 font-semibold text-sobre-acento">
-            Entrar
-          </button>
+          <Boton variante="degradado">Entrar</Boton>
         </form>
         <p className="text-center text-sm text-tinta">
           ¿Sin cuenta?{" "}

@@ -1,6 +1,7 @@
 import { enviarPushPrueba } from "./actions";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
+import { Boton } from "@/components/ui/Boton";
 
 export default function PushAdminPage() {
   return (
@@ -9,9 +10,9 @@ export default function PushAdminPage() {
       <div className="mx-auto max-w-md p-4">
         <Tarjeta>
           <form action={enviarPushPrueba}>
-            <button className="w-full rounded-xl bg-degradado-club p-3 text-sm font-semibold text-sobre-acento">
+            <Boton variante="degradado" className="w-full text-sm">
               Enviarme una notificación de prueba
-            </button>
+            </Boton>
           </form>
         </Tarjeta>
       </div>

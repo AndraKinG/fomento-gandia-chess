@@ -2,9 +2,10 @@ import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { importarOrdenFuerza, sincronizarOrdenFuerzaFACV } from "./actions";
 import { Cabecera } from "@/components/ui/Cabecera";
-import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Banner } from "@/components/ui/Banner";
 import { ChipElo } from "@/components/ui/ChipElo";
+import { Boton } from "@/components/ui/Boton";
+import { FilaJugadorOF } from "@/components/ui/FilaJugadorOF";
 
 const SEPARADOR_AVISOS = "||";
 
@@ -68,9 +69,9 @@ export default async function OrdenFuerzaPage({
           </Banner>
         ) : null}
         <form action={accionSincronizar}>
-          <button className="w-full rounded-xl bg-degradado-club p-3 font-semibold text-sobre-acento">
+          <Boton variante="degradado" className="w-full">
             Sincronizar con la FACV
-          </button>
+          </Boton>
         </form>
         {orden && orden.length > 0 ? (
           <ol className="space-y-2">
@@ -80,24 +81,18 @@ export default async function OrdenFuerzaPage({
               };
               return (
                 <li key={`${f.numero}-${f.bis_index}`}>
-                  <Tarjeta compacta className="flex items-center gap-3">
-                    <span
-                      className={`grid h-8 w-8 shrink-0 place-items-center rounded-full bg-acento-fuerte font-semibold text-sobre-acento ${
-                        f.bis_index ? "text-[0.65rem]" : "text-sm"
-                      }`}
-                    >
-                      {f.numero}
-                      {f.bis_index ? "bis" : ""}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-tinta">{p.nombre}</p>
-                      <div className="mt-1 flex flex-wrap gap-2">
+                  <FilaJugadorOF
+                    numero={f.numero}
+                    bisIndex={f.bis_index}
+                    nombre={p.nombre}
+                    chips={
+                      <>
                         <ChipElo valor={f.elo_oficial} etiqueta="Oficial" />
                         <ChipElo valor={p.elo_fide} etiqueta="FIDE" />
                         <ChipElo valor={p.elo_feda} etiqueta="FEDA" />
-                      </div>
-                    </div>
-                  </Tarjeta>
+                      </>
+                    }
+                  />
                 </li>
               );
             })}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { registro } from "../actions";
 import { Banner } from "@/components/ui/Banner";
+import { Boton } from "@/components/ui/Boton";
 
 export default async function RegistroPage({
   searchParams,
@@ -55,9 +56,7 @@ export default async function RegistroPage({
               className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta placeholder:text-tinta-suave"
             />
           </div>
-          <button className="rounded-xl bg-degradado-club p-3 font-semibold text-sobre-acento">
-            Registrarme
-          </button>
+          <Boton variante="degradado">Registrarme</Boton>
         </form>
         <p className="text-center text-sm text-tinta">
           ¿Ya tienes cuenta?{" "}
