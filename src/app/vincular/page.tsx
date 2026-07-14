@@ -64,7 +64,7 @@ export default async function VincularPage({
                     if (r?.error) redirect("/vincular?error=" + encodeURIComponent(r.error));
                   }}
                 >
-                  <button className="rounded-xl bg-acento px-4 py-1.5 text-sm font-semibold text-sobre-acento">
+                  <button className="rounded-xl bg-acento-fuerte px-4 py-1.5 text-sm font-semibold text-sobre-acento">
                     Soy yo
                   </button>
                 </form>

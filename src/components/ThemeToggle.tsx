@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useSyncExternalStore } from "react";
 
 type Tema = "sistema" | "claro" | "oscuro";
 const ORDEN: Tema[] = ["sistema", "claro", "oscuro"];
@@ -9,6 +9,7 @@ const ETIQUETA: Record<Tema, string> = {
   claro: "☀️ Tema: claro",
   oscuro: "🌙 Tema: oscuro",
 };
+const EVENTO_TEMA = "tema-cambiado";
 
 function aplicar(tema: Tema) {
   const oscuroSistema = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -16,29 +17,43 @@ function aplicar(tema: Tema) {
   document.documentElement.classList.toggle("dark", oscuro);
 }
 
-// Inicializador perezoso: lee `localStorage` ya en el primer render del
-// cliente (guardado con `typeof window` porque en el render de servidor
-// `window` no existe y debe devolver "sistema"). Así se evita el parpadeo
-// de la etiqueta "sistema" que aparecía antes de un `useEffect` posterior.
-function temaInicial(): Tema {
-  if (typeof window === "undefined") return "sistema";
+// El tema vive en `localStorage` (estado externo a React), así que se lee con
+// `useSyncExternalStore`: el servidor no tiene `localStorage` y siempre
+// "ve" el snapshot `leerTemaServidor` ("sistema"); tras hidratar, React vuelve
+// a pedir el snapshot real (`leerTema`) y re-renderiza si difiere. A
+// diferencia de un `useState` con inicializador perezoso + `suppressHydrationWarning`,
+// esto sí actualiza el DOM de forma fiable (sin dejar el botón "congelado"
+// mostrando "sistema" para siempre tras recargar con un tema guardado), y sin
+// llamar a `setState` dentro de un efecto.
+function leerTema(): Tema {
   return (localStorage.getItem("tema") as Tema | null) ?? "sistema";
 }
 
+function leerTemaServidor(): Tema {
+  return "sistema";
+}
+
+function suscribir(cb: () => void) {
+  window.addEventListener("storage", cb);
+  window.addEventListener(EVENTO_TEMA, cb);
+  return () => {
+    window.removeEventListener("storage", cb);
+    window.removeEventListener(EVENTO_TEMA, cb);
+  };
+}
+
 export function ThemeToggle() {
-  const [tema, setTema] = useState<Tema>(temaInicial);
+  const tema = useSyncExternalStore(suscribir, leerTema, leerTemaServidor);
   function ciclar() {
     const siguiente = ORDEN[(ORDEN.indexOf(tema) + 1) % ORDEN.length];
-    setTema(siguiente);
     localStorage.setItem("tema", siguiente);
     aplicar(siguiente);
+    window.dispatchEvent(new Event(EVENTO_TEMA));
   }
   return (
     <button onClick={ciclar}
       className="rounded-xl border border-borde bg-tarjeta px-4 py-2 text-sm text-tinta">
-      {/* Servidor siempre renderiza "sistema"; cliente conoce el tema guardado en hydration.
-          La divergencia es intencional (localStorage guardado vs. default de servidor). */}
-      <span suppressHydrationWarning>{ETIQUETA[tema]}</span>
+      {ETIQUETA[tema]}
     </button>
   );
 }

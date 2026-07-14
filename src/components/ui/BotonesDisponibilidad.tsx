@@ -18,7 +18,7 @@ export function BotonesDisponibilidad({
           aria-pressed={valor === o.valor}
           className={`flex-1 rounded-xl border px-2 py-2 text-sm transition ${
             valor === o.valor
-              ? "border-acento bg-acento text-sobre-acento"
+              ? "border-acento-fuerte bg-acento-fuerte text-sobre-acento"
               : "border-borde bg-tarjeta text-tinta"
           } disabled:opacity-50`}>
           <span aria-hidden>{o.icono}</span> {o.texto}

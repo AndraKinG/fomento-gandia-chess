@@ -3,7 +3,7 @@ import { EstadoVacio } from "@/components/ui/EstadoVacio";
 
 export default function EquiposPage() {
   return (
-    <main>
+    <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera titulo="Equipos" subtitulo="Interclubs FACV" />
       <div className="mx-auto max-w-md p-4">
         <EstadoVacio titulo="Los equipos llegan con el interclubs"

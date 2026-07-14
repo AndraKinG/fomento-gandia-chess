@@ -61,7 +61,7 @@ export default async function RegistroPage({
         </form>
         <p className="text-center text-sm text-tinta">
           ¿Ya tienes cuenta?{" "}
-          <Link className="text-acento underline" href="/login">
+          <Link className="text-acento-fuerte underline dark:text-acento" href="/login">
             Entra
           </Link>
         </p>

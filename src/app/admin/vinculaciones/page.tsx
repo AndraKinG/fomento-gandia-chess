@@ -27,7 +27,7 @@ export default async function VinculacionesPage() {
               </p>
               <div className="mt-3 flex gap-2">
                 <form action={aprobarVinculo.bind(null, r.id)}>
-                  <button className="rounded-xl bg-acento px-3 py-1.5 text-sm font-medium text-sobre-acento">
+                  <button className="rounded-xl bg-acento-fuerte px-3 py-1.5 text-sm font-medium text-sobre-acento">
                     Aprobar
                   </button>
                 </form>

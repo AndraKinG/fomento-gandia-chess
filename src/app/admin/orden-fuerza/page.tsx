@@ -51,7 +51,7 @@ export default async function OrdenFuerzaPage({
                 <li key={`${f.numero}-${f.bis_index}`}>
                   <Tarjeta className="flex items-center gap-3 p-3">
                     <span
-                      className={`grid h-8 w-8 shrink-0 place-items-center rounded-full bg-acento font-semibold text-sobre-acento ${
+                      className={`grid h-8 w-8 shrink-0 place-items-center rounded-full bg-acento-fuerte font-semibold text-sobre-acento ${
                         f.bis_index ? "text-[0.65rem]" : "text-sm"
                       }`}
                     >
@@ -77,7 +77,7 @@ export default async function OrdenFuerzaPage({
             <textarea name="texto" required rows={12}
               placeholder={"1; Apellidos, Nombre; fide_id; feda_id\n2; ..."}
               className="rounded-xl border border-borde bg-tarjeta p-3 font-mono text-xs text-tinta" />
-            <button className="rounded-xl bg-acento p-3 font-semibold text-sobre-acento">
+            <button className="rounded-xl bg-acento-fuerte p-3 font-semibold text-sobre-acento">
               Importar
             </button>
           </form>
