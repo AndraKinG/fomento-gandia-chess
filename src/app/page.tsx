@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { logout } from "./(auth)/actions";
 
 export default async function Home() {
   const supabase = await createServerSupabase();
@@ -25,9 +24,6 @@ export default async function Home() {
           Solicitud de vinculación pendiente de aprobación.
         </p>
       )}
-      <form action={logout}>
-        <button className="mt-4 rounded border p-2 text-sm">Cerrar sesión</button>
-      </form>
     </main>
   );
 }

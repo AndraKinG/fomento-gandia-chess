@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { PushSubscriber } from "@/components/PushSubscriber";
+import { BottomNav } from "@/components/BottomNav";
+import { createServerSupabase } from "@/lib/supabase/server";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,19 +21,29 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createServerSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
+  let esAdmin = false;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles").select("is_admin").eq("id", user.id).single();
+    esAdmin = Boolean(profile?.is_admin);
+  }
+
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col pb-20">
         <PushSubscriber />
         {children}
+        <BottomNav esAdmin={esAdmin} />
       </body>
     </html>
   );
