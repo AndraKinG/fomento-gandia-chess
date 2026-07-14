@@ -1,26 +1,56 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ===== Tema claro: Mediterráneo ===== */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --fondo: #f0f9ff;
+  --tarjeta: #ffffff;
+  --tarjeta-suave: #f0f9ff;
+  --borde: #e2e8f0;
+  --borde-acento: #bae6fd;
+  --tinta: #0c4a6e;
+  --tinta-suave: #64748b;
+  --acento: #0ea5e9;
+  --acento-fuerte: #0369a1;
+  --sobre-acento: #ffffff;
+}
+
+/* ===== Tema oscuro: Azul profundo ===== */
+.dark {
+  --fondo: #0a1628;
+  --tarjeta: #132c4d;
+  --tarjeta-suave: #0f2137;
+  --borde: #1e3a5f;
+  --borde-acento: #1e3a5f;
+  --tinta: #e2ecf7;
+  --tinta-suave: #8fa8c4;
+  --acento: #60a5fa;
+  --acento-fuerte: #2563eb;
+  --sobre-acento: #ffffff;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-fondo: var(--fondo);
+  --color-tarjeta: var(--tarjeta);
+  --color-tarjeta-suave: var(--tarjeta-suave);
+  --color-borde: var(--borde);
+  --color-borde-acento: var(--borde-acento);
+  --color-tinta: var(--tinta);
+  --color-tinta-suave: var(--tinta-suave);
+  --color-acento: var(--acento);
+  --color-acento-fuerte: var(--acento-fuerte);
+  --color-sobre-acento: var(--sobre-acento);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.bg-degradado-club {
+  background: linear-gradient(135deg, var(--acento), var(--acento-fuerte));
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--fondo);
+  color: var(--tinta);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
