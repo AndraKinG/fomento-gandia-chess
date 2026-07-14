@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Banner } from "@/components/ui/Banner";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
@@ -14,15 +15,9 @@ const TEXTOS: Record<Estado, string> = {
 const DIEZ_DIAS_MS = 10 * 24 * 60 * 60 * 1000;
 
 function formatearFecha(fechaHoraISO: string | null): string {
-  if (!fechaHoraISO) return "Sin fecha";
-  const fecha = new Date(fechaHoraISO);
-  if (Number.isNaN(fecha.getTime())) return "Sin fecha";
-  const dia = fecha.toLocaleDateString("es-ES", {
-    timeZone: "Europe/Madrid", weekday: "short", day: "2-digit", month: "short",
-  });
-  const hora = fecha.toLocaleTimeString("es-ES", {
-    timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit",
-  });
+  if (!fechaHoraISO || Number.isNaN(new Date(fechaHoraISO).getTime())) return "Sin fecha";
+  const dia = formatearFechaMadrid(fechaHoraISO, { weekday: "short", day: "2-digit", month: "short" });
+  const hora = formatearFechaMadrid(fechaHoraISO, { hour: "2-digit", minute: "2-digit" });
   return `${dia} · ${hora}`;
 }
 

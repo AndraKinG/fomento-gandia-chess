@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
@@ -21,15 +22,6 @@ function ChipMargen({ margenElo }: { margenElo: number | null }) {
       {texto}
     </span>
   );
-}
-
-function formatearFechaCorta(fechaHoraISO: string | null): string {
-  if (!fechaHoraISO) return "Sin fecha";
-  const fecha = new Date(fechaHoraISO);
-  if (Number.isNaN(fecha.getTime())) return "Sin fecha";
-  return fecha.toLocaleDateString("es-ES", {
-    timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric",
-  });
 }
 
 /** Próximas 2 jornadas (fecha futura) o, si no quedan, las últimas 2 jugadas. */
@@ -123,7 +115,9 @@ export default async function EquiposPage() {
                           <span className="text-tinta">
                             R{j.ronda} · {j.es_local ? "vs" : "@"} {j.rival}
                           </span>
-                          <span className="text-xs text-tinta-suave">{formatearFechaCorta(j.fecha_hora)}</span>
+                          <span className="text-xs text-tinta-suave">
+                            {formatearFechaMadrid(j.fecha_hora, { day: "2-digit", month: "2-digit", year: "numeric" })}
+                          </span>
                         </li>
                       ))}
                     </ul>

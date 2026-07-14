@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fechaMadrid, limitesDiaMadrid } from "./fecha-madrid";
+import { fechaMadrid, formatearFechaMadrid, limitesDiaMadrid } from "./fecha-madrid";
 
 describe("fechaMadrid", () => {
   it("mapea un instante UTC de invierno a su fecha local de Madrid (+01:00)", () => {
@@ -36,5 +36,30 @@ describe("limitesDiaMadrid", () => {
     const medioDia = new Date(desde);
     medioDia.setUTCHours(medioDia.getUTCHours() + 12);
     expect(fechaMadrid(medioDia.toISOString())).toBe("2026-07-18");
+  });
+});
+
+describe("formatearFechaMadrid", () => {
+  it("formatea correctamente una jornada de invierno (+01:00) sea cual sea la TZ del proceso", () => {
+    // 15 de enero 2026, 18:30 UTC = 19:30 en Madrid (invierno).
+    expect(
+      formatearFechaMadrid("2026-01-15T18:30:00+00:00", {
+        day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+      })
+    ).toBe("15/01/2026, 19:30");
+  });
+
+  it("formatea correctamente una jornada de verano (+02:00) sea cual sea la TZ del proceso", () => {
+    // 18 de julio 2026, 17:00 UTC = 19:00 en Madrid (verano).
+    expect(
+      formatearFechaMadrid("2026-07-18T17:00:00+00:00", {
+        day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+      })
+    ).toBe("18/07/2026, 19:00");
+  });
+
+  it("devuelve 'Sin fecha' si la fecha es null o inválida", () => {
+    expect(formatearFechaMadrid(null)).toBe("Sin fecha");
+    expect(formatearFechaMadrid("no-es-una-fecha")).toBe("Sin fecha");
   });
 });

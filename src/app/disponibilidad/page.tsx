@@ -96,10 +96,16 @@ export default async function DisponibilidadPage() {
       <Cabecera titulo="Disponibilidad" subtitulo="Marca si puedes jugar cada jornada" />
       <div className="mx-auto max-w-md space-y-4 p-4">
         {[...grupos.entries()].map(([fecha, grupo]) => {
-          const valorInicial =
-            grupo.matchIds
-              .map((id) => mapaEstado.get(id))
-              .find((v): v is Valor => v !== undefined) ?? null;
+          // El grupo solo cuenta como "respondido" si TODAS sus jornadas
+          // (A/B/C del mismo día) tienen fila de disponibilidad y, además,
+          // todas comparten el mismo estado. Si falta alguna por responder,
+          // o si están respondidas mostrando estados distintos, se trata
+          // como sin responder (null) para que el jugador vuelva a
+          // confirmar en vez de ver un valor parcial o inconsistente.
+          const estados = grupo.matchIds.map((id) => mapaEstado.get(id));
+          const todasRespondidas = estados.every((e): e is Valor => e !== undefined);
+          const mismoEstado = todasRespondidas && estados.every((e) => e === estados[0]);
+          const valorInicial = mismoEstado ? (estados[0] as Valor) : null;
           return (
             <Tarjeta key={fecha} className="flex flex-col gap-2">
               <p className="font-semibold text-tinta">{formatearFechaGrupo(fecha)}</p>

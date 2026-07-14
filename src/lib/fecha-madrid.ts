@@ -13,6 +13,28 @@ export function fechaMadrid(fechaHoraISO: string): string {
   );
 }
 
+/**
+ * Formatea un instante ISO (timestamptz) para mostrarlo en pantalla, siempre
+ * en la zona horaria de Madrid y locale es-ES — sin esto, cada pantalla que
+ * usa `new Date(...).toLocaleString(...)` sin `timeZone` explícito muestra
+ * una hora distinta según en qué TZ corre el proceso Node (dev local vs.
+ * Vercel en UTC). Centraliza aquí el formateo para que no se repita (ni se
+ * olvide) el `timeZone: "Europe/Madrid"` en cada pantalla.
+ *
+ * Devuelve "Sin fecha" si `fechaHoraISO` es null o no es una fecha válida.
+ * `opciones` se pasan tal cual a `toLocaleString`, salvo `timeZone` que
+ * siempre se fuerza a "Europe/Madrid".
+ */
+export function formatearFechaMadrid(
+  fechaHoraISO: string | null,
+  opciones?: Intl.DateTimeFormatOptions
+): string {
+  if (!fechaHoraISO) return "Sin fecha";
+  const fecha = new Date(fechaHoraISO);
+  if (Number.isNaN(fecha.getTime())) return "Sin fecha";
+  return fecha.toLocaleString("es-ES", { ...opciones, timeZone: "Europe/Madrid" });
+}
+
 /** Día siguiente a `fecha` (YYYY-MM-DD), en aritmética UTC pura (sin DST). */
 function diaSiguiente(fecha: string): string {
   const d = new Date(`${fecha}T00:00:00Z`);

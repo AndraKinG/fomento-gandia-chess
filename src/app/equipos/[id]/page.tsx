@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { esAdmin } from "@/lib/auth/es-admin";
+import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Boton } from "@/components/ui/Boton";
@@ -31,15 +32,11 @@ function ChipEstado({ estado }: { estado: Estado }) {
 }
 
 function formatearFecha(fechaHoraISO: string | null): string {
-  if (!fechaHoraISO) return "Sin fecha";
-  const fecha = new Date(fechaHoraISO);
-  if (Number.isNaN(fecha.getTime())) return "Sin fecha";
-  const dia = fecha.toLocaleDateString("es-ES", {
-    timeZone: "Europe/Madrid", weekday: "short", day: "2-digit", month: "short", year: "numeric",
+  if (!fechaHoraISO || Number.isNaN(new Date(fechaHoraISO).getTime())) return "Sin fecha";
+  const dia = formatearFechaMadrid(fechaHoraISO, {
+    weekday: "short", day: "2-digit", month: "short", year: "numeric",
   });
-  const hora = fecha.toLocaleTimeString("es-ES", {
-    timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit",
-  });
+  const hora = formatearFechaMadrid(fechaHoraISO, { hour: "2-digit", minute: "2-digit" });
   return `${dia} · ${hora}`;
 }
 

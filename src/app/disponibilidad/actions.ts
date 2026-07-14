@@ -17,6 +17,8 @@ export async function marcarDisponibilidad(
   fecha: string,
   estado: "disponible" | "no_disponible" | "duda"
 ): Promise<Resultado> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return { error: "Fecha no válida" };
+
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "No autenticado" };

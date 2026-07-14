@@ -21,10 +21,13 @@ function sufijoEquipo(nombre: string): Sufijo {
  * Lógica interna (sin gate de autorización) que descarga la página pública
  * del calendario de Interclubs FACV, la parsea y sincroniza `matches` de
  * cada equipo (A/B/C) de la temporada activa: crea las jornadas que no
- * existan y actualiza rival/es_local/fecha de las que ya estén (upsert por
- * `(team_id, ronda)`). El estado se deja siempre en 'pendiente' — sincronizar
- * el resultado real de una jornada jugada es responsabilidad del importador
- * de resultados (fuera del alcance de esta tarea).
+ * existan (con estado inicial 'pendiente') y actualiza rival/es_local/fecha
+ * de las que ya estén (upsert por `(team_id, ronda)`), sin tocar su estado.
+ * Las jornadas ya marcadas como 'jugado' se respetan por completo (ni
+ * siquiera se actualiza rival/fecha): sincronizar el resultado real de una
+ * jornada jugada es responsabilidad del importador de resultados (fuera del
+ * alcance de esta tarea), y un re-sync de calendario no debe pisar ajustes
+ * que el capitán haya hecho sobre un encuentro ya jugado.
  *
  * NO exportar directamente desde una acción de servidor sin comprobar antes
  * que quien invoca es admin (ver `src/app/admin/equipos/actions.ts`).
@@ -33,6 +36,7 @@ export async function sincronizarCalendarioFACVCore(): Promise<{
   creadas: number;
   actualizadas: number;
   omitidas: number;
+  respetados: number;
   porEquipo?: Record<string, number>;
   error?: string;
 }> {
@@ -42,7 +46,7 @@ export async function sincronizarCalendarioFACVCore(): Promise<{
     const { data: season } = await admin
       .from("seasons").select("id").eq("activa", true).maybeSingle();
     if (!season) {
-      return { creadas: 0, actualizadas: 0, omitidas: 0, error: "No hay ninguna temporada activa" };
+      return { creadas: 0, actualizadas: 0, omitidas: 0, respetados: 0, error: "No hay ninguna temporada activa" };
     }
 
     const { data: equipos } = await admin
@@ -52,6 +56,7 @@ export async function sincronizarCalendarioFACVCore(): Promise<{
         creadas: 0,
         actualizadas: 0,
         omitidas: 0,
+        respetados: 0,
         error: "No hay equipos dados de alta en la temporada activa; créalos primero",
       };
     }
@@ -72,6 +77,7 @@ export async function sincronizarCalendarioFACVCore(): Promise<{
         creadas: 0,
         actualizadas: 0,
         omitidas: 0,
+        respetados: 0,
         error: `No se pudo descargar el calendario (HTTP ${pagina.status})`,
       };
     }
@@ -82,22 +88,26 @@ export async function sincronizarCalendarioFACVCore(): Promise<{
         creadas: 0,
         actualizadas: 0,
         omitidas: 0,
+        respetados: 0,
         error: "La página no contiene encuentros del club (¿rediseño de la web FACV?)",
       };
     }
 
     // Jornadas ya existentes de los equipos de la temporada, indexadas por
     // "team_id/ronda" para decidir insert vs. update sin una consulta por fila.
+    // Se incluye el estado para poder respetar (no tocar) los encuentros ya
+    // jugados: ver más abajo.
     const idsEquipos = equipos.map((e) => e.id);
     const { data: existentes } = await admin
-      .from("matches").select("id, team_id, ronda").in("team_id", idsEquipos);
+      .from("matches").select("id, team_id, ronda, estado").in("team_id", idsEquipos);
     const existentePorClave = new Map(
-      (existentes ?? []).map((m) => [`${m.team_id}/${m.ronda}`, m.id])
+      (existentes ?? []).map((m) => [`${m.team_id}/${m.ronda}`, m])
     );
 
     let creadas = 0;
     let actualizadas = 0;
     let omitidas = 0;
+    let respetados = 0;
     const porEquipo: Record<string, number> = {};
 
     for (const j of jornadas) {
@@ -115,31 +125,49 @@ export async function sincronizarCalendarioFACVCore(): Promise<{
       // guarden correctamente en la columna timestamptz.
       const fechaHora = j.fecha ? `${j.fecha}${offsetMadrid(j.fecha)}` : null;
 
-      const valores = {
+      // Campos que sí puede tocar la sincronización FACV. `estado` queda
+      // fuera a propósito: en el UPDATE no debe pisarlo (ver más abajo) y en
+      // el INSERT se fija explícitamente a "pendiente".
+      const camposComunes = {
         team_id: equipo.id,
         ronda: j.ronda,
         rival,
         es_local: esLocal,
         fecha_hora: fechaHora,
-        estado: "pendiente" as const,
       };
 
       const clave = `${equipo.id}/${j.ronda}`;
-      const idExistente = existentePorClave.get(clave);
-      if (idExistente) {
-        const { error } = await admin.from("matches").update(valores).eq("id", idExistente);
-        if (error) return { creadas, actualizadas, omitidas, error: error.message };
+      const existente = existentePorClave.get(clave);
+
+      if (existente?.estado === "jugado") {
+        // FACV no debe pisar resultados ni ajustes del capitán en encuentros
+        // ya jugados: se respeta la fila tal cual está.
+        respetados++;
+        continue;
+      }
+
+      if (existente) {
+        // Sin `estado` en el payload: un re-sync no debe revertir a
+        // "pendiente" un encuentro que el capitán ya haya ajustado por otra
+        // vía, ni pisar cualquier otro estado intermedio.
+        const { error } = await admin.from("matches").update(camposComunes).eq("id", existente.id);
+        if (error) return { creadas, actualizadas, omitidas, respetados, error: error.message };
         actualizadas++;
       } else {
-        const { error } = await admin.from("matches").insert(valores);
-        if (error) return { creadas, actualizadas, omitidas, error: error.message };
+        const { error } = await admin
+          .from("matches")
+          .insert({ ...camposComunes, estado: "pendiente" as const });
+        if (error) return { creadas, actualizadas, omitidas, respetados, error: error.message };
         creadas++;
       }
       porEquipo[equipo.nombre] = (porEquipo[equipo.nombre] ?? 0) + 1;
     }
 
-    return { creadas, actualizadas, omitidas, porEquipo };
+    return { creadas, actualizadas, omitidas, respetados, porEquipo };
   } catch {
-    return { creadas: 0, actualizadas: 0, omitidas: 0, error: "Error al procesar el calendario FACV" };
+    return {
+      creadas: 0, actualizadas: 0, omitidas: 0, respetados: 0,
+      error: "Error al procesar el calendario FACV",
+    };
   }
 }

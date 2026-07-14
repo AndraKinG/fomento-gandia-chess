@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 import {
   crearEquipo,
   crearJornada,
@@ -22,15 +23,6 @@ function volver(resultado: { ok?: string; error?: string }): never {
     tipo: resultado.ok ? "ok" : "error",
   });
   redirect(`/admin/equipos?${params.toString()}`);
-}
-
-function formatearFecha(fechaHora: string | null): string {
-  if (!fechaHora) return "Sin fecha";
-  const fecha = new Date(fechaHora);
-  if (Number.isNaN(fecha.getTime())) return "Sin fecha";
-  return fecha.toLocaleString("es-ES", {
-    day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
-  });
 }
 
 function ChipMargen({ margenElo }: { margenElo: number | null }) {
@@ -267,7 +259,11 @@ export default async function EquiposPage({
                               <span className="text-tinta">
                                 R{j.ronda} · {j.es_local ? "vs" : "@"} {j.rival}
                               </span>
-                              <span className="text-xs text-tinta-suave">{formatearFecha(j.fecha_hora)}</span>
+                              <span className="text-xs text-tinta-suave">
+                                {formatearFechaMadrid(j.fecha_hora, {
+                                  day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+                                })}
+                              </span>
                             </li>
                           ))}
                         </ul>

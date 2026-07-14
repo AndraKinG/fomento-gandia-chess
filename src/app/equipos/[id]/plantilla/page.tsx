@@ -1,22 +1,13 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { esAdmin } from "@/lib/auth/es-admin";
+import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 
 type Estado = "disponible" | "no_disponible" | "duda";
 const ICONOS: Record<Estado, string> = { disponible: "✅", no_disponible: "❌", duda: "🤔" };
-
-function formatearFecha(fechaHora: string | null): string {
-  if (!fechaHora) return "Sin fecha";
-  const fecha = new Date(fechaHora);
-  if (Number.isNaN(fecha.getTime())) return "Sin fecha";
-  return fecha.toLocaleString("es-ES", {
-    timeZone: "Europe/Madrid",
-    day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
-  });
-}
 
 export default async function PlantillaPage({
   params,
@@ -89,7 +80,11 @@ export default async function PlantillaPage({
                 <p className="font-semibold text-tinta">
                   R{j.ronda} · {j.es_local ? "vs" : "@"} {j.rival}
                 </p>
-                <p className="text-xs text-tinta-suave">{formatearFecha(j.fecha_hora)}</p>
+                <p className="text-xs text-tinta-suave">
+                  {formatearFechaMadrid(j.fecha_hora, {
+                    day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+                  })}
+                </p>
                 <ul className="divide-y divide-borde">
                   {filas.map((f) => (
                     <li key={f.etiqueta} className="flex items-center justify-between py-1.5 text-sm">

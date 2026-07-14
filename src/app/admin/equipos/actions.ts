@@ -111,11 +111,15 @@ export async function sincronizarCalendarioFACV(): Promise<{
   creadas: number;
   actualizadas: number;
   omitidas: number;
+  respetados: number;
   porEquipo?: Record<string, number>;
   error?: string;
 }> {
   if (!(await esAdmin())) {
-    return { creadas: 0, actualizadas: 0, omitidas: 0, error: "Solo el admin puede hacer esto" };
+    return {
+      creadas: 0, actualizadas: 0, omitidas: 0, respetados: 0,
+      error: "Solo el admin puede hacer esto",
+    };
   }
   const resultado = await sincronizarCalendarioFACVCore();
   if (!resultado.error) revalidatePath("/admin/equipos");
