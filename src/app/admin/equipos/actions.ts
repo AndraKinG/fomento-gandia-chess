@@ -1,0 +1,101 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { esAdmin } from "@/lib/auth/es-admin";
+
+type Resultado = { ok?: string; error?: string };
+
+const MARGENES_VALIDOS = ["", "100", "200"] as const;
+
+/** Da de alta un equipo en la temporada activa. */
+export async function crearEquipo(formData: FormData): Promise<Resultado> {
+  if (!(await esAdmin())) return { error: "Solo el admin puede hacer esto" };
+
+  const nombre = String(formData.get("nombre") ?? "").trim();
+  const categoria = String(formData.get("categoria") ?? "").trim();
+  const margenRaw = String(formData.get("margen_elo") ?? "");
+  const numTablerosRaw = String(formData.get("num_tableros") ?? "");
+
+  if (!nombre) return { error: "El nombre del equipo no puede estar vacío" };
+  if (!categoria) return { error: "La categoría no puede estar vacía" };
+  if (!MARGENES_VALIDOS.includes(margenRaw as (typeof MARGENES_VALIDOS)[number])) {
+    return { error: "Margen de ELO no válido" };
+  }
+  const margenElo = margenRaw === "" ? null : Number(margenRaw);
+
+  const numTableros = Number(numTablerosRaw);
+  if (!Number.isInteger(numTableros) || numTableros < 1) {
+    return { error: "Número de tableros no válido" };
+  }
+
+  const admin = createAdminClient();
+  const { data: season } = await admin
+    .from("seasons").select("id").eq("activa", true).maybeSingle();
+  if (!season) {
+    return { error: "No hay temporada activa. Créala primero desde Orden de fuerza." };
+  }
+
+  const { error } = await admin.from("teams").insert({
+    season_id: season.id,
+    nombre,
+    categoria,
+    margen_elo: margenElo,
+    num_tableros: numTableros,
+  });
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "Ya existe un equipo con ese nombre en esta temporada" };
+    }
+    return { error: error.message };
+  }
+  revalidatePath("/admin/equipos");
+  return { ok: `Equipo "${nombre}" creado` };
+}
+
+/** Elimina un equipo, salvo que ya tenga jornadas creadas. */
+export async function eliminarEquipo(teamId: string): Promise<Resultado> {
+  if (!(await esAdmin())) return { error: "Solo el admin puede hacer esto" };
+  const admin = createAdminClient();
+
+  const { count, error: countErr } = await admin
+    .from("matches")
+    .select("id", { count: "exact", head: true })
+    .eq("team_id", teamId);
+  if (countErr) return { error: countErr.message };
+  if (count && count > 0) {
+    return { error: "No se puede eliminar un equipo que ya tiene jornadas creadas" };
+  }
+
+  const { error } = await admin.from("teams").delete().eq("id", teamId);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/equipos");
+  return { ok: "Equipo eliminado" };
+}
+
+/** Nombra a una ficha capitana de un equipo. */
+export async function nombrarCapitan(teamId: string, playerId: string): Promise<Resultado> {
+  if (!(await esAdmin())) return { error: "Solo el admin puede hacer esto" };
+  if (!playerId) return { error: "Selecciona una ficha" };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("team_captains").insert({ team_id: teamId, player_id: playerId });
+  if (error) {
+    if (error.code === "23505") return { error: "Esa ficha ya es capitana de este equipo" };
+    return { error: error.message };
+  }
+  revalidatePath("/admin/equipos");
+  return { ok: "Capitán nombrado" };
+}
+
+/** Retira a una ficha de capitán de un equipo. */
+export async function quitarCapitan(teamId: string, playerId: string): Promise<Resultado> {
+  if (!(await esAdmin())) return { error: "Solo el admin puede hacer esto" };
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("team_captains").delete().eq("team_id", teamId).eq("player_id", playerId);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/equipos");
+  return { ok: "Capitán retirado" };
+}

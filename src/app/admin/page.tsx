@@ -16,6 +16,12 @@ const ENLACES = [
     detalle: "Aprobar o rechazar solicitudes de vinculación pendientes",
   },
   {
+    href: "/admin/equipos",
+    icono: "🛡️",
+    titulo: "Equipos y capitanes",
+    detalle: "Dar de alta equipos de la temporada y nombrar capitanes",
+  },
+  {
     href: "/admin/elo",
     icono: "📈",
     titulo: "Actualización de ELO",
