@@ -4,6 +4,26 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { esAdmin } from "@/lib/auth/es-admin";
 import { parseOrdenFuerza } from "@/lib/import/orden-fuerza-parser";
+import { sincronizarOrdenFuerzaFACVCore } from "@/lib/import/facv-of-apply";
+
+/**
+ * Descarga la página pública del orden de fuerza oficial FACV del club y la
+ * sincroniza con `force_order` de la temporada activa.
+ * Acción de servidor gateada por sesión admin.
+ */
+export async function sincronizarOrdenFuerzaFACV(): Promise<{
+  creados: number;
+  actualizados: number;
+  avisos?: string[];
+  error?: string;
+}> {
+  if (!(await esAdmin())) {
+    return { creados: 0, actualizados: 0, error: "Solo el admin puede hacer esto" };
+  }
+  const resultado = await sincronizarOrdenFuerzaFACVCore();
+  if (!resultado.error) revalidatePath("/admin/orden-fuerza");
+  return resultado;
+}
 
 export async function importarOrdenFuerza(
   seasonNombre: string,
