@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
 import { aplicarListaFeda, actualizarEloFeda, actualizarEloFide } from "./actions";
+import { Cabecera } from "@/components/ui/Cabecera";
+import { Tarjeta } from "@/components/ui/Tarjeta";
+import { Banner } from "@/components/ui/Banner";
 
 export default async function EloAdminPage({
   searchParams,
@@ -63,42 +66,38 @@ export default async function EloAdminPage({
   }
 
   return (
-    <main className="mx-auto max-w-md p-4">
-      <h1 className="text-xl font-bold">Actualización de ELO</h1>
-      {msg ? (
-        <p
-          className={`mt-4 rounded p-3 text-sm ${
-            tipo === "ok"
-              ? "bg-green-100 text-green-800"
-              : "bg-red-100 text-red-800"
-          }`}
-        >
-          {msg}
-        </p>
-      ) : null}
-      <form action={refrescarFide} className="mt-4">
-        <button className="rounded bg-black p-3 text-sm font-semibold text-white">
-          Actualizar FIDE ahora (perfiles fide.com)
-        </button>
-      </form>
-      <form action={refrescarFeda} className="mt-4">
-        <button className="rounded bg-black p-3 text-sm font-semibold text-white">
-          Actualizar FEDA ahora (descarga lista oficial)
-        </button>
-      </form>
-      <p className="mt-1 text-xs text-gray-500">
-        Ojo: la lista automática de feda.org puede estar desactualizada
-        (última publicada: 2023). Para datos actuales usa la subida manual
-        del fichero.
-      </p>
-      <form action={subirFichero} className="mt-6 flex flex-col gap-2">
-        <label className="text-sm font-medium">
-          Respaldo manual: subir lista FEDA (.xlsx)
-        </label>
-        <input type="file" name="fichero" accept=".xlsx" required
-          className="rounded border p-2 text-sm" />
-        <button className="rounded border p-2 text-sm">Aplicar fichero</button>
-      </form>
+    <main className="min-h-dvh bg-fondo pb-10">
+      <Cabecera titulo="Actualización de ELO" />
+      <div className="mx-auto max-w-md space-y-4 p-4">
+        {msg ? <Banner tipo={tipo === "ok" ? "ok" : "error"}>{msg}</Banner> : null}
+        <form action={refrescarFide}>
+          <button className="w-full rounded-xl bg-degradado-club p-3 text-sm font-semibold text-sobre-acento">
+            Actualizar FIDE ahora (perfiles fide.com)
+          </button>
+        </form>
+        <form action={refrescarFeda}>
+          <button className="w-full rounded-xl bg-degradado-club p-3 text-sm font-semibold text-sobre-acento">
+            Actualizar FEDA ahora (descarga lista oficial)
+          </button>
+        </form>
+        <Banner tipo="aviso">
+          Ojo: la lista automática de feda.org puede estar desactualizada
+          (última publicada: 2023). Para datos actuales usa la subida manual
+          del fichero.
+        </Banner>
+        <Tarjeta>
+          <form action={subirFichero} className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-tinta">
+              Respaldo manual: subir lista FEDA (.xlsx)
+            </label>
+            <input type="file" name="fichero" accept=".xlsx" required
+              className="rounded-xl border border-borde bg-tarjeta p-2 text-sm text-tinta" />
+            <button className="rounded-xl border border-borde bg-tarjeta p-2 text-sm text-tinta">
+              Aplicar fichero
+            </button>
+          </form>
+        </Tarjeta>
+      </div>
     </main>
   );
 }

@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { importarOrdenFuerza } from "./actions";
+import { Cabecera } from "@/components/ui/Cabecera";
+import { Tarjeta } from "@/components/ui/Tarjeta";
+import { Banner } from "@/components/ui/Banner";
+import { ChipElo } from "@/components/ui/ChipElo";
 
 export default async function OrdenFuerzaPage({
   searchParams,
@@ -33,45 +37,52 @@ export default async function OrdenFuerzaPage({
   }
 
   return (
-    <main className="mx-auto max-w-md p-4">
-      <h1 className="text-xl font-bold">Orden de fuerza</h1>
-      {msg ? (
-        <p
-          className={`mt-4 rounded p-3 text-sm ${
-            tipo === "ok"
-              ? "bg-green-100 text-green-800"
-              : "bg-red-100 text-red-800"
-          }`}
-        >
-          {msg}
-        </p>
-      ) : null}
-      {orden && orden.length > 0 ? (
-        <ol className="mt-4 space-y-1">
-          {orden.map((f) => {
-            const p = f.players as unknown as {
-              nombre: string; elo_fide: number | null; elo_feda: number | null;
-            };
-            return (
-              <li key={`${f.numero}-${f.bis_index}`} className="rounded border p-2 text-sm">
-                <b>{f.numero}{f.bis_index ? "bis" : ""}</b> · {p.nombre} ·
-                FIDE {p.elo_fide ?? "—"} · FEDA {p.elo_feda ?? "—"}
-              </li>
-            );
-          })}
-        </ol>
-      ) : (
-        <form action={accion} className="mt-4 flex flex-col gap-3">
-          <input name="season" required placeholder="Nombre temporada (ej. Interclubs 2027)"
-            className="rounded border p-3" />
-          <textarea name="texto" required rows={12}
-            placeholder={"1; Apellidos, Nombre; fide_id; feda_id\n2; ..."}
-            className="rounded border p-3 font-mono text-xs" />
-          <button className="rounded bg-black p-3 font-semibold text-white">
-            Importar
-          </button>
-        </form>
-      )}
+    <main className="min-h-dvh bg-fondo pb-10">
+      <Cabecera titulo="Orden de fuerza" />
+      <div className="mx-auto max-w-md space-y-4 p-4">
+        {msg ? <Banner tipo={tipo === "ok" ? "ok" : "error"}>{msg}</Banner> : null}
+        {orden && orden.length > 0 ? (
+          <ol className="space-y-2">
+            {orden.map((f) => {
+              const p = f.players as unknown as {
+                nombre: string; elo_fide: number | null; elo_feda: number | null;
+              };
+              return (
+                <li key={`${f.numero}-${f.bis_index}`}>
+                  <Tarjeta className="flex items-center gap-3 p-3">
+                    <span
+                      className={`grid h-8 w-8 shrink-0 place-items-center rounded-full bg-acento font-semibold text-sobre-acento ${
+                        f.bis_index ? "text-[0.65rem]" : "text-sm"
+                      }`}
+                    >
+                      {f.numero}
+                      {f.bis_index ? "bis" : ""}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-tinta">{p.nombre}</p>
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        <ChipElo valor={p.elo_fide} etiqueta="FIDE" />
+                        <ChipElo valor={p.elo_feda} etiqueta="FEDA" />
+                      </div>
+                    </div>
+                  </Tarjeta>
+                </li>
+              );
+            })}
+          </ol>
+        ) : (
+          <form action={accion} className="flex flex-col gap-3">
+            <input name="season" required placeholder="Nombre temporada (ej. Interclubs 2027)"
+              className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta" />
+            <textarea name="texto" required rows={12}
+              placeholder={"1; Apellidos, Nombre; fide_id; feda_id\n2; ..."}
+              className="rounded-xl border border-borde bg-tarjeta p-3 font-mono text-xs text-tinta" />
+            <button className="rounded-xl bg-acento p-3 font-semibold text-sobre-acento">
+              Importar
+            </button>
+          </form>
+        )}
+      </div>
     </main>
   );
 }
