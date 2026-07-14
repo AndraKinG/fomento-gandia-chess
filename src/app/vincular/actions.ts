@@ -15,6 +15,12 @@ export async function solicitarVinculo(playerId: string): Promise<{ error?: stri
   const { error } = await supabase
     .from("link_requests")
     .insert({ user_id: user.id, player_id: playerId });
-  if (error) return { error: "No se pudo crear la solicitud (¿ya tienes una?)" };
+  if (error) {
+    // Postgres error code 23505 = unique constraint violation
+    if (error.code === "23505") {
+      return { error: "Ese jugador ya tiene una solicitud pendiente, o tú ya tienes una" };
+    }
+    return { error: "No se pudo crear la solicitud" };
+  }
   redirect("/?solicitud=enviada");
 }

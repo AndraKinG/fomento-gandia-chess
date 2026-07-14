@@ -1,8 +1,15 @@
+import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { solicitarVinculo } from "./actions";
 
-export default async function VincularPage() {
+export default async function VincularPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
+
   const supabase = await createServerSupabase();
   const { data: players } = await supabase
     .from("players")
@@ -31,6 +38,9 @@ export default async function VincularPage() {
       <p className="mt-1 text-sm text-gray-600">
         Busca tu nombre en la lista del club. El admin confirmará tu vinculación.
       </p>
+      {error && (
+        <p className="mt-4 rounded bg-red-100 p-3 text-sm text-red-800">{error}</p>
+      )}
       <ul className="mt-4 space-y-2">
         {libres.map((p) => (
           <li key={p.id} className="flex items-center justify-between rounded border p-3">
@@ -43,7 +53,8 @@ export default async function VincularPage() {
             <form
               action={async () => {
                 "use server";
-                await solicitarVinculo(p.id);
+                const r = await solicitarVinculo(p.id);
+                if (r?.error) redirect("/vincular?error=" + encodeURIComponent(r.error));
               }}
             >
               <button className="rounded bg-black px-3 py-1 text-sm text-white">
