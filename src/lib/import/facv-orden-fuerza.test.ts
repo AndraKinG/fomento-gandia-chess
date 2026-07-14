@@ -64,4 +64,100 @@ describe("parseOrdenFuerzaFACV", () => {
       []
     );
   });
+
+  it("parsea '5 bis' (con espacio) como {numero: 5, bisIndex: 1}", () => {
+    const syntheticHtml = `
+      <table>
+        <tr data-search="test 5 bis">
+          <td class="col-of">
+            <span class="badge text-bg-dark px-3 py-2">5 bis</span>
+          </td>
+          <td><span class="cut">Test Name 5bis</span></td>
+          <td class="col-elo">1800</td>
+          <td><a href="https://ratings.fide.com/profile/123456">123456</a></td>
+        </tr>
+      </table>
+    `;
+    const result = parseOrdenFuerzaFACV(syntheticHtml);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({
+      numero: 5,
+      bisIndex: 1,
+      nombre: "Test Name 5bis",
+      eloOficial: 1800,
+      fideId: "123456",
+    });
+  });
+
+  it("parsea '7bis' (sin espacio) como {numero: 7, bisIndex: 1}", () => {
+    const syntheticHtml = `
+      <table>
+        <tr data-search="test 7bis">
+          <td class="col-of">
+            <span class="badge text-bg-dark px-3 py-2">7bis</span>
+          </td>
+          <td><span class="cut">Test Name 7bis</span></td>
+          <td class="col-elo">1900</td>
+          <td><a href="https://ratings.fide.com/profile/789012">789012</a></td>
+        </tr>
+      </table>
+    `;
+    const result = parseOrdenFuerzaFACV(syntheticHtml);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({
+      numero: 7,
+      bisIndex: 1,
+      nombre: "Test Name 7bis",
+      eloOficial: 1900,
+      fideId: "789012",
+    });
+  });
+
+  it("devuelve fideId null cuando falta el link ratings.fide.com", () => {
+    const syntheticHtml = `
+      <table>
+        <tr data-search="test sin fide">
+          <td class="col-of">
+            <span class="badge text-bg-dark px-3 py-2">10</span>
+          </td>
+          <td><span class="cut">Test Sin Fide</span></td>
+          <td class="col-elo">1700</td>
+          <td><!-- Sin link FIDE --></td>
+        </tr>
+      </table>
+    `;
+    const result = parseOrdenFuerzaFACV(syntheticHtml);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({
+      numero: 10,
+      bisIndex: 0,
+      nombre: "Test Sin Fide",
+      eloOficial: 1700,
+      fideId: null,
+    });
+  });
+
+  it("preserva mayúsculas en entidades HTML (Pe&ntilde;a, &Aacute;ngel)", () => {
+    const syntheticHtml = `
+      <table>
+        <tr data-search="test">
+          <td class="col-of">
+            <span class="badge text-bg-dark px-3 py-2">3</span>
+          </td>
+          <td><span class="cut">Pe&ntilde;a, &Aacute;ngel</span></td>
+          <td class="col-elo">1750</td>
+          <td><a href="https://ratings.fide.com/profile/555666">555666</a></td>
+        </tr>
+      </table>
+    `;
+    const result = parseOrdenFuerzaFACV(syntheticHtml);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({
+      numero: 3,
+      bisIndex: 0,
+      nombre: "Peña, Ángel",
+      eloOficial: 1750,
+      fideId: "555666",
+    });
+  });
 });

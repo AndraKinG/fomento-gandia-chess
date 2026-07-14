@@ -18,12 +18,18 @@ const FIDE_RE = /ratings\.fide\.com\/profile\/([0-9]+)/i;
 function decodeEntidades(texto: string): string {
   return texto
     .replace(/&amp;/g, "&")
-    .replace(/&ntilde;/gi, "ñ")
-    .replace(/&aacute;/gi, "á")
-    .replace(/&eacute;/gi, "é")
-    .replace(/&iacute;/gi, "í")
-    .replace(/&oacute;/gi, "ó")
-    .replace(/&uacute;/gi, "ú")
+    .replace(/&Ntilde;/g, "Ñ")
+    .replace(/&ntilde;/g, "ñ")
+    .replace(/&Aacute;/g, "Á")
+    .replace(/&aacute;/g, "á")
+    .replace(/&Eacute;/g, "É")
+    .replace(/&eacute;/g, "é")
+    .replace(/&Iacute;/g, "Í")
+    .replace(/&iacute;/g, "í")
+    .replace(/&Oacute;/g, "Ó")
+    .replace(/&oacute;/g, "ó")
+    .replace(/&Uacute;/g, "Ú")
+    .replace(/&uacute;/g, "ú")
     .replace(/\s+/g, " ")
     .trim();
 }
