@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { registro } from "../actions";
+import { Banner } from "@/components/ui/Banner";
 
 export default async function RegistroPage({
   searchParams,
@@ -9,30 +10,62 @@ export default async function RegistroPage({
 }) {
   const { error } = await searchParams;
   return (
-    <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 p-6">
-      <h1 className="text-2xl font-bold">Crear cuenta</h1>
-      {error && (
-        <p className="rounded bg-red-100 p-3 text-sm text-red-800">{error}</p>
-      )}
-      <form
-        action={async (formData) => {
-          "use server";
-          const r = await registro(formData);
-          if (r?.error) redirect("/registro?error=" + encodeURIComponent(r.error));
-        }}
-        className="flex flex-col gap-3"
-      >
-        <input name="email" type="email" required placeholder="Email"
-          className="rounded border p-3" />
-        <input name="password" type="password" required minLength={8}
-          placeholder="Contraseña (mín. 8)" className="rounded border p-3" />
-        <button className="rounded bg-black p-3 font-semibold text-white">
-          Registrarme
-        </button>
-      </form>
-      <p className="text-sm">
-        ¿Ya tienes cuenta? <Link className="underline" href="/login">Entra</Link>
-      </p>
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-fondo p-6">
+      <div className="flex w-full max-w-sm flex-col gap-6">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <span className="bg-degradado-club bg-clip-text text-6xl leading-none text-transparent">
+            ♞
+          </span>
+          <h1 className="text-2xl font-bold text-tinta">Crear cuenta</h1>
+          <p className="text-sm text-tinta-suave">Club de ajedrez · Gandia</p>
+        </div>
+        {error && <Banner tipo="error">{error}</Banner>}
+        <form
+          action={async (formData) => {
+            "use server";
+            const r = await registro(formData);
+            if (r?.error) redirect("/registro?error=" + encodeURIComponent(r.error));
+          }}
+          className="flex flex-col gap-3"
+        >
+          <div className="flex flex-col gap-1">
+            <label htmlFor="email" className="text-sm text-tinta">
+              Email
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              placeholder="tucorreo@ejemplo.com"
+              className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta placeholder:text-tinta-suave"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="password" className="text-sm text-tinta">
+              Contraseña (mín. 8)
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              minLength={8}
+              placeholder="Contraseña (mín. 8)"
+              className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta placeholder:text-tinta-suave"
+            />
+          </div>
+          <button className="rounded-xl bg-degradado-club p-3 font-semibold text-sobre-acento">
+            Registrarme
+          </button>
+        </form>
+        <p className="text-center text-sm text-tinta">
+          ¿Ya tienes cuenta?{" "}
+          <Link className="text-acento underline" href="/login">
+            Entra
+          </Link>
+        </p>
+      </div>
     </main>
   );
 }
