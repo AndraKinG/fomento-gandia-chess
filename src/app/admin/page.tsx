@@ -8,6 +8,9 @@ export default function AdminPage() {
         <Link className="rounded border p-3" href="/admin/orden-fuerza">
           Orden de fuerza
         </Link>
+        <Link className="rounded border p-3" href="/admin/vinculaciones">
+          Vinculaciones pendientes
+        </Link>
         <Link className="rounded border p-3" href="/admin/elo">
           Actualización de ELO
         </Link>
