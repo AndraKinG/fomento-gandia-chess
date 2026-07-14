@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { esAdmin } from "@/lib/auth/es-admin";
+import { sincronizarCalendarioFACVCore } from "@/lib/import/facv-calendario-apply";
 
 type Resultado = { ok?: string; error?: string };
 
@@ -98,4 +99,61 @@ export async function quitarCapitan(teamId: string, playerId: string): Promise<R
   if (error) return { error: error.message };
   revalidatePath("/admin/equipos");
   return { ok: "Capitán retirado" };
+}
+
+/**
+ * Descarga el calendario público de Interclubs FACV y sincroniza las
+ * jornadas (`matches`) de cada equipo A/B/C de la temporada activa.
+ * Acción de servidor gateada por sesión admin.
+ */
+export async function sincronizarCalendarioFACV(): Promise<{
+  creadas: number;
+  actualizadas: number;
+  porEquipo?: Record<string, number>;
+  error?: string;
+}> {
+  if (!(await esAdmin())) {
+    return { creadas: 0, actualizadas: 0, error: "Solo el admin puede hacer esto" };
+  }
+  const resultado = await sincronizarCalendarioFACVCore();
+  if (!resultado.error) revalidatePath("/admin/equipos");
+  return resultado;
+}
+
+/** Da de alta manualmente una jornada de un equipo (respaldo del importador FACV). */
+export async function crearJornada(formData: FormData): Promise<Resultado> {
+  if (!(await esAdmin())) return { error: "Solo el admin puede hacer esto" };
+
+  const teamId = String(formData.get("team_id") ?? "");
+  const rondaRaw = String(formData.get("ronda") ?? "");
+  const fechaRaw = String(formData.get("fecha") ?? "").trim();
+  const rival = String(formData.get("rival") ?? "").trim();
+  const esLocalRaw = String(formData.get("es_local") ?? "");
+  const sede = String(formData.get("sede") ?? "").trim();
+
+  if (!teamId) return { error: "Selecciona un equipo" };
+  const ronda = Number(rondaRaw);
+  if (!Number.isInteger(ronda) || ronda < 1) return { error: "Ronda no válida" };
+  if (!rival) return { error: "El rival no puede estar vacío" };
+  if (esLocalRaw !== "true" && esLocalRaw !== "false") {
+    return { error: "Indica si el equipo juega como local o visitante" };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("matches").insert({
+    team_id: teamId,
+    ronda,
+    fecha_hora: fechaRaw || null,
+    rival,
+    es_local: esLocalRaw === "true",
+    sede: sede || null,
+    // estado se deja al valor por defecto de la columna ('pendiente'): la
+    // sincronización de resultados jugados es responsabilidad de otra tarea.
+  });
+  if (error) {
+    if (error.code === "23505") return { error: "Ese equipo ya tiene una jornada en esa ronda" };
+    return { error: error.message };
+  }
+  revalidatePath("/admin/equipos");
+  return { ok: `Jornada ${ronda} creada` };
 }

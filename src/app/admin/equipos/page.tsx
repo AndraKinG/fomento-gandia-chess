@@ -1,6 +1,13 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { crearEquipo, eliminarEquipo, nombrarCapitan, quitarCapitan } from "./actions";
+import {
+  crearEquipo,
+  crearJornada,
+  eliminarEquipo,
+  nombrarCapitan,
+  quitarCapitan,
+  sincronizarCalendarioFACV,
+} from "./actions";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Banner } from "@/components/ui/Banner";
@@ -15,6 +22,15 @@ function volver(resultado: { ok?: string; error?: string }): never {
     tipo: resultado.ok ? "ok" : "error",
   });
   redirect(`/admin/equipos?${params.toString()}`);
+}
+
+function formatearFecha(fechaHora: string | null): string {
+  if (!fechaHora) return "Sin fecha";
+  const fecha = new Date(fechaHora);
+  if (Number.isNaN(fecha.getTime())) return "Sin fecha";
+  return fecha.toLocaleString("es-ES", {
+    day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
 }
 
 function ChipMargen({ margenElo }: { margenElo: number | null }) {
@@ -67,6 +83,44 @@ export default async function EquiposPage({
   const { data: fichas } = await supabase
     .from("players").select("id, nombre").eq("activo", true).order("nombre");
 
+  type Jornada = {
+    id: string;
+    team_id: string;
+    ronda: number;
+    fecha_hora: string | null;
+    rival: string;
+    es_local: boolean;
+    sede: string | null;
+    estado: string;
+  };
+  const idsEquipos = (equipos ?? []).map((eq) => eq.id);
+  const jornadas: Jornada[] = idsEquipos.length > 0
+    ? ((
+        await supabase
+          .from("matches")
+          .select("id, team_id, ronda, fecha_hora, rival, es_local, sede, estado")
+          .in("team_id", idsEquipos)
+          .order("ronda")
+      ).data ?? [])
+    : [];
+  const jornadasPorEquipo = new Map<string, Jornada[]>();
+  for (const j of jornadas) {
+    const lista = jornadasPorEquipo.get(j.team_id) ?? [];
+    lista.push(j);
+    jornadasPorEquipo.set(j.team_id, lista);
+  }
+
+  async function accionSincronizarCalendario() {
+    "use server";
+    const resultado = await sincronizarCalendarioFACV();
+    const params = new URLSearchParams({
+      msg: resultado.error
+        ?? `Calendario sincronizado: ${resultado.creadas} jornadas creadas, ${resultado.actualizadas} actualizadas`,
+      tipo: resultado.error ? "error" : "ok",
+    });
+    redirect(`/admin/equipos?${params.toString()}`);
+  }
+
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera titulo="Equipos y capitanes" subtitulo={season.nombre} />
@@ -99,6 +153,12 @@ export default async function EquiposPage({
             </button>
           </form>
         </Tarjeta>
+
+        <form action={accionSincronizarCalendario}>
+          <button className="w-full rounded-xl bg-degradado-club p-3 font-semibold text-sobre-acento">
+            Importar calendario FACV
+          </button>
+        </form>
 
         {(equipos ?? []).length === 0 ? (
           <EstadoVacio titulo="Todavía no hay equipos" detalle="Da de alta el primero con el formulario de arriba." />
@@ -184,6 +244,64 @@ export default async function EquiposPage({
                     Eliminar equipo
                   </button>
                 </form>
+
+                {(() => {
+                  const propiasJornadas = jornadasPorEquipo.get(eq.id) ?? [];
+                  return (
+                    <div className="flex flex-col gap-2 border-t border-borde pt-3">
+                      <p className="text-sm font-medium text-tinta">Jornadas</p>
+                      {propiasJornadas.length === 0 ? (
+                        <p className="text-sm text-tinta-suave">
+                          Sin jornadas todavía. Impórtalas de la FACV o añádelas a mano abajo.
+                        </p>
+                      ) : (
+                        <ul className="flex flex-col gap-1.5">
+                          {propiasJornadas.map((j) => (
+                            <li
+                              key={j.id}
+                              className="flex items-center justify-between rounded-xl bg-tarjeta-suave px-3 py-1.5 text-sm"
+                            >
+                              <span className="text-tinta">
+                                R{j.ronda} · {j.es_local ? "vs" : "@"} {j.rival}
+                              </span>
+                              <span className="text-xs text-tinta-suave">{formatearFecha(j.fecha_hora)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+
+                      <details className="rounded-xl border border-borde p-3">
+                        <summary className="cursor-pointer text-sm font-medium text-tinta">
+                          Añadir jornada
+                        </summary>
+                        <form
+                          action={async (formData: FormData) => {
+                            "use server";
+                            formData.set("team_id", eq.id);
+                            volver(await crearJornada(formData));
+                          }}
+                          className="mt-3 flex flex-col gap-2"
+                        >
+                          <input
+                            name="ronda" type="number" min={1} required placeholder="Ronda"
+                            className={CAMPO}
+                          />
+                          <input name="fecha" type="datetime-local" className={CAMPO} />
+                          <input name="rival" required placeholder="Rival (ej. Sueca)" className={CAMPO} />
+                          <select name="es_local" required defaultValue="" className={CAMPO}>
+                            <option value="" disabled>¿Local o visitante?</option>
+                            <option value="true">Local</option>
+                            <option value="false">Visitante</option>
+                          </select>
+                          <input name="sede" placeholder="Sede (opcional)" className={CAMPO} />
+                          <button className="rounded-xl bg-acento-fuerte p-2.5 text-sm font-semibold text-sobre-acento">
+                            Añadir jornada
+                          </button>
+                        </form>
+                      </details>
+                    </div>
+                  );
+                })()}
               </Tarjeta>
             );
           })
