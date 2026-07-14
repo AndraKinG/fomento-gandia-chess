@@ -21,7 +21,7 @@ export default async function OrdenFuerzaPage({
   const { data: orden } = season
     ? await supabase
         .from("force_order")
-        .select("numero, bis_index, players(nombre, elo_fide, elo_feda)")
+        .select("numero, bis_index, elo_oficial, players(nombre, elo_fide, elo_feda)")
         .eq("season_id", season.id)
         .order("numero").order("bis_index")
     : { data: null };
@@ -92,6 +92,7 @@ export default async function OrdenFuerzaPage({
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium text-tinta">{p.nombre}</p>
                       <div className="mt-1 flex flex-wrap gap-2">
+                        <ChipElo valor={f.elo_oficial} etiqueta="Oficial" />
                         <ChipElo valor={p.elo_fide} etiqueta="FIDE" />
                         <ChipElo valor={p.elo_feda} etiqueta="FEDA" />
                       </div>

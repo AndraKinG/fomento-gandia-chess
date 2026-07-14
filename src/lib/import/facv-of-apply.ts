@@ -64,6 +64,16 @@ export async function sincronizarOrdenFuerzaFACVCore(): Promise<{
     let creados = 0;
     let actualizados = 0;
 
+    // Paso 1: resolver (o crear) el jugador de cada fila de la página FACV.
+    // Se separa del upsert de force_order (paso 2, dos fases) para poder
+    // liberar posiciones antes de aplicar ningún valor final.
+    type FilaResuelta = {
+      fila: (typeof filas)[number];
+      playerId: string;
+      existente: NonNullable<typeof existentes>[number] | undefined;
+    };
+    const resueltas: FilaResuelta[] = [];
+
     for (const fila of filas) {
       // a. Resolver el jugador: por fide_id, si no por nombre exacto, si no crearlo.
       let playerId: string | null = null;
@@ -73,8 +83,19 @@ export async function sincronizarOrdenFuerzaFACVCore(): Promise<{
         playerId = data?.id ?? null;
       }
       if (!playerId) {
-        const { data } = await admin
+        const { data, error: lookupErr } = await admin
           .from("players").select("id").eq("nombre", fila.nombre).maybeSingle();
+        if (lookupErr) {
+          // maybeSingle() sólo devuelve error cuando hay más de una fila:
+          // nombre duplicado en la BD. No decidimos automáticamente cuál es
+          // "el" jugador — cortamos para evitar crear/enlazar un duplicado
+          // silencioso; se resuelve a mano (fusionar o desambiguar nombres).
+          return {
+            creados,
+            actualizados,
+            error: `Nombre duplicado en la base de datos: ${fila.nombre} — resuélvelo manualmente`,
+          };
+        }
         playerId = data?.id ?? null;
       }
       if (!playerId) {
@@ -90,14 +111,46 @@ export async function sincronizarOrdenFuerzaFACVCore(): Promise<{
       // playerId está garantizado no-nulo aquí: o se resolvió arriba o se creó.
       const idJugador = playerId as string;
       vistos.add(idJugador);
+      resueltas.push({ fila, playerId: idJugador, existente: existentesPorJugador.get(idJugador) });
+    }
 
-      // b. Upsert manual de force_order por (season_id, player_id). Existe además
-      // una restricción unique(season_id, numero, bis_index) DEFERRABLE: si el
-      // reordenamiento colisiona con la posición de otra fila ya existente,
-      // Postgres devuelve 23505. No lo resolvemos automáticamente (implicaría
-      // decidir qué fila "gana" la posición): se corta y se pide reimportar
-      // tras limpiar el orden anterior.
-      const existente = existentesPorJugador.get(idJugador);
+    // Paso 2, fase 1: liberar posiciones. Existe una restricción
+    // unique(season_id, numero, bis_index) DEFERRABLE, pero cada llamada a
+    // PostgREST es su propia transacción, así que la deferencia no ayuda: un
+    // simple bucle de updates fila a fila choca (23505) en cuanto el nuevo
+    // orden FACV reordena posiciones ya ocupadas por otras filas existentes
+    // (p. ej. un swap A<->B). Para evitarlo, primero se mueve toda fila de
+    // force_order YA EXISTENTE cuya posición vaya a cambiar a una franja de
+    // cuarentena garantizada libre (numero = 10000 + numero_actual, mismo
+    // bis_index) — el orden de fuerza real nunca llega a 10000 posiciones.
+    // Sólo entonces (fase 2 más abajo) se aplican los valores finales.
+    //
+    // Si una ejecución anterior falló a mitad de la fase 2, puede haber
+    // quedado alguna fila en la franja 10000+ (feo pero recuperable). Un
+    // reintento la detecta (numero >= 10000, no se reenvía a cuarentena) y
+    // la fase 2 sigue localizándola por su id/player_id, no por numero, así
+    // que le aplica igual el valor final correcto.
+    for (const { fila, existente } of resueltas) {
+      if (!existente) continue;
+      const cambiaPosicion =
+        existente.numero !== fila.numero || existente.bis_index !== fila.bisIndex;
+      if (!cambiaPosicion || existente.numero >= 10000) continue;
+      const { error: cuarentenaErr } = await admin
+        .from("force_order")
+        .update({ numero: 10000 + existente.numero })
+        .eq("id", existente.id);
+      if (cuarentenaErr) {
+        return { creados, actualizados, error: cuarentenaErr.message };
+      }
+    }
+
+    // Paso 2, fase 2: aplicar los valores finales. Con las posiciones
+    // conflictivas ya liberadas en la fase 1, cada update/insert sólo puede
+    // chocar (23505) en casos realmente patológicos (dos filas finales
+    // apuntando a la misma posición, error de datos de la propia FACV): no
+    // se resuelve automáticamente, se corta y se pide reimportar tras
+    // limpiar el orden anterior.
+    for (const { fila, playerId: idJugador, existente } of resueltas) {
       if (existente) {
         const cambia =
           existente.numero !== fila.numero ||

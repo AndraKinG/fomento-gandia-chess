@@ -8,8 +8,8 @@ export function Banner({
   tipo, children,
 }: { tipo: keyof typeof ESTILOS; children: React.ReactNode }) {
   return (
-    <p role="alert" className={`rounded-xl border p-3 text-sm ${ESTILOS[tipo]}`}>
+    <div role="alert" className={`rounded-xl border p-3 text-sm ${ESTILOS[tipo]}`}>
       {children}
-    </p>
+    </div>
   );
 }
