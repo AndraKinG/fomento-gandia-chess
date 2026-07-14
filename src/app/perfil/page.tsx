@@ -1,5 +1,6 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { fuerza } from "@/lib/elo/fuerza";
+import { ActivarNotificaciones } from "@/components/PushSubscriber";
 import { logout } from "../(auth)/actions";
 
 export default async function PerfilPage() {
@@ -34,6 +35,9 @@ export default async function PerfilPage() {
       ) : (
         <p className="mt-4 text-sm">Sin ficha vinculada todavía.</p>
       )}
+      <div className="mt-6">
+        <ActivarNotificaciones />
+      </div>
       <form action={logout}>
         <button className="mt-6 rounded border p-2 text-sm">Cerrar sesión</button>
       </form>

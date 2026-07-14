@@ -6,9 +6,10 @@ export default async function Home() {
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = await supabase
     .from("profiles").select("player_id").eq("id", user!.id).single();
-  const { data: pendiente } = await supabase
+  const { data: pendientes } = await supabase
     .from("link_requests").select("id").eq("user_id", user!.id)
-    .eq("status", "pendiente").maybeSingle();
+    .eq("status", "pendiente").limit(1);
+  const pendiente = (pendientes ?? []).length > 0;
 
   return (
     <main className="mx-auto max-w-sm p-6">
