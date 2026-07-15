@@ -105,7 +105,24 @@ export async function guardarBorrador(
     return { error: "No autorizado", infracciones: [] };
   }
 
-  const { orden, config, ctx, match } = await cargarContextoValidacion(matchId);
+  let contexto;
+  try {
+    contexto = await cargarContextoValidacion(matchId);
+  } catch {
+    return { error: "Encuentro no encontrado", infracciones: [] };
+  }
+  const { orden, config, ctx, match } = contexto;
+
+  // El encuentro jugado congela la convocatoria: es el registro histórico de
+  // lo realmente alineado (ver `despublicarConvocatoria`) y ni siquiera un
+  // borrador nuevo puede pisarlo.
+  if (match.estado === "jugado") {
+    return {
+      error: "El encuentro ya está jugado; la convocatoria no se puede modificar",
+      infracciones: [],
+    };
+  }
+
   const infracciones = validar(orden, tableros, config, ctx);
 
   const estructurales = infracciones.filter(
@@ -119,6 +136,25 @@ export async function guardarBorrador(
   }
 
   const supabase = await createServerSupabase();
+
+  // Si ya hay una convocatoria PUBLICADA, guardar un borrador aquí la
+  // demovería en silencio (el capitán vería "guardado" sin darse cuenta de
+  // que acaba de despublicar). Se exige el flujo explícito de despublicar.
+  const { data: lineupExistente, error: lineupExistenteError } = await supabase
+    .from("lineups")
+    .select("id, estado")
+    .eq("match_id", matchId)
+    .maybeSingle();
+  if (lineupExistenteError) {
+    return { error: lineupExistenteError.message, infracciones };
+  }
+  if (lineupExistente?.estado === "publicada") {
+    return {
+      error: "La convocatoria está publicada; despublícala antes de editarla",
+      infracciones,
+    };
+  }
+
   const { data: lineup, error: lineupError } = await supabase
     .from("lineups")
     .upsert({ match_id: matchId, estado: "borrador" }, { onConflict: "match_id" })
@@ -126,6 +162,20 @@ export async function guardarBorrador(
     .single();
   if (lineupError || !lineup) {
     return { error: lineupError?.message ?? "No se pudo guardar el borrador", infracciones };
+  }
+
+  // Reemplazo de tableros: sin una función de BD, borrar+insertar no es
+  // atómico (una caída entre medias deja la convocatoria vacía y expuesta a
+  // que una publicación concurrente publique "nada"). A escala de club se
+  // acepta el riesgo de la ventana, pero se hace recuperable: se guardan los
+  // tableros PREVIOS antes de borrar y, si el insert de los nuevos falla, se
+  // restauran para no dejar el borrador vacío.
+  const { data: tablerosPrevios, error: tablerosPreviosError } = await supabase
+    .from("lineup_boards")
+    .select("tablero, player_id")
+    .eq("lineup_id", lineup.id);
+  if (tablerosPreviosError) {
+    return { error: tablerosPreviosError.message, infracciones };
   }
 
   const { error: deleteError } = await supabase
@@ -141,7 +191,23 @@ export async function guardarBorrador(
       player_id: t.playerId,
     }));
     const { error: insertError } = await supabase.from("lineup_boards").insert(filas);
-    if (insertError) return { error: insertError.message, infracciones };
+    if (insertError) {
+      const filasPrevias = (tablerosPrevios ?? []).map((b) => ({
+        lineup_id: lineup.id as string,
+        tablero: b.tablero,
+        player_id: b.player_id,
+      }));
+      if (filasPrevias.length > 0) {
+        const { error: restoreError } = await supabase.from("lineup_boards").insert(filasPrevias);
+        if (restoreError) {
+          return {
+            error: `${insertError.message} — además falló restaurar la convocatoria anterior; el capitán debe volver a guardarla`,
+            infracciones,
+          };
+        }
+      }
+      return { error: insertError.message, infracciones };
+    }
   }
 
   revalidarJornada(match.teamId, matchId);
@@ -172,7 +238,17 @@ export async function publicarConvocatoria(matchId: string): Promise<ResultadoPu
     (lineup.lineup_boards ?? []) as unknown as LineupBoardFila[]
   ).map((b) => ({ tablero: b.tablero, playerId: b.player_id }));
 
-  const { orden, config, ctx, match } = await cargarContextoValidacion(matchId);
+  if (tableros.length === 0) {
+    return { error: "No se puede publicar una convocatoria vacía" };
+  }
+
+  let contexto;
+  try {
+    contexto = await cargarContextoValidacion(matchId);
+  } catch {
+    return { error: "Encuentro no encontrado" };
+  }
+  const { orden, config, ctx, match } = contexto;
   const infracciones = validar(orden, tableros, config, ctx);
   const errores = infracciones.filter((i) => i.nivel === "error");
   if (errores.length > 0) {
@@ -202,7 +278,13 @@ export async function despublicarConvocatoria(matchId: string): Promise<Resultad
     return { error: "No autorizado" };
   }
 
-  const { match } = await cargarContextoValidacion(matchId);
+  let contexto;
+  try {
+    contexto = await cargarContextoValidacion(matchId);
+  } catch {
+    return { error: "Encuentro no encontrado" };
+  }
+  const { match } = contexto;
   if (match.estado === "jugado") {
     return { error: "No se puede despublicar: la jornada ya está jugada" };
   }
