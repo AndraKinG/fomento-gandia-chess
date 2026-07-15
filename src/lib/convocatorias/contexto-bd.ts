@@ -28,12 +28,25 @@ type EquipoFila = {
   num_tableros: number;
 };
 
+/** Datos de la propia jornada, ya resueltos (Task 5, actions): evita que cada
+ * action tenga que repetir su propia consulta a `matches`/`teams` solo para
+ * saber si es local, el estado, la fecha o el nombre del equipo/rival. */
+export type MatchInfo = {
+  esLocal: boolean;
+  estado: string;
+  fechaHora: string | null;
+  teamId: string;
+  equipoNombre: string;
+  rival: string;
+};
+
 /** Resultado listo para pasar directamente a `validar()`/`validarContexto()`
  * (ver `src/lib/validador`). */
 export type ContextoValidacion = {
   orden: JugadorOrden[];
   config: ConfigEquipo;
   ctx: ContextoClub;
+  match: MatchInfo;
 };
 
 /**
@@ -52,7 +65,7 @@ export async function cargarContextoValidacion(matchId: string): Promise<Context
 
   const { data: match, error: matchError } = await admin
     .from("matches")
-    .select("id, team_id, fecha_hora, es_local, estado")
+    .select("id, team_id, fecha_hora, es_local, estado, rival")
     .eq("id", matchId)
     .single();
   if (matchError || !match) {
@@ -322,5 +335,17 @@ export async function cargarContextoValidacion(matchId: string): Promise<Context
     rondasJugadasPorEquipo,
   };
 
-  return { orden, config, ctx };
+  return {
+    orden,
+    config,
+    ctx,
+    match: {
+      esLocal: match.es_local as boolean,
+      estado: match.estado as string,
+      fechaHora: match.fecha_hora as string | null,
+      teamId: match.team_id as string,
+      equipoNombre: equipos[equipoIndice].nombre,
+      rival: match.rival as string,
+    },
+  };
 }
