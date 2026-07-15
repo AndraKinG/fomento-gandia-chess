@@ -54,7 +54,7 @@ export default async function PerfilPage() {
         <ThemeToggle />
         <ActivarNotificaciones />
         <form action={logout}>
-          <button className="w-full rounded-xl border border-borde bg-tarjeta p-3 text-sm text-tinta-suave">
+          <button className="w-full rounded-xl border border-borde bg-tarjeta p-3 text-sm text-tinta-suave transition duration-100 hover:bg-tarjeta-suave active:scale-[0.97]">
             Cerrar sesión
           </button>
         </form>

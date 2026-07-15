@@ -32,7 +32,7 @@ export default async function VinculacionesPage() {
                   </button>
                 </form>
                 <form action={rechazarVinculo.bind(null, r.id)}>
-                  <button className="rounded-xl border border-borde bg-tarjeta px-3 py-1.5 text-sm text-tinta-suave">
+                  <button className="rounded-xl border border-borde bg-tarjeta px-3 py-1.5 text-sm text-tinta-suave transition duration-100 hover:bg-tarjeta-suave active:scale-[0.97]">
                     Rechazar
                   </button>
                 </form>

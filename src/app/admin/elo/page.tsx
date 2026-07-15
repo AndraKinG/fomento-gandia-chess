@@ -93,7 +93,7 @@ export default async function EloAdminPage({
             </label>
             <input type="file" name="fichero" accept=".xlsx" required
               className="rounded-xl border border-borde bg-tarjeta p-2 text-sm text-tinta" />
-            <button className="rounded-xl border border-borde bg-tarjeta p-2 text-sm text-tinta">
+            <button className="rounded-xl border border-borde bg-tarjeta p-2 text-sm text-tinta transition duration-100 hover:bg-tarjeta-suave active:scale-[0.97]">
               Aplicar fichero
             </button>
           </form>

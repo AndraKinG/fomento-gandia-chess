@@ -81,7 +81,7 @@ export default async function EquiposPage() {
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera titulo="Equipos" subtitulo={season.nombre} />
-      <div className="mx-auto max-w-md space-y-5 p-4">
+      <div className="mx-auto max-w-md space-y-8 p-4">
         {(equipos ?? []).length === 0 ? (
           <EstadoVacio
             titulo="Todavía no hay equipos"
