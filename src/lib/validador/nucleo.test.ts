@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { validarNucleo } from "./nucleo";
-import type { ConfigEquipo, JugadorOrden, TableroPropuesto } from "./tipos";
+import type { ConfigEquipo, Infraccion, JugadorOrden, TableroPropuesto } from "./tipos";
 
 /** Construye un JugadorOrden de prueba. */
 function j(
@@ -29,15 +29,21 @@ function t(tablero: number, playerId: string): TableroPropuesto {
 // los tests que no discuten explícitamente el modo estricto/permisivo. Los
 // tests que sí lo discuten (casos 3-6 y sus contrapartidas estrictas) lo
 // pasan de forma explícita.
-function cfg(margenElo: number | null, numTableros = 8, permitirInversionDentroMargen = true): ConfigEquipo {
+// Minor (c): renombrado de `cfg` a `cfgPermisiva` para que la postura
+// (permisivo por defecto) sea visible en cada call site sin consultar la
+// firma de la función.
+function cfgPermisiva(margenElo: number | null, numTableros = 8, permitirInversionDentroMargen = true): ConfigEquipo {
   return { margenElo, numTableros, permitirInversionDentroMargen };
 }
 
-function errores(infs: { nivel: "error" | "aviso" }[]) {
+// Minor (b): tipar como Infraccion[] (no el { nivel } estrecho anterior) para
+// que el acceso a `.articulo`/`.mensaje`/`.tablero` en los tests no dispare
+// TS2339 ("Property does not exist"); `npx tsc --noEmit` debe quedar limpio.
+function errores(infs: Infraccion[]): Infraccion[] {
   return infs.filter((i) => i.nivel === "error");
 }
 
-function avisos(infs: { nivel: "error" | "aviso" }[]) {
+function avisos(infs: Infraccion[]): Infraccion[] {
   return infs.filter((i) => i.nivel === "aviso");
 }
 
@@ -46,7 +52,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
   it("orden perfecto sin margen no genera infracciones", () => {
     const orden = Array.from({ length: 8 }, (_, i) => j(i + 1, 2300 - i * 20));
     const alineacion = orden.map((p, i) => t(i + 1, p.playerId));
-    const infs = validarNucleo(orden, alineacion, cfg(null));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(null));
     expect(infs).toEqual([]);
   });
 
@@ -54,7 +60,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
   it("sin margen: nº14 delante del nº9 es error 51.2 con ambos nombres", () => {
     const orden = [j(9, 1800), j(14, 1600)];
     const alineacion = [t(1, "p14"), t(2, "p9")];
-    const infs = validarNucleo(orden, alineacion, cfg(null));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(null));
     const err = errores(infs).find((e) => e.articulo === "51.2");
     expect(err).toBeDefined();
     expect(err!.mensaje).toContain("Jugador14");
@@ -66,7 +72,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
   it("[PERMISIVO] margen 200: inversión con diferencia 150 es aviso de inversión legal", () => {
     const orden = [j(3, 2150), j(5, 2000)];
     const alineacion = [t(1, "p5"), t(2, "p3")];
-    const infs = validarNucleo(orden, alineacion, cfg(200, 8, true));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(200, 8, true));
     expect(errores(infs)).toEqual([]);
     const av = avisos(infs).find((a) => a.articulo === "52.3");
     expect(av).toBeDefined();
@@ -79,7 +85,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
   it("[ESTRICTO] margen 200: inversión con diferencia 150 es error 51.2 (no aviso)", () => {
     const orden = [j(3, 2150), j(5, 2000)];
     const alineacion = [t(1, "p5"), t(2, "p3")];
-    const infs = validarNucleo(orden, alineacion, cfg(200, 8, false));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(200, 8, false));
     const err51 = errores(infs).find((e) => e.articulo === "51.2");
     expect(err51).toBeDefined();
     expect(avisos(infs).some((a) => a.articulo === "52.3")).toBe(false);
@@ -90,7 +96,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
   it("[PERMISIVO] margen 200: diferencia de 250 es error 52.3", () => {
     const orden = [j(3, 2150), j(5, 1900)];
     const alineacion = [t(1, "p5"), t(2, "p3")];
-    const infs = validarNucleo(orden, alineacion, cfg(200, 8, true));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(200, 8, true));
     const err = errores(infs).find((e) => e.articulo === "52.3");
     expect(err).toBeDefined();
     expect(err!.mensaje).toContain("250");
@@ -102,7 +108,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
   it("[ESTRICTO] margen 200: diferencia de 250 es error 52.3 Y error 51.2 (inversión)", () => {
     const orden = [j(3, 2150), j(5, 1900)];
     const alineacion = [t(1, "p5"), t(2, "p3")];
-    const infs = validarNucleo(orden, alineacion, cfg(200, 8, false));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(200, 8, false));
     expect(errores(infs).some((e) => e.articulo === "52.3")).toBe(true);
     expect(errores(infs).some((e) => e.articulo === "51.2")).toBe(true);
   });
@@ -111,7 +117,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
   it("[PERMISIVO] margen 200: diferencia exacta de 200 es error (>=)", () => {
     const orden = [j(3, 2150), j(5, 1950)];
     const alineacion = [t(1, "p5"), t(2, "p3")];
-    const infs = validarNucleo(orden, alineacion, cfg(200, 8, true));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(200, 8, true));
     expect(errores(infs).some((e) => e.articulo === "52.3")).toBe(true);
   });
 
@@ -119,7 +125,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
   it("[ESTRICTO] margen 200: diferencia exacta de 200 es error 52.3 y error 51.2", () => {
     const orden = [j(3, 2150), j(5, 1950)];
     const alineacion = [t(1, "p5"), t(2, "p3")];
-    const infs = validarNucleo(orden, alineacion, cfg(200, 8, false));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(200, 8, false));
     expect(errores(infs).some((e) => e.articulo === "52.3")).toBe(true);
     expect(errores(infs).some((e) => e.articulo === "51.2")).toBe(true);
   });
@@ -128,13 +134,13 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
   it("[PERMISIVO] margen 100: diferencia 99 es aviso, 100 es error", () => {
     const ordenAviso = [j(3, 2099), j(5, 2000)];
     const alineacionAviso = [t(1, "p5"), t(2, "p3")];
-    const infsAviso = validarNucleo(ordenAviso, alineacionAviso, cfg(100, 8, true));
+    const infsAviso = validarNucleo(ordenAviso, alineacionAviso, cfgPermisiva(100, 8, true));
     expect(errores(infsAviso).some((e) => e.articulo === "52.3")).toBe(false);
     expect(avisos(infsAviso).some((a) => a.articulo === "52.3")).toBe(true);
 
     const ordenError = [j(3, 2100), j(5, 2000)];
     const alineacionError = [t(1, "p5"), t(2, "p3")];
-    const infsError = validarNucleo(ordenError, alineacionError, cfg(100, 8, true));
+    const infsError = validarNucleo(ordenError, alineacionError, cfgPermisiva(100, 8, true));
     expect(errores(infsError).some((e) => e.articulo === "52.3")).toBe(true);
   });
 
@@ -144,14 +150,14 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
   it("[ESTRICTO] margen 100: diferencia 99 es solo error 51.2; 100 es error 51.2 y 52.3", () => {
     const ordenAviso = [j(3, 2099), j(5, 2000)];
     const alineacionAviso = [t(1, "p5"), t(2, "p3")];
-    const infsAviso = validarNucleo(ordenAviso, alineacionAviso, cfg(100, 8, false));
+    const infsAviso = validarNucleo(ordenAviso, alineacionAviso, cfgPermisiva(100, 8, false));
     expect(errores(infsAviso).some((e) => e.articulo === "51.2")).toBe(true);
     expect(errores(infsAviso).some((e) => e.articulo === "52.3")).toBe(false);
     expect(avisos(infsAviso).some((a) => a.articulo === "52.3")).toBe(false);
 
     const ordenError = [j(3, 2100), j(5, 2000)];
     const alineacionError = [t(1, "p5"), t(2, "p3")];
-    const infsError = validarNucleo(ordenError, alineacionError, cfg(100, 8, false));
+    const infsError = validarNucleo(ordenError, alineacionError, cfgPermisiva(100, 8, false));
     expect(errores(infsError).some((e) => e.articulo === "51.2")).toBe(true);
     expect(errores(infsError).some((e) => e.articulo === "52.3")).toBe(true);
   });
@@ -160,7 +166,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
   it("7bis se ordena entre el 7 y el 8; alinear 8 delante de 7bis es error 51.2", () => {
     const orden = [j(7, 2000), j(7, 1990, { bisIndex: 1 }), j(8, 1980)];
     const alineacion = [t(1, "p8"), t(2, "p7bis1")];
-    const infs = validarNucleo(orden, alineacion, cfg(null));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(null));
     expect(errores(infs).some((e) => e.articulo === "51.2")).toBe(true);
   });
 
@@ -182,7 +188,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
       t(5, "p3"),
       t(6, "p3bis1"),
     ];
-    const infs3 = validarNucleo(orden, alineacion3, cfg(null, 8));
+    const infs3 = validarNucleo(orden, alineacion3, cfgPermisiva(null, 8));
     expect(errores(infs3).some((e) => e.articulo === "50.3")).toBe(true);
 
     const alineacion2 = [
@@ -192,7 +198,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
       t(4, "p2bis1"),
       t(5, "p3"),
     ];
-    const infs2 = validarNucleo(orden, alineacion2, cfg(null, 8));
+    const infs2 = validarNucleo(orden, alineacion2, cfgPermisiva(null, 8));
     expect(errores(infs2).some((e) => e.articulo === "50.3")).toBe(false);
   });
 
@@ -200,7 +206,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
   it("excepcionMargen en el jugador adelantado convierte el error 52.3 en aviso", () => {
     const orden = [j(3, 2150), j(5, 1900, { excepcionMargen: true })];
     const alineacion = [t(1, "p5"), t(2, "p3")];
-    const infs = validarNucleo(orden, alineacion, cfg(200, 8, true));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(200, 8, true));
     expect(errores(infs).some((e) => e.articulo === "52.3")).toBe(false);
     const av = avisos(infs).find((a) => a.articulo === "52.3");
     expect(av).toBeDefined();
@@ -216,7 +222,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
   it("excepcionMargen en el jugador de DETRÁS también suprime el error 52.3 (regresión probe)", () => {
     const orden = [j(2, 1900), j(10, 2400, { excepcionMargen: true })];
     const alineacion = [t(1, "p2"), t(2, "p10")];
-    const infs = validarNucleo(orden, alineacion, cfg(200, 8, true));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(200, 8, true));
     expect(errores(infs)).toEqual([]);
     const av52 = avisos(infs).filter((a) => a.articulo === "52.3");
     expect(av52.length).toBe(1);
@@ -227,14 +233,14 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
   it("tablero duplicado es error estructural", () => {
     const orden = [j(1, 2200), j(2, 2150)];
     const alineacion = [t(1, "p1"), t(1, "p2")];
-    const infs = validarNucleo(orden, alineacion, cfg(null));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(null));
     expect(errores(infs).length).toBeGreaterThan(0);
   });
 
   it("jugador duplicado (dos tableros) es error estructural y cita el NOMBRE, no el playerId", () => {
     const orden = [j(1, 2200), j(2, 2150)];
     const alineacion = [t(1, "p1"), t(2, "p1")];
-    const infs = validarNucleo(orden, alineacion, cfg(null));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(null));
     const errs = errores(infs);
     expect(errs.length).toBeGreaterThan(0);
     expect(errs.some((e) => e.mensaje.includes("Jugador1"))).toBe(true);
@@ -244,7 +250,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
   it("tablero 9 con numTableros 8 es error estructural", () => {
     const orden = [j(1, 2200), j(2, 2150)];
     const alineacion = [t(1, "p1"), t(9, "p2")];
-    const infs = validarNucleo(orden, alineacion, cfg(null, 8));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(null, 8));
     expect(errores(infs).length).toBeGreaterThan(0);
   });
 
@@ -255,7 +261,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
   it("dos entradas con el mismo tablero fuera de rango son ambas 'fuera de rango', no 'repetido'", () => {
     const orden = [j(1, 2200), j(2, 2150)];
     const alineacion = [t(9, "p1"), t(9, "p2")];
-    const infs = validarNucleo(orden, alineacion, cfg(null, 8));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(null, 8));
     const errs = errores(infs);
     expect(errs.length).toBe(2);
     expect(errs.every((e) => e.mensaje.includes("fuera del rango"))).toBe(true);
@@ -265,7 +271,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
   it("jugador fuera del orden de fuerza es error estructural", () => {
     const orden = [j(1, 2200)];
     const alineacion = [t(1, "p1"), t(2, "fantasma")];
-    const infs = validarNucleo(orden, alineacion, cfg(null));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(null));
     const err = errores(infs).find((e) => e.mensaje.includes("orden de fuerza"));
     expect(err).toBeDefined();
   });
@@ -274,7 +280,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
   it("alineación incompleta (menos tableros que numTableros) es aviso, no error", () => {
     const orden = [j(1, 2200), j(2, 2150), j(3, 2100)];
     const alineacion = [t(1, "p1"), t(2, "p2")];
-    const infs = validarNucleo(orden, alineacion, cfg(null, 8));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(null, 8));
     expect(errores(infs)).toEqual([]);
     expect(avisos(infs).length).toBeGreaterThan(0);
   });
@@ -282,7 +288,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
   it("tableros vacíos intercalados generan aviso, no error", () => {
     const orden = [j(1, 2200), j(2, 2150), j(3, 2100), j(4, 2050)];
     const alineacion = [t(1, "p1"), t(3, "p3"), t(4, "p4")]; // falta el 2, intercalado
-    const infs = validarNucleo(orden, alineacion, cfg(null, 4));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(null, 4));
     expect(errores(infs)).toEqual([]);
     expect(avisos(infs).some((a) => a.tablero === 2)).toBe(true);
   });
@@ -292,11 +298,11 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
     const orden = [j(3, 2000), j(5, 2000)];
     const alineacion = [t(1, "p5"), t(2, "p3")];
 
-    const conMargen = validarNucleo(orden, alineacion, cfg(200, 8, true));
+    const conMargen = validarNucleo(orden, alineacion, cfgPermisiva(200, 8, true));
     expect(errores(conMargen)).toEqual([]);
     expect(avisos(conMargen).some((a) => a.articulo === "52.3")).toBe(true);
 
-    const sinMargen = validarNucleo(orden, alineacion, cfg(null));
+    const sinMargen = validarNucleo(orden, alineacion, cfgPermisiva(null));
     expect(errores(sinMargen).some((e) => e.articulo === "51.2")).toBe(true);
   });
 
@@ -309,21 +315,21 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
     // delante en >= margen.
     const orden = [j(1, 1900), j(2, 2200)];
     const alineacion = [t(1, "p1"), t(2, "p2")];
-    const infs = validarNucleo(orden, alineacion, cfg(200, 2));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(200, 2));
     expect(errores(infs).some((e) => e.articulo === "52.3")).toBe(true);
   });
 
   it("margen: pareja no invertida y por debajo del margen no genera infracción", () => {
     const orden = [j(1, 2200), j(2, 2150)];
     const alineacion = [t(1, "p1"), t(2, "p2")];
-    const infs = validarNucleo(orden, alineacion, cfg(200, 2));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(200, 2));
     expect(infs).toEqual([]);
   });
 
   it("numTableros 4 con alineación completa y ordenada no genera infracciones", () => {
     const orden = [j(1, 2200), j(2, 2150), j(3, 2100), j(4, 2050)];
     const alineacion = [t(1, "p1"), t(2, "p2"), t(3, "p3"), t(4, "p4")];
-    const infs = validarNucleo(orden, alineacion, cfg(null, 4));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(null, 4));
     expect(infs).toEqual([]);
   });
 
@@ -346,7 +352,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
 
     it("[ESTRICTO] genera exactamente 3 errores 51.2 (uno por cada par invertido) y 2 avisos 52.3 informativos (exención), 0 errores 52.3", () => {
       const { orden, alineacion } = compuesto();
-      const infs = validarNucleo(orden, alineacion, cfg(200, 3, false));
+      const infs = validarNucleo(orden, alineacion, cfgPermisiva(200, 3, false));
       const errs51 = errores(infs).filter((e) => e.articulo === "51.2");
       const errs52 = errores(infs).filter((e) => e.articulo === "52.3");
       const av52 = avisos(infs).filter((a) => a.articulo === "52.3");
@@ -357,7 +363,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
 
     it("[PERMISIVO] con diferencias que no llegan al margen entre nº10/nº5 → solo avisos, ningún error", () => {
       const { orden, alineacion } = compuesto();
-      const infs = validarNucleo(orden, alineacion, cfg(200, 3, true));
+      const infs = validarNucleo(orden, alineacion, cfgPermisiva(200, 3, true));
       expect(errores(infs)).toEqual([]);
       const av52 = avisos(infs).filter((a) => a.articulo === "52.3");
       // 1 "inversión legal" (nº10 delante de nº5, diferencia 100 < 200) +
@@ -381,7 +387,7 @@ describe("validarNucleo (RGC arts. 50-52)", () => {
     // García (nº14, peor orden) se alinea en el tablero 1, por delante de
     // los nº11, nº12 y nº13 (mejor orden), todos con diferencia < 200.
     const alineacion = [t(1, "p14"), t(2, "p11"), t(3, "p12"), t(4, "p13")];
-    const infs = validarNucleo(orden, alineacion, cfg(200, 4, true));
+    const infs = validarNucleo(orden, alineacion, cfgPermisiva(200, 4, true));
     expect(errores(infs)).toEqual([]);
     const av52 = avisos(infs).filter((a) => a.articulo === "52.3");
     expect(av52.length).toBe(1);

@@ -54,6 +54,23 @@ function calcularInicios(numTablerosPorEquipo: number[]): number[] {
   return inicios;
 }
 
+// Finding 5e / minor (e): segunda ambigüedad FACV-confirmable (ver también el
+// comentario de `permitirInversionDentroMargen` en tipos.ts). El art. 51.4
+// dice que si un equipo juega "a 6" el bloque de titulares es "del 1 al
+// 6bis"; el art. 50.1 numera los bis intercalados (p. ej. 1, 1bis, 2, 2bis,
+// ..., 6, 6bis). Queda sin confirmar por la FACV si el tamaño del bloque
+// (`numTablerosPorEquipo[i]`, usado aquí como cuenta de ENTRADAS/posiciones
+// en la lista ordenada) debe interpretarse como "posiciones de la lista
+// ordenada que ocupa el bloque" (lectura actual: un bis intercalado cuenta
+// como una posición más, desplazando el final del bloque) o como "números
+// de orden inclusive hasta 6bis" (lectura alternativa: el bis NO desplaza el
+// límite del bloque, ya que "6bis" ya está incluido en "del 1 al 6"). Con la
+// lectura actual, un club con un bis intercalado en las primeras 6 plazas
+// tendría en realidad 7 ENTRADAS en el bloque del equipo (1..5, 5bis, 6), lo
+// cual podría no coincidir con la lectura alternativa. Este módulo asume la
+// lectura "cuenta de entradas" (consistente con cómo se define
+// `numTablerosPorEquipo` en tipos.ts, ver Task 3); no se ha confirmado (a
+// 2026) con la FACV cuál prevalece para casos límite con bis intercalados.
 /** Bloque (índice de equipo) al que pertenece la posición `indice`, o null si
  * cae más allá de todos los bloques (bis añadidos al final de la lista,
  * art. 50.1, sin restricción de equipo asociada). */
@@ -127,6 +144,19 @@ export function validarContexto(
   // Solo aplica si ESTE equipo compite en división autonómica. El límite
   // inferior de B (nº9) ya queda cubierto por R3 (los titulares 1-8 del A no
   // pueden bajar a B), así que aquí solo se comprueba el tope superior.
+  //
+  // Minor (f): la afirmación anterior ("el límite inferior ya lo cubre R3")
+  // presupone que el bloque de titulares del equipo A tiene exactamente 8
+  // posiciones (`numTablerosPorEquipo[0] === 8`), que es lo que asume el
+  // propio art. 51.5.c al fijar los topes absolutos 18 (A) y 28 (B) — cifras
+  // pensadas para una A a 8 tableros. Si un club jugase el A a menos
+  // tableros (art. 51.4, p. ej. a 6), R3 seguiría bloqueando correctamente a
+  // los titulares REALES del A (bloqueDe ya usa numTablerosPorEquipo, no un
+  // 8 fijo) de bajar a B, pero los topes 18/28 aquí abajo seguirían citando
+  // los valores textuales del RGC (pensados para A=8) sin reescalarlos: no
+  // hay indicación en el RGC de cómo ajustar 18/28 para un A reducido, así
+  // que esta implementación no lo intenta y asume división autonómica con
+  // A a 8 tableros (caso real esperado en la liga interclubs valenciana).
   if (ctx.esDivisionAutonomica[ctx.equipoIndice]) {
     for (const { tablero, jugador } of validas) {
       const idx = indicePorId.get(jugador.playerId);
@@ -166,7 +196,16 @@ export function validarContexto(
     const bloque = bloqueDe(idx, ctx.numTablerosPorEquipo, inicios);
     if (bloque === null) continue;
 
-    const rondasOrigen = ctx.rondasJugadasEquipoOrigen;
+    // Finding 3: rondas del equipo de ORIGEN del titular (su propio bloque,
+    // `bloque`), NO del equipo que se está validando (`ctx.equipoIndice`).
+    // Antes de este fix, `ContextoClub` solo exponía un escalar
+    // (`rondasJugadasEquipoOrigen`) compartido por toda la convocatoria, lo
+    // que era incorrecto en cuanto había, en una misma alineación, titulares
+    // de MÁS de un equipo de origen distinto jugando arriba (p. ej. un
+    // titular de B y otro de C, ambos alineados en el A): cada uno debe
+    // medirse contra las rondas de SU propio equipo (B y C pueden llevar
+    // disputadas rondas distintas), no contra un valor único.
+    const rondasOrigen = ctx.rondasJugadasPorEquipo[bloque] ?? 0;
     if (rondasOrigen <= 0) continue; // sin base aún, nada que comprobar.
     const veces = ctx.vecesEnSuperior[jugador.playerId] ?? 0;
     const umbral = rondasOrigen * 0.5;
@@ -178,7 +217,13 @@ export function validarContexto(
           nivel: "aviso",
           tablero,
           articulo: "51.3",
-          mensaje: `${etiqueta(jugador)} alcanzará ${veces + 1} de ${rondasOrigen} rondas (≥ 50%) alineado en equipos superiores si juega esta convocatoria; a partir de entonces ya no podrá volver a alinearse en el equipo ${letraEquipo(bloque)} de origen (art. 51.3).`,
+          // Minor (d): "ya no podría volver" (condicional), no "ya no podrá
+          // volver" (futuro categórico): este es un AVISO preventivo sobre
+          // un estado que aún no se ha alcanzado (se alcanzaría SI se juega
+          // esta convocatoria), por lo que la redacción debe seguir siendo
+          // válida tanto si el bloqueo ya es un hecho consumado como si es
+          // solo la proyección de lo que ocurriría a partir de ahora.
+          mensaje: `${etiqueta(jugador)} alcanzará ${veces + 1} de ${rondasOrigen} rondas (≥ 50%) alineado en equipos superiores si juega esta convocatoria; a partir de entonces ya no podría volver a alinearse en el equipo ${letraEquipo(bloque)} de origen (art. 51.3).`,
         });
       }
     } else if (bloque === ctx.equipoIndice) {
@@ -231,29 +276,51 @@ function validarMismaSede(
   actual: { equipoIndice: number; alineacion: TableroPropuesto[]; config: ConfigEquipo },
   mismaSede: ContextoClub["mismaSede"]
 ): Infraccion[] {
+  const porId = new Map(orden.map((p) => [p.playerId, p]));
   const participantes = [actual, ...mismaSede].sort((a, b) => a.equipoIndice - b.equipoIndice);
 
   let offset = 0;
   const combinada: TableroPropuesto[] = [];
   const origenPorTablero = new Map<number, { equipoIndice: number; tableroOriginal: number }>();
+  const equipoPorJugador = new Map<string, number>();
   for (const p of participantes) {
-    for (const entrada of p.alineacion) {
-      const virtual = offset + entrada.tablero;
-      combinada.push({ tablero: virtual, playerId: entrada.playerId });
-      origenPorTablero.set(virtual, { equipoIndice: p.equipoIndice, tableroOriginal: entrada.tablero });
+    // Minor (a) / finding 4a: sanear CADA alineación (equipo actual Y los
+    // demás de la sede) con la misma pasada de "entradas válidas" que usa
+    // nucleo.ts, ANTES de combinar. Sin esto, una entrada fuera de rango o
+    // duplicada de un equipo (p. ej. un tablero mal grabado que excede su
+    // numTableros real) se desplaza igualmente por `offset` y puede aterrizar
+    // en un número de tablero VIRTUAL que sí es válido en la numeración
+    // combinada, colisionando con un tablero real de OTRO equipo de la sede
+    // (el primero en "ocupar" ese número virtual gana, y el jugador legítimo
+    // del segundo equipo se descarta como "repetido"): eso enmascararía una
+    // infracción cruzada real. Al sanear por participante primero, la entrada
+    // corrupta nunca entra en `combinada`.
+    const validasParticipante = entradasValidas(p.alineacion, p.config, porId);
+    for (const { tablero, jugador } of validasParticipante) {
+      const virtual = offset + tablero;
+      combinada.push({ tablero: virtual, playerId: jugador.playerId });
+      origenPorTablero.set(virtual, { equipoIndice: p.equipoIndice, tableroOriginal: tablero });
+      equipoPorJugador.set(jugador.playerId, p.equipoIndice);
     }
     offset += p.config.numTableros;
   }
 
-  // Config combinada "más estricta" entre los equipos implicados (decisión
-  // de interpretación, documentada en el informe de Task 3):
-  //  - margenElo: el MÍNIMO no nulo entre los participantes (más restrictivo
-  //    para el check 52.3); null solo si NINGÚN participante tiene margen.
+  // Config combinada (Fix round 1, finding 1: corrige la combinación previa,
+  // que era MÁS PERMISIVA que un participante con margen null):
+  //  - margenElo: null si CUALQUIER participante tiene margenElo === null
+  //    (ese equipo no tiene margen aplicable en absoluto — art. 52.3.c — y
+  //    para él rige el 51.2 puro, orden estricto sin excepción; combinar con
+  //    un margen numérico de otro equipo dejaría pasar como "inversión
+  //    legal" una infracción que, para el equipo sin margen, sería un error
+  //    51.2 sin paliativos). Si NINGÚN participante tiene margenElo null, se
+  //    usa el MÍNIMO de los margenes (el más restrictivo para el check
+  //    52.3).
   //  - permitirInversionDentroMargen: permisivo (true) solo si TODOS los
   //    equipos lo son; si alguno es estricto, la combinación es estricta,
   //    para no dejar pasar inversiones que un solo equipo consideraría error.
-  const margenes = participantes.map((p) => p.config.margenElo).filter((m): m is number => m !== null);
-  const margenCombinado = margenes.length > 0 ? Math.min(...margenes) : null;
+  const algunSinMargen = participantes.some((p) => p.config.margenElo === null);
+  const margenesNoNulos = participantes.map((p) => p.config.margenElo).filter((m): m is number => m !== null);
+  const margenCombinado = algunSinMargen ? null : Math.min(...margenesNoNulos);
   const permisivoCombinado = participantes.every((p) => p.config.permitirInversionDentroMargen);
 
   const configCombinada: ConfigEquipo = {
@@ -270,11 +337,30 @@ function validarMismaSede(
     const origen = inf.tablero !== null ? origenPorTablero.get(inf.tablero) : undefined;
     const esDeEsteEquipo = origen?.equipoIndice === actual.equipoIndice;
     const equiposImplicados = participantes.map((p) => letraEquipo(p.equipoIndice)).join("+");
+
+    // Finding 2: si NINGUNO de los jugadores implicados en la infracción
+    // pertenece al equipo que se está validando, es una infracción interna
+    // de OTRO equipo de la sede (p. ej. el propio equipo A invertido consigo
+    // mismo). El art. 52.4 dice explícitamente que "las sanciones solo le
+    // afectan al equipo que ha cometido las infracciones": no se debe
+    // reenviar como error bloqueante a un equipo ajeno a la infracción, solo
+    // como aviso informativo (para que su capitán sepa que hay un problema
+    // en la sede, sin que le impida validar su propia alineación).
+    const playerIds = inf.playerIds ?? [];
+    const afectaAlEquipoActual = playerIds.some((id) => equipoPorJugador.get(id) === actual.equipoIndice);
+    const esInfraccionAjena = playerIds.length > 0 && !afectaAlEquipoActual;
+
+    const equipoResponsable = origen ? letraEquipo(origen.equipoIndice) : equiposImplicados;
+    const mensaje = esInfraccionAjena
+      ? `(equipo ${equipoResponsable} de la sede) ${inf.mensaje} [Alineación conjunta misma sede, equipos ${equiposImplicados} — art. 52.4]`
+      : `${inf.mensaje} [Alineación conjunta misma sede, equipos ${equiposImplicados} — art. 52.4]`;
+
     infracciones.push({
-      nivel: inf.nivel,
+      nivel: esInfraccionAjena ? "aviso" : inf.nivel,
       tablero: esDeEsteEquipo ? origen!.tableroOriginal : null,
       articulo: "52.4",
-      mensaje: `${inf.mensaje} [Alineación conjunta misma sede, equipos ${equiposImplicados} — art. 52.4]`,
+      mensaje,
+      ...(inf.playerIds ? { playerIds: inf.playerIds } : {}),
     });
   }
   return infracciones;

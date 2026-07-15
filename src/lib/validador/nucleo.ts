@@ -36,6 +36,10 @@ function error512(
     mensaje: `${etiqueta(detras.jugador)} no puede ir en el tablero ${detras.tablero}, por detrás de ${etiqueta(
       delante.jugador
     )} en el tablero ${delante.tablero}: tiene mejor orden de fuerza (art. 51.2).`,
+    // Finding 2: ambos jugadores de la pareja infractora, para que
+    // validarMismaSede (contexto.ts) pueda distinguir una infracción interna
+    // de OTRO equipo de una infracción cruzada real.
+    playerIds: [detras.jugador.playerId, delante.jugador.playerId],
   };
 }
 
@@ -69,6 +73,7 @@ export function validarNucleo(
         tablero: entrada.tablero,
         articulo: "estructural",
         mensaje: `El tablero ${entrada.tablero} está fuera del rango 1..${config.numTableros} del equipo.`,
+        playerIds: [entrada.playerId],
       });
       continue;
     }
@@ -79,6 +84,7 @@ export function validarNucleo(
         tablero: entrada.tablero,
         articulo: "estructural",
         mensaje: `El tablero ${entrada.tablero} está repetido en la alineación.`,
+        playerIds: [entrada.playerId],
       });
       continue;
     }
@@ -94,6 +100,7 @@ export function validarNucleo(
         tablero: entrada.tablero,
         articulo: "estructural",
         mensaje: `El jugador ${nombre} está alineado en más de un tablero.`,
+        playerIds: [entrada.playerId],
       });
       continue;
     }
@@ -105,6 +112,7 @@ export function validarNucleo(
         tablero: entrada.tablero,
         articulo: "estructural",
         mensaje: `El jugador ${entrada.playerId} no está en el orden de fuerza del club.`,
+        playerIds: [entrada.playerId],
       });
       continue;
     }
@@ -140,6 +148,7 @@ export function validarNucleo(
       mensaje: `Se alinean ${bisesAlineados.length} bises (${bisesAlineados
         .map((v) => etiqueta(v.jugador))
         .join(", ")}); el máximo permitido por encuentro es 2 (art. 50.3).`,
+      playerIds: bisesAlineados.map((v) => v.jugador.playerId),
     });
   }
 
@@ -228,6 +237,7 @@ export function validarNucleo(
             mensaje: `${etiqueta(detras.jugador)} supera a ${etiqueta(
               delante.jugador
             )} en ${diferencia} ≥ ${margen}, pero ${quienes} excepción de margen autorizada (arts. 52.3.d-e).`,
+            playerIds: [detras.jugador.playerId, delante.jugador.playerId],
           });
         } else {
           infracciones.push({
@@ -237,6 +247,7 @@ export function validarNucleo(
             mensaje: `${etiqueta(delante.jugador)} no puede ir por delante de ${etiqueta(
               detras.jugador
             )} en el tablero ${detras.tablero}: le supera en ${diferencia} ≥ ${margen} (art. 52.3).`,
+            playerIds: [detras.jugador.playerId, delante.jugador.playerId],
           });
         }
       } else if (!estricto && esInversionOrden) {
@@ -266,6 +277,7 @@ export function validarNucleo(
         mensaje: `Inversión legal (<${margen}): ${etiqueta(delante)} va por delante de ${etiqueta(
           detrasJugador
         )} con una diferencia de ${diferencia} < ${margen} (art. 52.3).`,
+        playerIds: [delante.playerId, detrasJugador.playerId],
       });
     } else {
       infracciones.push({
@@ -273,6 +285,7 @@ export function validarNucleo(
         tablero: tableroDelante,
         articulo: "52.3",
         mensaje: `${delante.nombre} (nº${delante.numero}) va por delante de ${detrasList.length} jugadores con mejor orden — inversión legal dentro del margen (<${margen}) (art. 52.3).`,
+        playerIds: [delante.playerId, ...detrasList.map((d) => d.jugador.playerId)],
       });
     }
   }

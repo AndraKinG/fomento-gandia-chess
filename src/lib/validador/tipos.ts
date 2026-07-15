@@ -17,6 +17,17 @@ export type Infraccion = {
   tablero: number | null; // null = infracción global
   articulo: string; // "51.2", "52.3", "50.3", ...
   mensaje: string; // español, cita nombres y números concretos
+  // OPCIONAL (finding 2, Fix round 1): playerIds de los jugadores implicados
+  // en la infracción (los dos de una pareja 51.2/52.3, o el único de una
+  // infracción individual). Campo opcional y no rompe compatibilidad con
+  // código existente que construye Infraccion sin él; su propósito es
+  // permitir a validarMismaSede (contexto.ts, R8/52.4) distinguir una
+  // infracción puramente interna de OTRO equipo de la sede (ninguno de los
+  // playerIds pertenece al equipo que se está validando) de una infracción
+  // cruzada genuina (al menos un jugador es del equipo validado), ya que el
+  // art. 52.4 dice explícitamente que "las sanciones solo le afectan al
+  // equipo que ha cometido las infracciones".
+  playerIds?: string[];
 };
 
 export type ConfigEquipo = {
@@ -63,5 +74,15 @@ export type ContextoClub = {
   // no se duplica aquí.
   mismaSede: { equipoIndice: number; alineacion: TableroPropuesto[]; config: ConfigEquipo }[];
   vecesEnSuperior: Record<string, number>; // playerId -> nº de rondas alineado en equipos superiores (art. 51.3)
-  rondasJugadasEquipoOrigen: number; // rondas disputadas por el equipo de origen del titular (base del 50%)
+  // Finding 3 (Fix round 1): reemplaza el antiguo `rondasJugadasEquipoOrigen:
+  // number` (un único escalar). El art. 51.3 exige contar, para CADA
+  // titular, las rondas de SU PROPIO equipo de origen (el bloque de
+  // titulares al que pertenece según el orden de fuerza y
+  // numTablerosPorEquipo), no las del equipo que se está validando: en una
+  // misma alineación puede haber un titular del equipo B jugando arriba (en
+  // el A) y, en la MISMA convocatoria del A, un titular del C jugando arriba
+  // también, cada uno con su propio nº de rondas de origen (B y C pueden
+  // llevar disputadas rondas distintas). Indexado por equipoIndice (mismo
+  // orden que numTablerosPorEquipo/esDivisionAutonomica).
+  rondasJugadasPorEquipo: number[];
 };
