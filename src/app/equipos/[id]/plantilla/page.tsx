@@ -81,12 +81,18 @@ export default async function PlantillaPage({
               <details
                 key={j.id}
                 open={indice === 0}
-                className="overflow-hidden rounded-2xl border border-borde bg-tarjeta"
+                className="group overflow-hidden rounded-2xl border border-borde bg-tarjeta"
               >
                 <summary className="cursor-pointer list-none p-4">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-semibold text-tinta">
                       R{j.ronda} · {j.es_local ? "vs" : "@"} {j.rival} · {fechaCorta}
+                    </span>
+                    <span
+                      aria-hidden
+                      className="shrink-0 text-tinta-suave transition-transform group-open:rotate-180"
+                    >
+                      ▾
                     </span>
                   </div>
                   <p className="mt-1 flex flex-wrap gap-1.5 text-xs text-tinta-suave">

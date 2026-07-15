@@ -143,14 +143,14 @@ export default async function EquiposPage({
               placeholder="Número de tableros"
               className={CAMPO}
             />
-            <button className="rounded-xl bg-acento-fuerte p-3 font-semibold text-sobre-acento">
+            <button className="rounded-xl bg-acento-fuerte p-3 font-semibold text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]">
               Crear equipo
             </button>
           </form>
         </Tarjeta>
 
         <form action={accionSincronizarCalendario}>
-          <button className="w-full rounded-xl bg-degradado-club p-3 font-semibold text-sobre-acento">
+          <button className="w-full rounded-xl bg-degradado-club p-3 font-semibold text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]">
             Importar calendario FACV
           </button>
         </form>
@@ -158,7 +158,7 @@ export default async function EquiposPage({
         {(equipos ?? []).length === 0 ? (
           <EstadoVacio titulo="Todavía no hay equipos" detalle="Da de alta el primero con el formulario de arriba." />
         ) : (
-          (equipos ?? []).map((eq) => {
+          (equipos ?? []).map((eq, indice) => {
             const capitanes = (eq.team_captains ?? []) as unknown as {
               player_id: string;
               players: { nombre: string } | null;
@@ -167,14 +167,28 @@ export default async function EquiposPage({
             const disponibles = (fichas ?? []).filter((f) => !yaCapitanes.has(f.id));
 
             return (
-              <Tarjeta key={eq.id} className="flex flex-col gap-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-semibold text-tinta">{eq.nombre}</p>
-                    <p className="text-sm text-tinta-suave">{eq.categoria}</p>
+              <details
+                key={eq.id}
+                open={indice === 0}
+                className="group overflow-hidden rounded-2xl border border-borde bg-tarjeta shadow-sm"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-4">
+                  <div className="flex min-w-0 flex-1 items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-tinta">{eq.nombre}</p>
+                      <p className="text-sm text-tinta-suave">{eq.categoria}</p>
+                    </div>
+                    <ChipMargen margenElo={eq.margen_elo} />
                   </div>
-                  <ChipMargen margenElo={eq.margen_elo} />
-                </div>
+                  <span
+                    aria-hidden
+                    className="shrink-0 text-tinta-suave transition-transform group-open:rotate-180"
+                  >
+                    ▾
+                  </span>
+                </summary>
+
+                <div className="flex flex-col gap-3 border-t border-borde px-4 pb-4 pt-3">
                 <p className="text-xs text-tinta-suave">{eq.num_tableros} tableros</p>
 
                 <div className="flex flex-col gap-1.5">
@@ -223,7 +237,7 @@ export default async function EquiposPage({
                         <option key={f.id} value={f.id}>{f.nombre}</option>
                       ))}
                     </select>
-                    <button className="rounded-xl bg-acento-fuerte px-3 py-1.5 text-sm font-medium text-sobre-acento">
+                    <button className="rounded-xl bg-acento-fuerte px-3 py-1.5 text-sm font-medium text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]">
                       Nombrar capitán
                     </button>
                   </form>
@@ -269,9 +283,15 @@ export default async function EquiposPage({
                         </ul>
                       )}
 
-                      <details className="rounded-xl border border-borde p-3">
-                        <summary className="cursor-pointer text-sm font-medium text-tinta">
+                      <details className="group rounded-xl border border-borde p-3">
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-medium text-tinta">
                           Añadir jornada
+                          <span
+                            aria-hidden
+                            className="shrink-0 text-tinta-suave transition-transform group-open:rotate-180"
+                          >
+                            ▾
+                          </span>
                         </summary>
                         <form
                           action={async (formData: FormData) => {
@@ -293,7 +313,7 @@ export default async function EquiposPage({
                             <option value="false">Visitante</option>
                           </select>
                           <input name="sede" placeholder="Sede (opcional)" className={CAMPO} />
-                          <button className="rounded-xl bg-acento-fuerte p-2.5 text-sm font-semibold text-sobre-acento">
+                          <button className="rounded-xl bg-acento-fuerte p-2.5 text-sm font-semibold text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]">
                             Añadir jornada
                           </button>
                         </form>
@@ -301,7 +321,8 @@ export default async function EquiposPage({
                     </div>
                   );
                 })()}
-              </Tarjeta>
+                </div>
+              </details>
             );
           })
         )}

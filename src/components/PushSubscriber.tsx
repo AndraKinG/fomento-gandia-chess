@@ -80,7 +80,7 @@ export function ActivarNotificaciones() {
   return (
     <button
       onClick={() => activar().catch(() => {})}
-      className="w-full rounded-xl bg-degradado-club p-3 font-semibold text-sobre-acento"
+      className="w-full rounded-xl bg-degradado-club p-3 font-semibold text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]"
     >
       Activar notificaciones
     </button>

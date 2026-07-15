@@ -16,10 +16,10 @@ export function BotonesDisponibilidad({
         <button key={o.valor} type="button" disabled={deshabilitado}
           onClick={() => onCambio(o.valor)}
           aria-pressed={valor === o.valor}
-          className={`flex-1 rounded-xl border px-2 py-2 text-sm transition ${
+          className={`flex-1 rounded-xl border px-2 py-2 text-sm transition duration-100 active:scale-[0.97] ${
             valor === o.valor
-              ? "border-acento-fuerte bg-acento-fuerte text-sobre-acento"
-              : "border-borde bg-tarjeta text-tinta"
+              ? "border-acento-fuerte bg-acento-fuerte text-sobre-acento hover:brightness-110"
+              : "border-borde bg-tarjeta text-tinta hover:bg-tarjeta-suave"
           } disabled:opacity-50`}>
           <span aria-hidden>{o.icono}</span> {o.texto}
         </button>

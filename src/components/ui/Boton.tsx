@@ -2,9 +2,9 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 const VARIANTES = {
-  degradado: "bg-degradado-club text-sobre-acento",
-  solido: "bg-acento-fuerte text-sobre-acento",
-  secundario: "border border-borde bg-tarjeta text-tinta",
+  degradado: "bg-degradado-club text-sobre-acento hover:brightness-110",
+  solido: "bg-acento-fuerte text-sobre-acento hover:brightness-110",
+  secundario: "border border-borde bg-tarjeta text-tinta hover:bg-tarjeta-suave",
 } as const;
 
 type Variante = keyof typeof VARIANTES;
@@ -23,7 +23,7 @@ export function Boton({
   children: ReactNode;
   href?: string;
 }) {
-  const base = `rounded-xl p-3 font-semibold ${VARIANTES[variante]}`;
+  const base = `rounded-xl p-3 font-semibold transition duration-100 active:scale-[0.97] ${VARIANTES[variante]}`;
   if (href) {
     return (
       <Link href={href} className={`${base} inline-flex items-center justify-center text-center ${className}`.trim()}>

@@ -98,9 +98,15 @@ export default async function OrdenFuerzaPage({
             })}
           </ol>
         ) : null}
-        <details className="rounded-xl border border-borde bg-tarjeta p-3">
-          <summary className="cursor-pointer font-medium text-tinta">
+        <details className="group rounded-xl border border-borde bg-tarjeta p-3">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-medium text-tinta">
             Importación manual (respaldo)
+            <span
+              aria-hidden
+              className="shrink-0 text-tinta-suave transition-transform group-open:rotate-180"
+            >
+              ▾
+            </span>
           </summary>
           <form action={accion} className="mt-3 flex flex-col gap-3">
             <input name="season" required placeholder="Nombre temporada (ej. Interclubs 2027)"
@@ -108,7 +114,7 @@ export default async function OrdenFuerzaPage({
             <textarea name="texto" required rows={12}
               placeholder={"1; Apellidos, Nombre; fide_id; feda_id\n2; ..."}
               className="rounded-xl border border-borde bg-tarjeta p-3 font-mono text-xs text-tinta" />
-            <button className="rounded-xl bg-acento-fuerte p-3 font-semibold text-sobre-acento">
+            <button className="rounded-xl bg-acento-fuerte p-3 font-semibold text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]">
               Importar
             </button>
           </form>
