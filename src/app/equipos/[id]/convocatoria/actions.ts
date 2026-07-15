@@ -249,6 +249,14 @@ export async function publicarConvocatoria(matchId: string): Promise<ResultadoPu
     return { error: "Encuentro no encontrado" };
   }
   const { orden, config, ctx, match } = contexto;
+
+  // Mismo guard que guardarBorrador: el encuentro jugado congela la
+  // convocatoria (es el registro histórico de lo realmente alineado), no
+  // se puede publicar una nueva versión sobre él.
+  if (match.estado === "jugado") {
+    return { error: "El encuentro ya está jugado" };
+  }
+
   const infracciones = validar(orden, tableros, config, ctx);
   const errores = infracciones.filter((i) => i.nivel === "error");
   if (errores.length > 0) {

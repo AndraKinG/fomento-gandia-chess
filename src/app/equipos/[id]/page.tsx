@@ -60,6 +60,15 @@ export default async function EquipoDetallePage({
   ]);
   const puedeGestionar = Boolean(esCapitan) || admin;
 
+  // Chip "Conv." (Task 6): un extra query barata para saber qué jornadas ya
+  // tienen convocatoria publicada (la RLS de `lineups` ya permite leer las
+  // publicadas a cualquier usuario autenticado).
+  const idsJornadas = (jornadas ?? []).map((j) => j.id);
+  const { data: lineupsPublicadas } = idsJornadas.length > 0
+    ? await supabase.from("lineups").select("match_id").eq("estado", "publicada").in("match_id", idsJornadas)
+    : { data: [] };
+  const conConvocatoria = new Set((lineupsPublicadas ?? []).map((l) => l.match_id));
+
   const capitanes = (equipo.team_captains ?? []) as unknown as {
     player_id: string;
     players: { nombre: string } | null;
@@ -105,6 +114,11 @@ export default async function EquipoDetallePage({
                   <span className="shrink-0 text-right text-xs text-tinta-suave">
                     {formatearFechaCorta(j.fecha_hora)}
                   </span>
+                  {conConvocatoria.has(j.id) && (
+                    <span className="shrink-0 rounded-full bg-acento-fuerte px-2 py-0.5 text-xs font-semibold text-sobre-acento">
+                      Conv.
+                    </span>
+                  )}
                   <ChipEstado estado={j.estado as Estado} />
                 </li>
               ))}

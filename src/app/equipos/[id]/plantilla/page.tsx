@@ -4,6 +4,7 @@ import { esAdmin } from "@/lib/auth/es-admin";
 import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
+import { Boton } from "@/components/ui/Boton";
 
 type Estado = "disponible" | "no_disponible" | "duda";
 const ICONOS: Record<Estado, string> = { disponible: "✅", no_disponible: "❌", duda: "🤔" };
@@ -110,14 +111,23 @@ export default async function PlantillaPage({
                     </span>
                   </p>
                 </summary>
-                <ul className="divide-y divide-borde border-t border-borde px-4 pb-3">
-                  {filas.map((f) => (
-                    <li key={f.etiqueta} className="flex items-center justify-between py-1.5 text-sm">
-                      <span className="text-tinta">{f.etiqueta} · {f.nombre}</span>
-                      <span aria-hidden>{f.estado ? ICONOS[f.estado] : "—"}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="border-t border-borde px-4 pb-3 pt-2">
+                  <Boton
+                    variante="secundario"
+                    href={`/equipos/${id}/convocatoria/${j.id}`}
+                    className="mb-3 w-full text-sm"
+                  >
+                    Montar convocatoria
+                  </Boton>
+                  <ul className="divide-y divide-borde">
+                    {filas.map((f) => (
+                      <li key={f.etiqueta} className="flex items-center justify-between py-1.5 text-sm">
+                        <span className="text-tinta">{f.etiqueta} · {f.nombre}</span>
+                        <span aria-hidden>{f.estado ? ICONOS[f.estado] : "—"}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </details>
             );
           })
