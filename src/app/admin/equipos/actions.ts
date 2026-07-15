@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { esAdmin } from "@/lib/auth/es-admin";
 import { sincronizarCalendarioFACVCore } from "@/lib/import/facv-calendario-apply";
+import { sincronizarResultadosFACVCore, type ResultadoSyncResultados } from "@/lib/import/facv-resultados-apply";
 import { offsetMadrid } from "@/lib/import/facv-calendario";
 
 type Resultado = { ok?: string; error?: string };
@@ -123,6 +124,28 @@ export async function sincronizarCalendarioFACV(): Promise<{
   }
   const resultado = await sincronizarCalendarioFACVCore();
   if (!resultado.error) revalidatePath("/admin/equipos");
+  return resultado;
+}
+
+/**
+ * Descarga marcadores y clasificación de la FACV (misma página del
+ * calendario + los enlaces de chess-results que enlaza por grupo) y
+ * sincroniza `matches`/`standings` de la temporada activa. Acción de
+ * servidor gateada por sesión admin (ver `sincronizarResultadosFACVCore`
+ * para el detalle de qué respeta y qué sobreescribe).
+ */
+export async function sincronizarResultadosFACV(): Promise<ResultadoSyncResultados> {
+  if (!(await esAdmin())) {
+    return {
+      actualizados: 0, omitidos: 0, standingsActualizados: 0, discrepancias: [], avisos: [],
+      error: "Solo el admin puede hacer esto",
+    };
+  }
+  const resultado = await sincronizarResultadosFACVCore();
+  if (!resultado.error) {
+    revalidatePath("/admin/equipos");
+    revalidatePath("/equipos");
+  }
   return resultado;
 }
 

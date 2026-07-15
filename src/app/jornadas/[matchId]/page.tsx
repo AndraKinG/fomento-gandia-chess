@@ -38,7 +38,9 @@ export default async function JornadaPage({
 
   const { data: match } = await supabase
     .from("matches")
-    .select("id, team_id, ronda, fecha_hora, rival, es_local, sede, estado, teams(nombre)")
+    .select(
+      "id, team_id, ronda, fecha_hora, rival, es_local, sede, estado, marcador_propio, marcador_rival, teams(nombre)"
+    )
     .eq("id", matchId)
     .maybeSingle();
   if (!match) redirect("/");
@@ -111,7 +113,7 @@ export default async function JornadaPage({
             {match.es_local ? "En casa" : "Fuera"}
             {match.sede ? ` · ${match.sede}` : ""}
           </p>
-          {marcador.completos > 0 && (
+          {marcador.completos > 0 ? (
             <p className="text-2xl font-bold text-tinta">
               {marcador.texto}{" "}
               {marcador.completos < marcador.total && (
@@ -120,6 +122,15 @@ export default async function JornadaPage({
                 </span>
               )}
             </p>
+          ) : (
+            // Sin resultados por tablero: marcador global de la sync FACV
+            // (Task 8, Fase 1C) si lo hay.
+            match.marcador_propio !== null &&
+            match.marcador_rival !== null && (
+              <p className="text-2xl font-bold text-tinta">
+                {formatearPunto(match.marcador_propio)} – {formatearPunto(match.marcador_rival)}
+              </p>
+            )
           )}
         </Tarjeta>
 

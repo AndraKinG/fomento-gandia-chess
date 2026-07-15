@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { esAdmin } from "@/lib/auth/es-admin";
 import { formatearFechaMadrid } from "@/lib/fecha-madrid";
+import { formatearPunto } from "@/lib/marcador";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Boton } from "@/components/ui/Boton";
@@ -50,14 +51,19 @@ export default async function EquipoDetallePage({
     .maybeSingle();
   if (!equipo) redirect("/equipos");
 
-  const [{ data: esCapitan }, admin, { data: jornadas }] = await Promise.all([
+  const [{ data: esCapitan }, admin, { data: jornadas }, { data: standings }] = await Promise.all([
     supabase.rpc("es_capitan_de", { equipo: id }),
     esAdmin(),
     supabase
       .from("matches")
-      .select("id, ronda, fecha_hora, rival, es_local, sede, estado")
+      .select("id, ronda, fecha_hora, rival, es_local, sede, estado, marcador_propio, marcador_rival")
       .eq("team_id", id)
       .order("ronda"),
+    supabase
+      .from("standings")
+      .select("posicion, club, puntos, es_nuestro")
+      .eq("team_id", id)
+      .order("posicion"),
   ]);
   const puedeGestionar = Boolean(esCapitan) || admin;
 
@@ -116,6 +122,11 @@ export default async function EquipoDetallePage({
                     <span className="min-w-0 flex-1 truncate text-sm text-tinta">
                       {j.es_local ? "vs" : "@"} {j.rival}
                     </span>
+                    {j.marcador_propio !== null && j.marcador_rival !== null && (
+                      <span className="shrink-0 text-sm font-semibold text-tinta">
+                        {formatearPunto(j.marcador_propio)}–{formatearPunto(j.marcador_rival)}
+                      </span>
+                    )}
                     <span className="shrink-0 text-right text-xs text-tinta-suave">
                       {formatearFechaCorta(j.fecha_hora)}
                     </span>
@@ -130,6 +141,35 @@ export default async function EquipoDetallePage({
               ))}
             </ul>
           </div>
+        )}
+
+        {(standings ?? []).length > 0 && (
+          <section className="space-y-2">
+            <h2 className="font-semibold text-tinta">Clasificación</h2>
+            <div className="overflow-hidden rounded-2xl border border-borde bg-tarjeta">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-borde text-xs text-tinta-suave">
+                    <th className="px-3 py-2 text-left font-medium">#</th>
+                    <th className="px-3 py-2 text-left font-medium">Club</th>
+                    <th className="px-3 py-2 text-right font-medium">Ptos</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-borde">
+                  {(standings ?? []).map((s) => (
+                    <tr
+                      key={s.posicion}
+                      className={s.es_nuestro ? "bg-tarjeta-suave font-semibold text-acento-texto" : "text-tinta"}
+                    >
+                      <td className="px-3 py-1.5">{s.posicion}</td>
+                      <td className="px-3 py-1.5 truncate">{s.club}</td>
+                      <td className="px-3 py-1.5 text-right">{formatearPunto(s.puntos)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
         )}
       </div>
     </main>

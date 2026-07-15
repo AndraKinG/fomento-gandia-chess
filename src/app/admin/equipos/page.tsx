@@ -8,6 +8,7 @@ import {
   nombrarCapitan,
   quitarCapitan,
   sincronizarCalendarioFACV,
+  sincronizarResultadosFACV,
 } from "./actions";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
@@ -116,6 +117,24 @@ export default async function EquiposPage({
     redirect(`/admin/equipos?${params.toString()}`);
   }
 
+  async function accionSincronizarResultados() {
+    "use server";
+    const resultado = await sincronizarResultadosFACV();
+    const avisosMsg = resultado.avisos.length > 0 ? ` — avisos: ${resultado.avisos.join("; ")}` : "";
+    const discrepanciasMsg = resultado.discrepancias.length > 0
+      ? ` — discrepancias (se mantiene el resultado por tablero): ${resultado.discrepancias.join("; ")}`
+      : "";
+    const params = new URLSearchParams({
+      msg: resultado.error
+        ?? `Resultados sincronizados: ${resultado.actualizados} marcadores actualizados, `
+          + `${resultado.standingsActualizados} clasificaciones reemplazadas`
+          + (resultado.omitidos > 0 ? ` (${resultado.omitidos} omitidos)` : "")
+          + avisosMsg + discrepanciasMsg,
+      tipo: resultado.error ? "error" : "ok",
+    });
+    redirect(`/admin/equipos?${params.toString()}`);
+  }
+
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera titulo="Equipos y capitanes" subtitulo={season.nombre} volverA="/admin" />
@@ -152,6 +171,12 @@ export default async function EquiposPage({
         <form action={accionSincronizarCalendario}>
           <button className="w-full rounded-xl bg-degradado-club p-3 font-semibold text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]">
             Importar calendario FACV
+          </button>
+        </form>
+
+        <form action={accionSincronizarResultados}>
+          <button className="w-full rounded-xl bg-degradado-club p-3 font-semibold text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]">
+            Sincronizar resultados FACV
           </button>
         </form>
 
