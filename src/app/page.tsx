@@ -100,25 +100,27 @@ export default async function Home() {
 
         {proxima ? (
           <>
-            <TarjetaJornada
-              equipo={proxima.teams?.nombre ?? "Equipo"}
-              rival={proxima.rival}
-              fechaTexto={formatearFecha(proxima.fecha_hora)}
-              esLocal={proxima.es_local}
-              sede={proxima.sede ?? undefined}
-              extra={
-                <>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-tarjeta-suave px-2.5 py-0.5 text-xs font-medium text-acento-texto ring-1 ring-borde-acento">
-                    Ronda {proxima.ronda}
-                  </span>
-                  {profile?.player_id && (
+            <Link href={`/jornadas/${proxima.id}`} className="block">
+              <TarjetaJornada
+                equipo={proxima.teams?.nombre ?? "Equipo"}
+                rival={proxima.rival}
+                fechaTexto={formatearFecha(proxima.fecha_hora)}
+                esLocal={proxima.es_local}
+                sede={proxima.sede ?? undefined}
+                extra={
+                  <>
                     <span className="inline-flex items-center gap-1 rounded-full bg-tarjeta-suave px-2.5 py-0.5 text-xs font-medium text-acento-texto ring-1 ring-borde-acento">
-                      {miEstado ? `${ICONOS[miEstado]} ${TEXTOS[miEstado]}` : "Sin responder aún"}
+                      Ronda {proxima.ronda}
                     </span>
-                  )}
-                </>
-              }
-            />
+                    {profile?.player_id && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-tarjeta-suave px-2.5 py-0.5 text-xs font-medium text-acento-texto ring-1 ring-borde-acento">
+                        {miEstado ? `${ICONOS[miEstado]} ${TEXTOS[miEstado]}` : "Sin responder aún"}
+                      </span>
+                    )}
+                  </>
+                }
+              />
+            </Link>
             {faltaDisponibilidad && (
               <Banner tipo="aviso">
                 <p className="mb-2">Tienes jornadas próximas sin responder tu disponibilidad.</p>

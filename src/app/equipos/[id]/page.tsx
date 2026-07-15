@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { esAdmin } from "@/lib/auth/es-admin";
@@ -104,22 +105,27 @@ export default async function EquipoDetallePage({
           <div className="overflow-hidden rounded-2xl border border-borde bg-tarjeta">
             <ul className="divide-y divide-borde">
               {(jornadas ?? []).map((j) => (
-                <li key={j.id} className="flex items-center gap-2 px-3 py-2.5">
-                  <span className="shrink-0 rounded-full bg-tarjeta-suave px-2 py-0.5 text-xs font-semibold text-acento-texto ring-1 ring-borde-acento">
-                    R{j.ronda}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-sm text-tinta">
-                    {j.es_local ? "vs" : "@"} {j.rival}
-                  </span>
-                  <span className="shrink-0 text-right text-xs text-tinta-suave">
-                    {formatearFechaCorta(j.fecha_hora)}
-                  </span>
-                  {conConvocatoria.has(j.id) && (
-                    <span className="shrink-0 rounded-full bg-acento-fuerte px-2 py-0.5 text-xs font-semibold text-sobre-acento">
-                      Conv.
+                <li key={j.id}>
+                  <Link
+                    href={`/jornadas/${j.id}`}
+                    className="flex items-center gap-2 px-3 py-2.5 hover:bg-tarjeta-suave"
+                  >
+                    <span className="shrink-0 rounded-full bg-tarjeta-suave px-2 py-0.5 text-xs font-semibold text-acento-texto ring-1 ring-borde-acento">
+                      R{j.ronda}
                     </span>
-                  )}
-                  <ChipEstado estado={j.estado as Estado} />
+                    <span className="min-w-0 flex-1 truncate text-sm text-tinta">
+                      {j.es_local ? "vs" : "@"} {j.rival}
+                    </span>
+                    <span className="shrink-0 text-right text-xs text-tinta-suave">
+                      {formatearFechaCorta(j.fecha_hora)}
+                    </span>
+                    {conConvocatoria.has(j.id) && (
+                      <span className="shrink-0 rounded-full bg-acento-fuerte px-2 py-0.5 text-xs font-semibold text-sobre-acento">
+                        Conv.
+                      </span>
+                    )}
+                    <ChipEstado estado={j.estado as Estado} />
+                  </Link>
                 </li>
               ))}
             </ul>

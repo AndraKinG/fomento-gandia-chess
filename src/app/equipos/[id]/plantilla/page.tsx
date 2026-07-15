@@ -112,13 +112,18 @@ export default async function PlantillaPage({
                   </p>
                 </summary>
                 <div className="border-t border-borde px-4 pb-3 pt-2">
-                  <Boton
-                    variante="secundario"
-                    href={`/equipos/${id}/convocatoria/${j.id}`}
-                    className="mb-3 w-full text-sm"
-                  >
-                    Montar convocatoria
-                  </Boton>
+                  <div className="mb-3 flex gap-2">
+                    <Boton
+                      variante="secundario"
+                      href={`/equipos/${id}/convocatoria/${j.id}`}
+                      className="flex-1 text-sm"
+                    >
+                      Montar convocatoria
+                    </Boton>
+                    <Boton variante="secundario" href={`/jornadas/${j.id}`} className="flex-1 text-sm">
+                      Ver jornada
+                    </Boton>
+                  </div>
                   <ul className="divide-y divide-borde">
                     {filas.map((f) => (
                       <li key={f.etiqueta} className="flex items-center justify-between py-1.5 text-sm">
