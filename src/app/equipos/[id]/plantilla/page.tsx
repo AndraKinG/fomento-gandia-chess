@@ -3,7 +3,6 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { esAdmin } from "@/lib/auth/es-admin";
 import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 import { Cabecera } from "@/components/ui/Cabecera";
-import { Tarjeta } from "@/components/ui/Tarjeta";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 
 type Estado = "disponible" | "no_disponible" | "duda";
@@ -56,7 +55,7 @@ export default async function PlantillaPage({
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Plantilla" subtitulo={equipo.nombre} />
+      <Cabecera titulo="Plantilla" subtitulo={equipo.nombre} volverA={`/equipos/${id}`} />
       <div className="mx-auto max-w-md space-y-4 p-4">
         {propiasJornadas.length === 0 || propioOrden.length === 0 ? (
           <EstadoVacio
@@ -64,7 +63,7 @@ export default async function PlantillaPage({
             detalle="Hacen falta jornadas pendientes y un orden de fuerza para esta temporada"
           />
         ) : (
-          propiasJornadas.map((j) => {
+          propiasJornadas.map((j, indice) => {
             const filas = propioOrden.map((f) => ({
               etiqueta: `${f.numero}${f.bis_index ? "bis" : ""}`,
               nombre: f.players?.nombre ?? "—",
@@ -75,17 +74,37 @@ export default async function PlantillaPage({
               if (f.estado) contadores[f.estado]++;
               else contadores.sinResponder++;
             }
+            const fechaCorta = formatearFechaMadrid(j.fecha_hora, {
+              day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit",
+            });
             return (
-              <Tarjeta key={j.id} className="flex flex-col gap-2">
-                <p className="font-semibold text-tinta">
-                  R{j.ronda} · {j.es_local ? "vs" : "@"} {j.rival}
-                </p>
-                <p className="text-xs text-tinta-suave">
-                  {formatearFechaMadrid(j.fecha_hora, {
-                    day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
-                  })}
-                </p>
-                <ul className="divide-y divide-borde">
+              <details
+                key={j.id}
+                open={indice === 0}
+                className="overflow-hidden rounded-2xl border border-borde bg-tarjeta"
+              >
+                <summary className="cursor-pointer list-none p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-tinta">
+                      R{j.ronda} · {j.es_local ? "vs" : "@"} {j.rival} · {fechaCorta}
+                    </span>
+                  </div>
+                  <p className="mt-1 flex flex-wrap gap-1.5 text-xs text-tinta-suave">
+                    <span className="rounded-full bg-tarjeta-suave px-2 py-0.5 ring-1 ring-borde-acento">
+                      ✅ {contadores.disponible}
+                    </span>
+                    <span className="rounded-full bg-tarjeta-suave px-2 py-0.5 ring-1 ring-borde-acento">
+                      ❌ {contadores.no_disponible}
+                    </span>
+                    <span className="rounded-full bg-tarjeta-suave px-2 py-0.5 ring-1 ring-borde-acento">
+                      🤔 {contadores.duda}
+                    </span>
+                    <span className="rounded-full bg-tarjeta-suave px-2 py-0.5 ring-1 ring-borde-acento">
+                      — {contadores.sinResponder}
+                    </span>
+                  </p>
+                </summary>
+                <ul className="divide-y divide-borde border-t border-borde px-4 pb-3">
                   {filas.map((f) => (
                     <li key={f.etiqueta} className="flex items-center justify-between py-1.5 text-sm">
                       <span className="text-tinta">{f.etiqueta} · {f.nombre}</span>
@@ -93,10 +112,7 @@ export default async function PlantillaPage({
                     </li>
                   ))}
                 </ul>
-                <p className="text-xs text-tinta-suave">
-                  ✅ {contadores.disponible} · ❌ {contadores.no_disponible} · 🤔 {contadores.duda} · — {contadores.sinResponder}
-                </p>
-              </Tarjeta>
+              </details>
             );
           })
         )}

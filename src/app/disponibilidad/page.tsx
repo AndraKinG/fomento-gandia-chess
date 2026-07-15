@@ -27,7 +27,7 @@ export default async function DisponibilidadPage() {
   if (!profile?.player_id) {
     return (
       <main className="min-h-dvh bg-fondo pb-10">
-        <Cabecera titulo="Disponibilidad" />
+        <Cabecera titulo="Disponibilidad" volverA="/" />
         <div className="mx-auto max-w-md p-4">
           <EstadoVacio
             titulo="Sin ficha vinculada todavía"
@@ -56,7 +56,7 @@ export default async function DisponibilidadPage() {
   if (propias.length === 0) {
     return (
       <main className="min-h-dvh bg-fondo pb-10">
-        <Cabecera titulo="Disponibilidad" />
+        <Cabecera titulo="Disponibilidad" volverA="/" />
         <div className="mx-auto max-w-md p-4">
           <EstadoVacio icono="📅" titulo="No hay jornadas próximas"
             detalle="Cuando se programe la siguiente jornada, podrás marcar aquí tu disponibilidad" />
@@ -93,7 +93,7 @@ export default async function DisponibilidadPage() {
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Disponibilidad" subtitulo="Marca si puedes jugar cada jornada" />
+      <Cabecera titulo="Disponibilidad" subtitulo="Marca si puedes jugar cada jornada" volverA="/" />
       <div className="mx-auto max-w-md space-y-4 p-4">
         {[...grupos.entries()].map(([fecha, grupo]) => {
           // El grupo solo cuenta como "respondido" si TODAS sus jornadas

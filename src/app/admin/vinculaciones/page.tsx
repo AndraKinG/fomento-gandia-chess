@@ -14,7 +14,7 @@ export default async function VinculacionesPage() {
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Vinculaciones pendientes" />
+      <Cabecera titulo="Vinculaciones pendientes" volverA="/admin" />
       <div className="mx-auto max-w-md space-y-3 p-4">
         {(pendientes ?? []).map((r) => {
           const email = (r.profiles as unknown as { email: string }).email;

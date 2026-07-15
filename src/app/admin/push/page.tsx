@@ -6,7 +6,7 @@ import { Boton } from "@/components/ui/Boton";
 export default function PushAdminPage() {
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Notificaciones" />
+      <Cabecera titulo="Notificaciones" volverA="/admin" />
       <div className="mx-auto max-w-md p-4">
         <Tarjeta>
           <form action={enviarPushPrueba}>

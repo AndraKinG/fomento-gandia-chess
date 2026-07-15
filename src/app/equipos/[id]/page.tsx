@@ -31,13 +31,9 @@ function ChipEstado({ estado }: { estado: Estado }) {
   );
 }
 
-function formatearFecha(fechaHoraISO: string | null): string {
+function formatearFechaCorta(fechaHoraISO: string | null): string {
   if (!fechaHoraISO || Number.isNaN(new Date(fechaHoraISO).getTime())) return "Sin fecha";
-  const dia = formatearFechaMadrid(fechaHoraISO, {
-    weekday: "short", day: "2-digit", month: "short", year: "numeric",
-  });
-  const hora = formatearFechaMadrid(fechaHoraISO, { hour: "2-digit", minute: "2-digit" });
-  return `${dia} · ${hora}`;
+  return formatearFechaMadrid(fechaHoraISO, { day: "2-digit", month: "2-digit", year: "2-digit" });
 }
 
 export default async function EquipoDetallePage({
@@ -71,7 +67,7 @@ export default async function EquipoDetallePage({
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo={equipo.nombre} subtitulo={equipo.categoria} />
+      <Cabecera titulo={equipo.nombre} subtitulo={equipo.categoria} volverA="/equipos" />
       <div className="mx-auto max-w-md space-y-4 p-4">
         <Tarjeta className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
@@ -96,21 +92,23 @@ export default async function EquipoDetallePage({
             detalle="Cuando se publique el calendario de la FACV aparecerá aquí"
           />
         ) : (
-          <div className="flex flex-col gap-3">
-            {(jornadas ?? []).map((j) => (
-              <Tarjeta key={j.id} className="flex flex-col gap-1.5">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="font-semibold text-tinta">
-                    R{j.ronda} · {j.es_local ? "vs" : "@"} {j.rival}
-                  </p>
+          <div className="overflow-hidden rounded-2xl border border-borde bg-tarjeta">
+            <ul className="divide-y divide-borde">
+              {(jornadas ?? []).map((j) => (
+                <li key={j.id} className="flex items-center gap-2 px-3 py-2.5">
+                  <span className="shrink-0 rounded-full bg-tarjeta-suave px-2 py-0.5 text-xs font-semibold text-acento-texto ring-1 ring-borde-acento">
+                    R{j.ronda}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm text-tinta">
+                    {j.es_local ? "vs" : "@"} {j.rival}
+                  </span>
+                  <span className="shrink-0 text-right text-xs text-tinta-suave">
+                    {formatearFechaCorta(j.fecha_hora)}
+                  </span>
                   <ChipEstado estado={j.estado as Estado} />
-                </div>
-                <p className="text-sm text-tinta-suave">{formatearFecha(j.fecha_hora)}</p>
-                <p className="text-sm text-tinta-suave">
-                  {j.es_local ? "En casa" : "Fuera"}{j.sede ? ` · ${j.sede}` : ""}
-                </p>
-              </Tarjeta>
-            ))}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>

@@ -20,7 +20,7 @@ function Seccion({ titulo, children }: { titulo: string; children: React.ReactNo
 export default function DisenoPage() {
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Biblioteca de componentes" subtitulo="Showcase gandiblue" />
+      <Cabecera titulo="Biblioteca de componentes" subtitulo="Showcase gandiblue" volverA="/admin" />
       <div className="mx-auto max-w-md space-y-8 p-4">
         <div className="flex justify-end">
           <ThemeToggle />

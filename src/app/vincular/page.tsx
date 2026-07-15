@@ -41,30 +41,32 @@ export default async function VincularPage({
       <Cabecera
         titulo="¿Quién eres?"
         subtitulo="Busca tu nombre en la lista del club"
+        volverA="/"
       />
-      <div className="mx-auto max-w-md space-y-4 p-4">
+      <div className="mx-auto max-w-md space-y-4 p-4 sm:max-w-2xl">
         <p className="text-sm text-tinta-suave">
           El admin confirmará tu vinculación.
         </p>
         {error && <Banner tipo="error">{error}</Banner>}
-        <ul className="space-y-2">
+        <ul className="space-y-2 sm:grid sm:grid-cols-2 sm:gap-3 sm:space-y-0">
           {libres.map((p) => (
             <li key={p.id}>
-              <Tarjeta className="flex items-center justify-between">
-                <span className="text-tinta">
-                  {p.nombre}
-                  <span className="ml-2">
+              <Tarjeta className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <span className="min-w-0 truncate text-tinta">{p.nombre}</span>
+                  <span className="shrink-0">
                     <ChipElo valor={p.elo_fide} etiqueta="FIDE" />
                   </span>
-                </span>
+                </div>
                 <form
+                  className="shrink-0"
                   action={async () => {
                     "use server";
                     const r = await solicitarVinculo(p.id);
                     if (r?.error) redirect("/vincular?error=" + encodeURIComponent(r.error));
                   }}
                 >
-                  <button className="rounded-xl bg-acento-fuerte px-4 py-1.5 text-sm font-semibold text-sobre-acento">
+                  <button className="shrink-0 rounded-xl bg-acento-fuerte px-4 py-1.5 text-sm font-semibold text-sobre-acento">
                     Soy yo
                   </button>
                 </form>

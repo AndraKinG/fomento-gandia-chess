@@ -68,7 +68,7 @@ export default async function EloAdminPage({
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Actualización de ELO" />
+      <Cabecera titulo="Actualización de ELO" volverA="/admin" />
       <div className="mx-auto max-w-md space-y-4 p-4">
         {msg ? <Banner tipo={tipo === "ok" ? "ok" : "error"}>{msg}</Banner> : null}
         <form action={refrescarFide}>

@@ -53,7 +53,7 @@ export default async function EquiposPage({
   if (!season) {
     return (
       <main className="min-h-dvh bg-fondo pb-10">
-        <Cabecera titulo="Equipos y capitanes" />
+        <Cabecera titulo="Equipos y capitanes" volverA="/admin" />
         <div className="mx-auto max-w-md p-4">
           {msg ? <Banner tipo={tipo === "ok" ? "ok" : "error"}>{msg}</Banner> : null}
           <EstadoVacio
@@ -118,7 +118,7 @@ export default async function EquiposPage({
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Equipos y capitanes" subtitulo={season.nombre} />
+      <Cabecera titulo="Equipos y capitanes" subtitulo={season.nombre} volverA="/admin" />
       <div className="mx-auto max-w-md space-y-4 p-4">
         {msg ? <Banner tipo={tipo === "ok" ? "ok" : "error"}>{msg}</Banner> : null}
 

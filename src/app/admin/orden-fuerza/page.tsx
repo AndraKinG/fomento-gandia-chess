@@ -56,7 +56,7 @@ export default async function OrdenFuerzaPage({
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Orden de fuerza" />
+      <Cabecera titulo="Orden de fuerza" volverA="/admin" />
       <div className="mx-auto max-w-md space-y-4 p-4">
         {msg ? <Banner tipo={tipo === "ok" ? "ok" : "error"}>{msg}</Banner> : null}
         {listaAvisos.length > 0 ? (
