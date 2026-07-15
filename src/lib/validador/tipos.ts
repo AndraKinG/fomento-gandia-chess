@@ -41,3 +41,27 @@ export type ConfigEquipo = {
   //     cuando no hay margen aplicable (art. 52.3.c).
   permitirInversionDentroMargen: boolean;
 };
+
+// --- Task 3: contexto del club (arts. 51.1, 51.3, 51.4, 51.5.c, 52.4, 54-55) ---
+// Contrato compartido con Tasks 4-6 (contexto BD, actions, editor en vivo).
+// NO renombrar campos existentes.
+export type ContextoClub = {
+  equipoIndice: number; // 0 = A, 1 = B, 2 = C... (orden por categoría, A = superior)
+  totalEquipos: number;
+  numTablerosPorEquipo: number[]; // tableros de CADA equipo, en orden de categoría (art. 51.4)
+  esDivisionAutonomica: boolean[]; // por equipo, para límites del art. 51.5.c
+  alineacionesMismaFecha: { equipoIndice: number; playerIds: string[] }[]; // arts. 54-55
+  // art. 52.4: equipos del club que juegan en la MISMA sede esa jornada.
+  // Decisión de interpretación (Task 3, ver informe): el boceto del brief
+  // definía este campo como `number[]` (solo índices de equipo). Se amplía
+  // a incluir la alineación propuesta y la ConfigEquipo de cada equipo,
+  // porque el art. 52.4 exige "confeccionar las alineaciones... como si se
+  // tratase de un solo equipo": sin los tableros propuestos y la config
+  // (margenElo, numTableros) del otro equipo es imposible reconstruir esa
+  // alineación conjunta y aplicar R1/R2 sobre ella. El orden de fuerza es
+  // el mismo `orden` (club-wide) que se pasa a validarContexto, por lo que
+  // no se duplica aquí.
+  mismaSede: { equipoIndice: number; alineacion: TableroPropuesto[]; config: ConfigEquipo }[];
+  vecesEnSuperior: Record<string, number>; // playerId -> nº de rondas alineado en equipos superiores (art. 51.3)
+  rondasJugadasEquipoOrigen: number; // rondas disputadas por el equipo de origen del titular (base del 50%)
+};
