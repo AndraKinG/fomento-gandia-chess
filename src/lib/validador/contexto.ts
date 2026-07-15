@@ -35,16 +35,21 @@ function letraEquipo(indice: number): string {
 }
 
 /** Posición (0-based) de cada jugador en el orden de fuerza del CLUB, ordenado
- * por (numero, bisIndex). Base de los bloques de titulares (R3/R4). */
-function calcularIndices(orden: JugadorOrden[]): Map<string, number> {
+ * por (numero, bisIndex). Base de los bloques de titulares (R3/R4).
+ * Exportada (Task 4): `contexto-bd.ts` la reutiliza para determinar el
+ * equipo de ORIGEN de cada jugador al calcular `vecesEnSuperior` sobre el
+ * histórico de jornadas jugadas — evitar una tercera copia de esta lógica
+ * en un módulo aparte. */
+export function calcularIndices(orden: JugadorOrden[]): Map<string, number> {
   const ordenado = [...orden].sort((a, b) => compararClave(claveOrden(a), claveOrden(b)));
   return new Map(ordenado.map((p, i) => [p.playerId, i]));
 }
 
 /** Inicio (0-based) del bloque de titulares de cada equipo, acumulando
  * numTablerosPorEquipo (art. 51.4: el tamaño del bloque de un equipo es su
- * propio número de tableros, no siempre 8). */
-function calcularInicios(numTablerosPorEquipo: number[]): number[] {
+ * propio número de tableros, no siempre 8). Exportada por el mismo motivo
+ * que `calcularIndices` (ver comentario ahí). */
+export function calcularInicios(numTablerosPorEquipo: number[]): number[] {
   const inicios: number[] = [];
   let acc = 0;
   for (const n of numTablerosPorEquipo) {
@@ -73,8 +78,9 @@ function calcularInicios(numTablerosPorEquipo: number[]): number[] {
 // 2026) con la FACV cuál prevalece para casos límite con bis intercalados.
 /** Bloque (índice de equipo) al que pertenece la posición `indice`, o null si
  * cae más allá de todos los bloques (bis añadidos al final de la lista,
- * art. 50.1, sin restricción de equipo asociada). */
-function bloqueDe(indice: number, numTablerosPorEquipo: number[], inicios: number[]): number | null {
+ * art. 50.1, sin restricción de equipo asociada). Exportada por el mismo
+ * motivo que `calcularIndices` (ver comentario ahí). */
+export function bloqueDe(indice: number, numTablerosPorEquipo: number[], inicios: number[]): number | null {
   for (let i = 0; i < numTablerosPorEquipo.length; i++) {
     const inicio = inicios[i];
     const fin = inicio + numTablerosPorEquipo[i];
