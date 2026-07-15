@@ -11,7 +11,7 @@ import { calcularMarcador, type Marcador } from "@/lib/marcador";
 // que `equipos/[id]/convocatoria/actions.ts` — la RLS de `board_results`
 // (migración 0005) es la barrera DURA que no depende de este chequeo.
 
-type ResultadoGuardar = { ok?: boolean; error?: string; marcador?: Marcador; jugado?: boolean };
+type ResultadoGuardar = { ok?: boolean; error?: string; marcador?: Marcador; jugado?: boolean; guardado?: boolean };
 
 const RESULTADOS_VALIDOS = [1, 0.5, 0];
 
@@ -85,12 +85,18 @@ export async function guardarResultado(
       .from("matches")
       .update({ estado: "jugado" })
       .eq("id", matchId);
-    if (matchUpdateError) return { error: matchUpdateError.message, marcador };
+    if (matchUpdateError) {
+      return {
+        guardado: true,
+        error: "Resultado guardado, pero no se pudo actualizar el estado del encuentro; guarda otro resultado o recarga",
+        marcador,
+      };
+    }
   }
 
   revalidatePath(`/jornadas/${matchId}`);
   revalidatePath(`/equipos/${match.team_id}`);
   revalidatePath("/");
 
-  return { ok: true, marcador, jugado: completo };
+  return { ok: true, marcador, jugado: completo, guardado: true };
 }

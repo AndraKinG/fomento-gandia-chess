@@ -49,6 +49,7 @@ export function ResultadosEditor({
   );
   const [guardandoId, setGuardandoId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isAnySaving, setIsAnySaving] = useState(false);
   const [, iniciarGuardado] = useTransition();
 
   const marcador = calcularMarcador(
@@ -59,15 +60,22 @@ export function ResultadosEditor({
   function onElegir(lineupBoardId: string, valor: Resultado) {
     setError(null);
     setGuardandoId(lineupBoardId);
+    setIsAnySaving(true);
     iniciarGuardado(async () => {
       const resultado = await guardarResultado(matchId, lineupBoardId, valor);
       setGuardandoId(null);
-      if (resultado.error) {
+      setIsAnySaving(false);
+      if (resultado.guardado) {
+        setResultados((prev) => ({ ...prev, [lineupBoardId]: valor }));
+        if (resultado.error) {
+          setError(resultado.error);
+        }
+        if (resultado.ok) {
+          router.refresh();
+        }
+      } else if (resultado.error) {
         setError(resultado.error);
-        return;
       }
-      setResultados((prev) => ({ ...prev, [lineupBoardId]: valor }));
-      router.refresh();
     });
   }
 
@@ -94,13 +102,13 @@ export function ResultadosEditor({
                 <button
                   key={op.valor}
                   type="button"
-                  disabled={guardando}
+                  disabled={isAnySaving}
                   onClick={() => onElegir(b.lineupBoardId, op.valor)}
                   className={`flex-1 rounded-xl py-2 text-sm font-semibold transition disabled:opacity-50 ${
                     actual === op.valor
                       ? "bg-acento-fuerte text-sobre-acento"
                       : "border border-borde bg-tarjeta text-tinta hover:bg-tarjeta-suave"
-                  }`}
+                  } ${guardando ? "opacity-60" : ""}`}
                 >
                   {op.etiqueta}
                 </button>
