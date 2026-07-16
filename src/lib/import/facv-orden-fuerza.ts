@@ -1,3 +1,5 @@
+import { CLUB_ID_FACV } from "./facv-config";
+
 export type FilaOF = {
   numero: number;
   bisIndex: number;
@@ -6,9 +8,9 @@ export type FilaOF = {
   fideId: string | null;
 };
 
-/** Página oficial del orden de fuerza del club (id 56 = Fomento Gandia). */
+/** Página oficial del orden de fuerza del club (id = Fomento Gandia, ver facv-config.ts). */
 export const URL_OF_CLUB =
-  "https://www.facv.org/appwebfacv/public/staff/of_club/of_publico.php?id=56";
+  `https://www.facv.org/appwebfacv/public/staff/of_club/of_publico.php?id=${CLUB_ID_FACV}`;
 
 const BADGE_RE = /class="badge[^"]*"[^>]*>\s*([0-9]+)\s*(bis)?\s*</i;
 const NOMBRE_RE = /class="cut"[^>]*>\s*([^<]+?)\s*</i;

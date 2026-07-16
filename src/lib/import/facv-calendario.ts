@@ -1,3 +1,5 @@
+import { TEMPORADA_ID_FACV } from "./facv-config";
+
 export type JornadaFACV = {
   grupo: string;
   ronda: number;
@@ -7,7 +9,8 @@ export type JornadaFACV = {
 };
 
 /**
- * Página pública del calendario de Interclubs (id 1428 = temporada 2026).
+ * Página pública del calendario de Interclubs (id = temporada activa, ver
+ * facv-config.ts).
  *
  * Investigado con curl (-A "Mozilla/5.0"): `r` selecciona la ronda a mostrar
  * (`r=1`..`r=11`, un fetch por ronda) salvo `r=0`, que devuelve TODAS las
@@ -19,7 +22,7 @@ export type JornadaFACV = {
  * iteración de rondas y menos peticiones que cualquier alternativa.
  */
 export const URL_CALENDARIO =
-  "https://www.facv.org/appwebfacv/public/staff/interclubs/calendario_publico.php?id=1428&modo=completo&sede_id=0&club_id=0&r=0";
+  `https://www.facv.org/appwebfacv/public/staff/interclubs/calendario_publico.php?id=${TEMPORADA_ID_FACV}&modo=completo&sede_id=0&club_id=0&r=0`;
 
 // Marca el inicio de la sección de un grupo: "<div class="grupo-title">NOMBRE</div>".
 const GRUPO_RE = /<div class="grupo-title">([^<]+)<\/div>/g;

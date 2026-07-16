@@ -15,7 +15,7 @@ export async function createServerSupabase() {
               cookieStore.set(name, value, options)
             );
           } catch {
-            /* llamado desde RSC: el middleware refresca la sesión */
+            /* llamado desde RSC: el proxy (antes middleware) refresca la sesión */
           }
         },
       },
