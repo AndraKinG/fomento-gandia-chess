@@ -24,8 +24,66 @@ export type ResultadoSyncResultados = {
   standingsActualizados: number;
   discrepancias: string[];
   avisos: string[];
+  /** Fallos puntuales (escritura en BD) que NO abortan el resto de la sync:
+   * el resto de encuentros/grupos se sigue procesando (éxito parcial). */
+  errores: string[];
+  /** Solo se rellena cuando NO se pudo hacer nada en absoluto (temporada sin
+   * activar, calendario no descargable, etc.) — nunca por un fallo parcial,
+   * que se reporta en `errores` conservando lo que sí se completó. */
   error?: string;
 };
+
+export type EntradaDecisionEncuentro = {
+  /** Marcador oficial de FACV, orientado ya del punto de vista de este club. */
+  marcadorPropioFACV: number;
+  marcadorRivalFACV: number;
+  /** Resultados por tablero (vista del club) YA guardados por el capitán,
+   * en el orden que sea — solo importa la suma y el recuento. Vacío si no
+   * hay convocatoria o el capitán no ha anotado ningún resultado todavía. */
+  resultadosTablero: number[];
+  /** Nº de tableros de la convocatoria publicada (0 si no hay). */
+  totalTableros: number;
+  marcadorPropioExistente: number | null;
+  marcadorRivalExistente: number | null;
+};
+
+export type DecisionEncuentro =
+  | { escribir: true; marcadorPropio: number; marcadorRival: number }
+  | { escribir: false; discrepancia: { nuestro: number; rival: number } | null };
+
+/**
+ * Decisión PURA (sin I/O) de qué hacer con un encuentro al sincronizar
+ * resultados FACV: si el capitán ya anotó resultados por tablero, ESOS
+ * prevalecen siempre (nunca se pisan) — si además están completos, se
+ * compara la suma contra el marcador de FACV y se señala como discrepancia
+ * si no coincide. Si no hay ningún resultado por tablero, se rellena el
+ * marcador con el dato de FACV, salvo que ya se hubiera completado en una
+ * sync anterior (no se vuelve a tocar).
+ */
+export function decidirEncuentro(entrada: EntradaDecisionEncuentro): DecisionEncuentro {
+  const {
+    marcadorPropioFACV,
+    marcadorRivalFACV,
+    resultadosTablero,
+    totalTableros,
+    marcadorPropioExistente,
+    marcadorRivalExistente,
+  } = entrada;
+
+  if (resultadosTablero.length > 0) {
+    const marcador = calcularMarcador(resultadosTablero, totalTableros);
+    if (marcador.completos === marcador.total && marcador.nuestro !== marcadorPropioFACV) {
+      return { escribir: false, discrepancia: { nuestro: marcador.nuestro, rival: marcador.rival } };
+    }
+    return { escribir: false, discrepancia: null };
+  }
+
+  if (marcadorPropioExistente !== null || marcadorRivalExistente !== null) {
+    return { escribir: false, discrepancia: null }; // ya se completó en una sync anterior
+  }
+
+  return { escribir: true, marcadorPropio: marcadorPropioFACV, marcadorRival: marcadorRivalFACV };
+}
 
 /**
  * Lógica interna (sin gate de autorización) de la sync de resultados y
@@ -58,6 +116,7 @@ export async function sincronizarResultadosFACVCore(): Promise<ResultadoSyncResu
     standingsActualizados: 0,
     discrepancias: [],
     avisos: [],
+    errores: [],
   };
 
   try {
@@ -126,9 +185,14 @@ export async function sincronizarResultadosFACVCore(): Promise<ResultadoSyncResu
     }
     const resultadoPorBoard = new Map((boardResults ?? []).map((r) => [r.lineup_board_id as string, r.resultado as number]));
 
+    // Éxito parcial: los contadores se acumulan durante TODO el recorrido y
+    // nunca se resetean; un fallo puntual (escritura en BD de un encuentro
+    // concreto) se guarda en `errores` y se sigue con el resto — no aborta
+    // la sync entera perdiendo lo ya escrito (ver finding 1, fix round 1).
     let actualizados = 0;
     let omitidos = 0;
     const discrepancias: string[] = [];
+    const errores: string[] = [];
 
     for (const r of resultados) {
       if (r.marcadorLocal === null || r.marcadorVisitante === null) continue; // sin jugar todavía
@@ -155,34 +219,39 @@ export async function sincronizarResultadosFACVCore(): Promise<ResultadoSyncResu
         .map((id) => resultadoPorBoard.get(id))
         .filter((v): v is number => v !== undefined);
 
-      if (idsTableroDeEsteMatch.length > 0 && resultadosTablero.length > 0) {
-        // El capitán ya anotó resultados por tablero: PREVALECEN. Solo se
-        // compara (para avisar) cuando la convocatoria está completa.
-        const marcador = calcularMarcador(resultadosTablero, idsTableroDeEsteMatch.length);
-        if (marcador.completos === marcador.total && marcador.nuestro !== marcadorPropioFACV) {
+      const decision = decidirEncuentro({
+        marcadorPropioFACV,
+        marcadorRivalFACV,
+        resultadosTablero,
+        totalTableros: idsTableroDeEsteMatch.length,
+        marcadorPropioExistente: existente.marcador_propio,
+        marcadorRivalExistente: existente.marcador_rival,
+      });
+
+      if (!decision.escribir) {
+        if (decision.discrepancia) {
           discrepancias.push(
             `${equipo.nombre} ronda ${r.ronda} (vs ${nombreEquipoFila === r.local ? r.visitante : r.local}): ` +
-              `el capitán registró ${formatearPunto(marcador.nuestro)}–${formatearPunto(marcador.rival)}, ` +
+              `el capitán registró ${formatearPunto(decision.discrepancia.nuestro)}–${formatearPunto(decision.discrepancia.rival)}, ` +
               `FACV registra ${formatearPunto(marcadorPropioFACV)}–${formatearPunto(marcadorRivalFACV)} — ` +
               `se mantiene el resultado por tablero, revisa la discrepancia`
           );
         }
-        continue; // nunca se pisa el resultado por tablero
-      }
-
-      if (existente.marcador_propio !== null || existente.marcador_rival !== null) {
-        continue; // ya se completó en una sync anterior: no se vuelve a tocar
+        continue;
       }
 
       const { error } = await admin
         .from("matches")
         .update({
-          marcador_propio: marcadorPropioFACV,
-          marcador_rival: marcadorRivalFACV,
+          marcador_propio: decision.marcadorPropio,
+          marcador_rival: decision.marcadorRival,
           estado: "jugado" as const,
         })
         .eq("id", existente.id);
-      if (error) return { ...vacio, error: error.message };
+      if (error) {
+        errores.push(`${equipo.nombre} ronda ${r.ronda}: no se pudo guardar el marcador (${error.message})`);
+        continue;
+      }
       actualizados++;
     }
 
@@ -232,15 +301,90 @@ export async function sincronizarResultadosFACVCore(): Promise<ResultadoSyncResu
         es_nuestro: normalizaNombre(f.club) === nombreEquipoNorm,
       }));
 
-      const { error: deleteError } = await admin.from("standings").delete().eq("team_id", equipo.id);
-      if (deleteError) return { ...vacio, error: deleteError.message };
-      const { error: insertError } = await admin.from("standings").insert(filasStandings);
-      if (insertError) return { ...vacio, error: insertError.message };
+      const resultadoReemplazo = await reemplazarStandingsEquipo(admin, equipo, filasStandings);
+      if (!resultadoReemplazo.ok) {
+        errores.push(resultadoReemplazo.mensaje);
+        continue;
+      }
       standingsActualizados++;
     }
 
-    return { actualizados, omitidos, standingsActualizados, discrepancias, avisos };
+    return { actualizados, omitidos, standingsActualizados, discrepancias, avisos, errores };
   } catch {
     return { ...vacio, error: "Error al procesar la sync de resultados FACV" };
   }
+}
+
+type AdminClient = ReturnType<typeof createAdminClient>;
+type FilaStandingInsert = {
+  team_id: string;
+  posicion: number;
+  club: string;
+  puntos: number;
+  es_nuestro: boolean;
+};
+
+/**
+ * Reemplaza por completo las filas de `standings` de un equipo, de forma
+ * recuperable: borrar+insertar no es atómico (una caída entre medias deja la
+ * clasificación vacía), así que se guardan las filas PREVIAS antes de borrar
+ * y, si el insert de las nuevas falla, se restauran (mismo patrón que el
+ * reemplazo de tableros de convocatoria, ver
+ * `src/app/equipos/[id]/convocatoria/actions.ts`). Si la restauración
+ * también falla, el error resultante es un fallo compuesto bien audible: la
+ * clasificación de ese equipo puede haber quedado vacía y hay que revisarla
+ * a mano.
+ */
+async function reemplazarStandingsEquipo(
+  admin: AdminClient,
+  equipo: { id: string; nombre: string },
+  filasNuevas: FilaStandingInsert[]
+): Promise<{ ok: true } | { ok: false; mensaje: string }> {
+  if (filasNuevas.length === 0) {
+    return { ok: false, mensaje: `${equipo.nombre}: la clasificación nueva viene vacía, no se aplica` };
+  }
+  const posiciones = new Set(filasNuevas.map((f) => f.posicion));
+  if (posiciones.size !== filasNuevas.length) {
+    return { ok: false, mensaje: `${equipo.nombre}: la clasificación nueva tiene posiciones duplicadas, no se aplica` };
+  }
+
+  const { data: previas, error: previasError } = await admin
+    .from("standings")
+    .select("team_id, posicion, club, puntos, es_nuestro")
+    .eq("team_id", equipo.id);
+  if (previasError) {
+    return { ok: false, mensaje: `${equipo.nombre}: no se pudo leer la clasificación anterior (${previasError.message})` };
+  }
+
+  const { error: deleteError } = await admin.from("standings").delete().eq("team_id", equipo.id);
+  if (deleteError) {
+    return { ok: false, mensaje: `${equipo.nombre}: ${deleteError.message}` };
+  }
+
+  const { error: insertError } = await admin.from("standings").insert(filasNuevas);
+  if (!insertError) return { ok: true };
+
+  if ((previas ?? []).length > 0) {
+    const filasRestauracion = (previas ?? []).map((f) => ({
+      team_id: f.team_id as string,
+      posicion: f.posicion as number,
+      club: f.club as string,
+      puntos: f.puntos as number,
+      es_nuestro: f.es_nuestro as boolean,
+    }));
+    const { error: restoreError } = await admin.from("standings").insert(filasRestauracion);
+    if (restoreError) {
+      return {
+        ok: false,
+        mensaje:
+          `${equipo.nombre}: ${insertError.message} — además falló restaurar la clasificación anterior ` +
+          `(${restoreError.message}); la clasificación de este equipo puede haber quedado vacía, revisar a mano`,
+      };
+    }
+  }
+
+  return {
+    ok: false,
+    mensaje: `${equipo.nombre}: ${insertError.message} (se restauró la clasificación anterior)`,
+  };
 }

@@ -83,3 +83,17 @@ de Fase 1B). La ambigüedad sobre cómo contar bloques de bis para los
 límites de tableros/categoría queda **sin resolver por falta de caso
 real** — honestamente, no hay ningún dato empírico propio que la ilumine
 esta temporada. No se ha tocado el comportamiento del validador.
+
+## Limitaciones
+
+La comparación del apartado (a) usó el `force_order` sincronizado a FINAL
+de temporada (snapshot único, descargado con la temporada 2026 ya
+terminada), no el vigente en la fecha de cada ronda. Si la FACV hubiera
+renumerado el orden de fuerza a mitad de temporada (altas, bajas o
+correcciones), el juicio "orden estrictamente creciente" sobre las rondas
+anteriores al cambio se habría hecho contra una numeración que no era la
+aplicable entonces, y alguna ronda temprana podría en realidad contener
+una inversión (o dejar de contenerla). No consta ninguna renumeración esta
+temporada, pero no se verificó ronda a ronda. La conclusión de **cero
+inversiones observadas en 11/11 rondas** se mantiene como evidencia fuerte
+— pero no absoluta — de que el club juega en orden estricto de `numero`.

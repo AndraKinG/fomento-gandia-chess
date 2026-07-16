@@ -124,12 +124,19 @@ export default async function EquiposPage({
     const discrepanciasMsg = resultado.discrepancias.length > 0
       ? ` — discrepancias (se mantiene el resultado por tablero): ${resultado.discrepancias.join("; ")}`
       : "";
+    // `errores` son fallos puntuales (p. ej. de escritura en BD de un
+    // encuentro o una clasificación concretos) que NO impiden que el resto
+    // de la sync se complete: se muestran junto al resumen de lo que sí se
+    // hizo, nunca en su lugar (éxito parcial + errores, ambos visibles).
+    const erroresMsg = resultado.errores.length > 0
+      ? ` — errores parciales: ${resultado.errores.join("; ")}`
+      : "";
     const params = new URLSearchParams({
       msg: resultado.error
         ?? `Resultados sincronizados: ${resultado.actualizados} marcadores actualizados, `
           + `${resultado.standingsActualizados} clasificaciones reemplazadas`
           + (resultado.omitidos > 0 ? ` (${resultado.omitidos} omitidos)` : "")
-          + avisosMsg + discrepanciasMsg,
+          + avisosMsg + discrepanciasMsg + erroresMsg,
       tipo: resultado.error ? "error" : "ok",
     });
     redirect(`/admin/equipos?${params.toString()}`);

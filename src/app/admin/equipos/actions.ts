@@ -137,7 +137,7 @@ export async function sincronizarCalendarioFACV(): Promise<{
 export async function sincronizarResultadosFACV(): Promise<ResultadoSyncResultados> {
   if (!(await esAdmin())) {
     return {
-      actualizados: 0, omitidos: 0, standingsActualizados: 0, discrepancias: [], avisos: [],
+      actualizados: 0, omitidos: 0, standingsActualizados: 0, discrepancias: [], avisos: [], errores: [],
       error: "Solo el admin puede hacer esto",
     };
   }
