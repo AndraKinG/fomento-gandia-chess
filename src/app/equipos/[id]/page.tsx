@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { esAdmin } from "@/lib/auth/es-admin";
 import { formatearFechaMadrid } from "@/lib/fecha-madrid";
-import { formatearPunto } from "@/lib/marcador";
+import { calcularMarcador, formatearPunto } from "@/lib/marcador";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Boton } from "@/components/ui/Boton";
@@ -69,12 +69,46 @@ export default async function EquipoDetallePage({
 
   // Chip "Conv." (Task 6): un extra query barata para saber qué jornadas ya
   // tienen convocatoria publicada (la RLS de `lineups` ya permite leer las
-  // publicadas a cualquier usuario autenticado).
+  // publicadas a cualquier usuario autenticado). Se aprovecha la misma query
+  // para traer los tableros de esas convocatorias: algunas jornadas (p. ej.
+  // resultados anotados por el capitán tablero a tablero, Task 7) NO tienen
+  // `marcador_propio`/`marcador_rival` en `matches` — esas columnas solo las
+  // rellena la sync FACV (Task 8) — así que sin esto la fila se quedaría sin
+  // marcador aunque la jornada esté jugada y completa (ver detalle en
+  // `/jornadas/[matchId]`, que ya hace este mismo cálculo).
   const idsJornadas = (jornadas ?? []).map((j) => j.id);
   const { data: lineupsPublicadas } = idsJornadas.length > 0
-    ? await supabase.from("lineups").select("match_id").eq("estado", "publicada").in("match_id", idsJornadas)
+    ? await supabase
+        .from("lineups")
+        .select("match_id, lineup_boards(id)")
+        .eq("estado", "publicada")
+        .in("match_id", idsJornadas)
     : { data: [] };
   const conConvocatoria = new Set((lineupsPublicadas ?? []).map((l) => l.match_id));
+
+  type LineupBoardFila = { id: string };
+  const idsTableroPorMatch = new Map<string, string[]>(
+    (lineupsPublicadas ?? []).map((l) => [
+      l.match_id as string,
+      ((l.lineup_boards ?? []) as unknown as LineupBoardFila[]).map((b) => b.id),
+    ])
+  );
+  const todosLosTableros = [...idsTableroPorMatch.values()].flat();
+  const { data: resultadosTablero } = todosLosTableros.length > 0
+    ? await supabase.from("board_results").select("lineup_board_id, resultado").in("lineup_board_id", todosLosTableros)
+    : { data: [] };
+  const resultadoPorTablero = new Map(
+    (resultadosTablero ?? []).map((r) => [r.lineup_board_id as string, r.resultado as number])
+  );
+  const marcadorPorTablerosDeMatch = new Map<string, string>();
+  for (const [matchId, idsTablero] of idsTableroPorMatch) {
+    if (idsTablero.length === 0) continue;
+    const resultados = idsTablero
+      .map((id) => resultadoPorTablero.get(id))
+      .filter((r): r is number => r !== undefined);
+    if (resultados.length !== idsTablero.length) continue; // aún incompleto
+    marcadorPorTablerosDeMatch.set(matchId, calcularMarcador(resultados, idsTablero.length).texto);
+  }
 
   const capitanes = (equipo.team_captains ?? []) as unknown as {
     player_id: string;
@@ -122,10 +156,16 @@ export default async function EquipoDetallePage({
                     <span className="min-w-0 flex-1 truncate text-sm text-tinta">
                       {j.es_local ? "vs" : "@"} {j.rival}
                     </span>
-                    {j.marcador_propio !== null && j.marcador_rival !== null && (
+                    {j.marcador_propio !== null && j.marcador_rival !== null ? (
                       <span className="shrink-0 text-sm font-semibold text-tinta">
                         {formatearPunto(j.marcador_propio)}–{formatearPunto(j.marcador_rival)}
                       </span>
+                    ) : (
+                      marcadorPorTablerosDeMatch.has(j.id) && (
+                        <span className="shrink-0 text-sm font-semibold text-tinta">
+                          {marcadorPorTablerosDeMatch.get(j.id)}
+                        </span>
+                      )
                     )}
                     <span className="shrink-0 text-right text-xs text-tinta-suave">
                       {formatearFechaCorta(j.fecha_hora)}
