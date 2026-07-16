@@ -2,6 +2,7 @@
  * Identificadores FACV usados por los importadores de este directorio (orden
  * de fuerza, calendario, resultados/clasificación). Centralizados aquí para
  * no tener que buscar en varios ficheros cuando cambien.
+ * El nombre del club para filtrado de encuentros vive en la tabla teams (no aquí).
  */
 
 /**
@@ -17,10 +18,3 @@ export const CLUB_ID_FACV = 56;
  * nuevo cada año para el calendario de Interclubs.
  */
 export const TEMPORADA_ID_FACV = 1428;
-
-/**
- * Nombre base del club tal y como aparece en las páginas públicas FACV
- * (calendario, resultados), usado para filtrar los encuentros propios entre
- * todos los grupos de Interclubs.
- */
-export const NOMBRE_CLUB_FACV = "Fomento";

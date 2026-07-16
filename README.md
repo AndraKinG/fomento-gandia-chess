@@ -103,11 +103,14 @@ posiciones). Los ids de club/temporada están centralizados en
 `src/lib/import/facv-config.ts` — **actualizar `TEMPORADA_ID_FACV` cada
 temporada** (la FACV asigna un id nuevo cada año).
 
-## Notificaciones push
+## Notificaciones push y crons
 
-`api/cron/director` corre diariamente (ver `vercel.json`) y avisa a
-capitanes/jugadores de disponibilidad pendiente o convocatorias por publicar.
-`api/cron/elo-fide` y `api/cron/elo-feda` refrescan el ELO oficial.
+`/api/cron/director` corre diariamente en horario Vercel (ver `vercel.json`) y
+avisa a capitanes/jugadores de disponibilidad pendiente o convocatorias por
+publicar. `/api/cron/elo-fide` y `/api/cron/elo-feda` existen como rutas
+manually-invocables (sin cron automático en Vercel: fide.com bloquea peticiones
+desde Vercel) — se invocan desde los botones manuales en `/admin/elo` o desde
+`scripts/actualizar-elo-fide.mjs` en local.
 
 ## Deploy (Vercel)
 

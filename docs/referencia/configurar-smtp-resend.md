@@ -35,7 +35,8 @@ nombre. Sigue estos pasos tú mismo.
 ## 3. Configurar el SMTP en Supabase
 
 1. Entra al [Dashboard de Supabase](https://supabase.com/dashboard) → proyecto
-   del club → **Project Settings → Auth → SMTP Settings**.
+   del club → **Authentication → SMTP Settings** (si no lo ves ahí, búscalo en
+   Project Settings → Authentication — Supabase reubica el menú a veces).
 2. Activa **Enable Custom SMTP** y rellena:
 
    | Campo | Valor |
