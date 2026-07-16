@@ -163,7 +163,10 @@ export function validarContexto(
   // hay indicación en el RGC de cómo ajustar 18/28 para un A reducido, así
   // que esta implementación no lo intenta y asume división autonómica con
   // A a 8 tableros (caso real esperado en la liga interclubs valenciana).
-  if (ctx.esDivisionAutonomica[ctx.equipoIndice]) {
+  // Revisión final 1C, item 7a: sin más equipos en el club (totalEquipos===1)
+  // el límite A/B carece de objeto (no hay B/C con quien repartir jugadores
+  // fuertes) — se salta aunque el equipo esté marcado como autonómico.
+  if (ctx.esDivisionAutonomica[ctx.equipoIndice] && ctx.totalEquipos > 1) {
     for (const { tablero, jugador } of validas) {
       const idx = indicePorId.get(jugador.playerId);
       if (idx === undefined) continue;
@@ -246,17 +249,27 @@ export function validarContexto(
   }
 
   // --- R7 (arts. 54-55): jugador en dos convocatorias de la misma fecha. ---
+  // Revisión final 1C, item 2: si la OTRA convocatoria es todavía un
+  // BORRADOR (no publicada), el solape no es un hecho consumado — el otro
+  // capitán puede cambiarla o no llegar a publicarla nunca — así que se
+  // degrada a "aviso" preventivo en vez de bloquear con "error". Contra una
+  // convocatoria ya PUBLICADA de otro equipo sigue siendo error bloqueante.
   for (const { tablero, jugador } of validas) {
     for (const otra of ctx.alineacionesMismaFecha) {
       if (otra.equipoIndice === ctx.equipoIndice) continue;
       if (otra.playerIds.includes(jugador.playerId)) {
+        const esBorrador = otra.estado === "borrador";
         infracciones.push({
-          nivel: "error",
+          nivel: esBorrador ? "aviso" : "error",
           tablero,
           articulo: "54/55",
-          mensaje: `${etiqueta(jugador)} ya consta en la convocatoria del equipo ${letraEquipo(
-            otra.equipoIndice
-          )} correspondiente a la misma fecha; un jugador no puede constar en dos actas el mismo día (arts. 54 y 55).`,
+          mensaje: esBorrador
+            ? `${etiqueta(jugador)} también figura en un BORRADOR de convocatoria del equipo ${letraEquipo(
+                otra.equipoIndice
+              )} para la misma fecha; si ese borrador llega a publicarse, un jugador no puede constar en dos actas el mismo día (arts. 54 y 55) — aviso preventivo, el borrador de otro equipo aún puede cambiar.`
+            : `${etiqueta(jugador)} ya consta en la convocatoria del equipo ${letraEquipo(
+                otra.equipoIndice
+              )} correspondiente a la misma fecha; un jugador no puede constar en dos actas el mismo día (arts. 54 y 55).`,
         });
       }
     }
@@ -337,6 +350,12 @@ function validarMismaSede(
 
   const resultado = validarNucleo(orden, combinada, configCombinada);
 
+  // Revisión final 1C, item 2: mapa equipoIndice -> estado de la lineup de
+  // ORIGEN de cada participante de la sede. El equipo `actual` (el que se
+  // está validando en vivo) no tiene un `estado` persistido aquí — es su
+  // propia edición en curso, nunca "borrador ajeno" a efectos de este check.
+  const estadoPorEquipoIndice = new Map(mismaSede.map((p) => [p.equipoIndice, p.estado]));
+
   const infracciones: Infraccion[] = [];
   for (const inf of resultado) {
     if (inf.articulo !== "51.2" && inf.articulo !== "52.3") continue;
@@ -356,13 +375,29 @@ function validarMismaSede(
     const afectaAlEquipoActual = playerIds.some((id) => equipoPorJugador.get(id) === actual.equipoIndice);
     const esInfraccionAjena = playerIds.length > 0 && !afectaAlEquipoActual;
 
+    // Item 2 (revisión final 1C): si alguno de los equipos implicados
+    // (distinto del propio `actual`) tiene su alineación en la sede todavía
+    // en BORRADOR, la infracción no puede bloquear la publicación del equipo
+    // actual — ese borrador ajeno puede cambiar o no llegar a publicarse
+    // nunca. Se degrada a aviso igual que `esInfraccionAjena`, pero por un
+    // motivo distinto (aquí SÍ afecta al equipo actual).
+    const equiposImplicadosIndices = new Set(
+      playerIds.map((id) => equipoPorJugador.get(id)).filter((idx): idx is number => idx !== undefined)
+    );
+    const involucraBorradorAjeno = [...equiposImplicadosIndices].some(
+      (idx) => idx !== actual.equipoIndice && estadoPorEquipoIndice.get(idx) === "borrador"
+    );
+
     const equipoResponsable = origen ? letraEquipo(origen.equipoIndice) : equiposImplicados;
+    const notaBorrador = involucraBorradorAjeno
+      ? " (incluye la alineación en BORRADOR de otro equipo de la sede, aún puede cambiar)"
+      : "";
     const mensaje = esInfraccionAjena
-      ? `(equipo ${equipoResponsable} de la sede) ${inf.mensaje} [Alineación conjunta misma sede, equipos ${equiposImplicados} — art. 52.4]`
-      : `${inf.mensaje} [Alineación conjunta misma sede, equipos ${equiposImplicados} — art. 52.4]`;
+      ? `(equipo ${equipoResponsable} de la sede) ${inf.mensaje}${notaBorrador} [Alineación conjunta misma sede, equipos ${equiposImplicados} — art. 52.4]`
+      : `${inf.mensaje}${notaBorrador} [Alineación conjunta misma sede, equipos ${equiposImplicados} — art. 52.4]`;
 
     infracciones.push({
-      nivel: esInfraccionAjena ? "aviso" : inf.nivel,
+      nivel: esInfraccionAjena || involucraBorradorAjeno ? "aviso" : inf.nivel,
       tablero: esDeEsteEquipo ? origen!.tableroOriginal : null,
       articulo: "52.4",
       mensaje,

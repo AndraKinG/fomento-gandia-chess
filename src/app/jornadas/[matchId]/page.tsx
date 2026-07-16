@@ -4,7 +4,7 @@ import { esAdmin } from "@/lib/auth/es-admin";
 import { esCapitanDeMatch } from "@/lib/auth/es-capitan";
 import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 import { colorDeTablero } from "@/lib/validador/colores";
-import { calcularMarcador, formatearPunto } from "@/lib/marcador";
+import { calcularMarcador, formatearPunto, marcadorPreferido } from "@/lib/marcador";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Banner } from "@/components/ui/Banner";
@@ -77,12 +77,21 @@ export default async function JornadaPage({
     }
   }
 
-  const marcador = calcularMarcador(
+  // Revisión final 1C, item 3: precedencia compartida con `/equipos/[id]`
+  // (marcadorPreferido, src/lib/marcador.ts) — boards del capitán primero,
+  // marcador global de la sync FACV solo como fallback sin ningún resultado
+  // por tablero.
+  const boardsMarcador = calcularMarcador(
     boards
       .map((b) => resultadosPorBoard.get(b.id))
       .filter((r): r is number => r !== undefined),
     boards.length
   );
+  const marcador = marcadorPreferido({
+    boardsMarcador,
+    marcadorPropio: match.marcador_propio,
+    marcadorRival: match.marcador_rival,
+  });
 
   const fecha = formatearFechaMadrid(match.fecha_hora, {
     day: "2-digit",
@@ -113,24 +122,15 @@ export default async function JornadaPage({
             {match.es_local ? "En casa" : "Fuera"}
             {match.sede ? ` · ${match.sede}` : ""}
           </p>
-          {marcador.completos > 0 ? (
+          {marcador && (
             <p className="text-2xl font-bold text-tinta">
               {marcador.texto}{" "}
-              {marcador.completos < marcador.total && (
+              {marcador.parcial && (
                 <span className="text-sm font-normal text-tinta-suave">
-                  ({marcador.completos}/{marcador.total})
+                  ({boardsMarcador.completos}/{boardsMarcador.total})
                 </span>
               )}
             </p>
-          ) : (
-            // Sin resultados por tablero: marcador global de la sync FACV
-            // (Task 8, Fase 1C) si lo hay.
-            match.marcador_propio !== null &&
-            match.marcador_rival !== null && (
-              <p className="text-2xl font-bold text-tinta">
-                {formatearPunto(match.marcador_propio)} – {formatearPunto(match.marcador_rival)}
-              </p>
-            )
           )}
         </Tarjeta>
 

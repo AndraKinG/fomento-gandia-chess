@@ -47,3 +47,60 @@ export function calcularMarcador(resultados: number[], total: number): Marcador 
     texto: `${formatearPunto(nuestro)} – ${formatearPunto(rival)}`,
   };
 }
+
+export type MarcadorPreferidoInput = {
+  /** Marcador calculado a partir de `board_results` (ver `calcularMarcador`),
+   * si hay convocatoria publicada. `undefined`/`null` si no hay convocatoria
+   * (nada que anotar por tablero todavía). */
+  boardsMarcador?: Marcador | null;
+  /** `matches.marcador_propio`/`marcador_rival`: solo los rellena la sync
+   * FACV (Task 8, Fase 1C) cuando el capitán NO ha anotado nada por tablero. */
+  marcadorPropio?: number | null;
+  marcadorRival?: number | null;
+};
+
+export type MarcadorPreferidoResultado = {
+  texto: string;
+  /** true si el marcador viene de tableros pero AÚN quedan tableros sin
+   * resultado (completos < total): quien lo muestre puede señalarlo. */
+  parcial: boolean;
+  fuente: "tableros" | "facv";
+};
+
+/**
+ * Revisión final 1C, item 3: precedencia ÚNICA del marcador de una jornada,
+ * compartida por `/equipos/[id]` (lista de jornadas) y `/jornadas/[matchId]`
+ * (detalle) — antes cada pantalla decidía por su cuenta y la de
+ * `/equipos/[id]` tenía la precedencia INVERTIDA (mostraba el marcador de la
+ * sync FACV con prioridad sobre los resultados por tablero del capitán,
+ * pudiendo mostrar un marcador desactualizado si el capitán ya había
+ * corregido algo por tablero).
+ *
+ * Regla ("boards del capitán primero"): en cuanto haya AL MENOS un resultado
+ * por tablero anotado (aunque la convocatoria no esté completa todavía), ese
+ * es el marcador que se muestra — es el dato más fino y más actual, y
+ * `decidirEncuentro` (facv-resultados-apply.ts) ya nunca pisa estos datos.
+ * El marcador global de FACV (`marcadorPropio`/`marcadorRival`) solo se usa
+ * como *fallback* cuando no hay NINGÚN resultado por tablero todavía.
+ */
+export function marcadorPreferido({
+  boardsMarcador,
+  marcadorPropio,
+  marcadorRival,
+}: MarcadorPreferidoInput): MarcadorPreferidoResultado | null {
+  if (boardsMarcador && boardsMarcador.completos > 0) {
+    return {
+      texto: boardsMarcador.texto,
+      parcial: boardsMarcador.completos < boardsMarcador.total,
+      fuente: "tableros",
+    };
+  }
+  if (marcadorPropio !== null && marcadorPropio !== undefined && marcadorRival !== null && marcadorRival !== undefined) {
+    return {
+      texto: `${formatearPunto(marcadorPropio)} – ${formatearPunto(marcadorRival)}`,
+      parcial: false,
+      fuente: "facv",
+    };
+  }
+  return null;
+}

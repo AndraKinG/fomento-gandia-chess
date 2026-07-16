@@ -49,7 +49,13 @@ export type EntradaDecisionEncuentro = {
 
 export type DecisionEncuentro =
   | { escribir: true; marcadorPropio: number; marcadorRival: number }
-  | { escribir: false; discrepancia: { nuestro: number; rival: number } | null };
+  | {
+      escribir: false;
+      // Revisión final 1C, item 5: el encuentro se marca 'jugado' aunque no
+      // se escriba ningún marcador — ver el comentario extenso más abajo.
+      marcarJugado: boolean;
+      discrepancia: { nuestro: number; rival: number } | null;
+    };
 
 /**
  * Decisión PURA (sin I/O) de qué hacer con un encuentro al sincronizar
@@ -72,14 +78,30 @@ export function decidirEncuentro(entrada: EntradaDecisionEncuentro): DecisionEnc
 
   if (resultadosTablero.length > 0) {
     const marcador = calcularMarcador(resultadosTablero, totalTableros);
-    if (marcador.completos === marcador.total && marcador.nuestro !== marcadorPropioFACV) {
-      return { escribir: false, discrepancia: { nuestro: marcador.nuestro, rival: marcador.rival } };
+    if (marcador.completos === marcador.total) {
+      if (marcador.nuestro !== marcadorPropioFACV) {
+        return {
+          escribir: false,
+          marcarJugado: false,
+          discrepancia: { nuestro: marcador.nuestro, rival: marcador.rival },
+        };
+      }
+      return { escribir: false, marcarJugado: false, discrepancia: null };
     }
-    return { escribir: false, discrepancia: null };
+    // Finding 5 (revisión final 1C): boards INCOMPLETOS (el capitán aún está
+    // anotando) pero FACV ya tiene marcador — el encuentro SÍ se jugó. Antes
+    // de este fix, este caso devolvía `discrepancia: null` sin ninguna otra
+    // señal, y `sincronizarResultadosFACVCore` solo tocaba `matches.estado`
+    // en la rama `escribir: true`: el encuentro se quedaba en 'pendiente'
+    // para siempre, aunque FACV ya lo diera por jugado, hasta que el capitán
+    // completase el último tablero. Se marca 'jugado' aquí (nunca se toca
+    // marcador ni board_results: el capitán completará los resultados que
+    // faltan) y el llamador añade un aviso nombrando el encuentro.
+    return { escribir: false, marcarJugado: true, discrepancia: null };
   }
 
   if (marcadorPropioExistente !== null || marcadorRivalExistente !== null) {
-    return { escribir: false, discrepancia: null }; // ya se completó en una sync anterior
+    return { escribir: false, marcarJugado: false, discrepancia: null }; // ya se completó en una sync anterior
   }
 
   return { escribir: true, marcadorPropio: marcadorPropioFACV, marcadorRival: marcadorRivalFACV };
@@ -193,6 +215,11 @@ export async function sincronizarResultadosFACVCore(): Promise<ResultadoSyncResu
     let omitidos = 0;
     const discrepancias: string[] = [];
     const errores: string[] = [];
+    // Revisión final 1C, item 5: se declara aquí (antes solo existía para la
+    // sección de clasificación, más abajo) porque el bucle de marcadores
+    // también necesita avisar cuando marca un encuentro 'jugado' sin poder
+    // escribir el marcador (boards incompletos, ver `decidirEncuentro`).
+    const avisos: string[] = [];
 
     for (const r of resultados) {
       if (r.marcadorLocal === null || r.marcadorVisitante === null) continue; // sin jugar todavía
@@ -237,6 +264,28 @@ export async function sincronizarResultadosFACVCore(): Promise<ResultadoSyncResu
               `se mantiene el resultado por tablero, revisa la discrepancia`
           );
         }
+        // Revisión final 1C, item 5: boards incompletos pero FACV confirma
+        // que el encuentro se jugó — se marca 'jugado' SIN tocar marcador ni
+        // board_results (esos siguen siendo cosa del capitán). Se evita el
+        // update si ya estaba 'jugado' (nada que hacer, evita ruido/reintentos).
+        if (decision.marcarJugado && existente.estado !== "jugado") {
+          const { error } = await admin
+            .from("matches")
+            .update({ estado: "jugado" as const })
+            .eq("id", existente.id);
+          if (error) {
+            errores.push(
+              `${equipo.nombre} ronda ${r.ronda}: FACV confirma el resultado pero no se pudo marcar como jugado (${error.message})`
+            );
+          } else {
+            avisos.push(
+              `${equipo.nombre} ronda ${r.ronda} (vs ${nombreEquipoFila === r.local ? r.visitante : r.local}): ` +
+                `FACV confirma el resultado (${formatearPunto(marcadorPropioFACV)}–${formatearPunto(marcadorRivalFACV)}) pero el capitán ` +
+                `solo anotó ${resultadosTablero.length}/${idsTableroDeEsteMatch.length} tableros; se marca la jornada como jugada sin ` +
+                `tocar el marcador — completa los resultados que faltan`
+            );
+          }
+        }
         continue;
       }
 
@@ -267,7 +316,6 @@ export async function sincronizarResultadosFACVCore(): Promise<ResultadoSyncResu
 
     const enlaces = parseEnlacesClasificacionFACV(htmlCalendario, nombreBase);
     let standingsActualizados = 0;
-    const avisos: string[] = [];
 
     for (const enlace of enlaces) {
       const sufijo = grupoToSufijo.get(enlace.grupo);

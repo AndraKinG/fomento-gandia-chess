@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { esAdmin } from "@/lib/auth/es-admin";
 import { formatearFechaMadrid } from "@/lib/fecha-madrid";
-import { calcularMarcador, formatearPunto } from "@/lib/marcador";
+import { calcularMarcador, formatearPunto, marcadorPreferido } from "@/lib/marcador";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Boton } from "@/components/ui/Boton";
@@ -100,14 +100,19 @@ export default async function EquipoDetallePage({
   const resultadoPorTablero = new Map(
     (resultadosTablero ?? []).map((r) => [r.lineup_board_id as string, r.resultado as number])
   );
-  const marcadorPorTablerosDeMatch = new Map<string, string>();
+  // Revisión final 1C, item 3: se guarda el Marcador COMPLETO (no solo el
+  // texto de cuando estaba completo) para poder aplicar la precedencia
+  // compartida `marcadorPreferido` — antes esta lista solo guardaba el
+  // marcador de tableros si ya estaba completo, y la precedencia de la fila
+  // (ver JSX más abajo) estaba INVERTIDA: prefería el marcador global de la
+  // sync FACV incluso habiendo resultados por tablero más fiables.
+  const marcadorPorTablerosDeMatch = new Map<string, ReturnType<typeof calcularMarcador>>();
   for (const [matchId, idsTablero] of idsTableroPorMatch) {
     if (idsTablero.length === 0) continue;
     const resultados = idsTablero
       .map((id) => resultadoPorTablero.get(id))
       .filter((r): r is number => r !== undefined);
-    if (resultados.length !== idsTablero.length) continue; // aún incompleto
-    marcadorPorTablerosDeMatch.set(matchId, calcularMarcador(resultados, idsTablero.length).texto);
+    marcadorPorTablerosDeMatch.set(matchId, calcularMarcador(resultados, idsTablero.length));
   }
 
   const capitanes = (equipo.team_captains ?? []) as unknown as {
@@ -144,41 +149,43 @@ export default async function EquipoDetallePage({
         ) : (
           <div className="overflow-hidden rounded-2xl border border-borde bg-tarjeta">
             <ul className="divide-y divide-borde">
-              {(jornadas ?? []).map((j) => (
-                <li key={j.id}>
-                  <Link
-                    href={`/jornadas/${j.id}`}
-                    className="flex items-center gap-2 px-3 py-2.5 hover:bg-tarjeta-suave"
-                  >
-                    <span className="shrink-0 rounded-full bg-tarjeta-suave px-2 py-0.5 text-xs font-semibold text-acento-texto ring-1 ring-borde-acento">
-                      R{j.ronda}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm text-tinta">
-                      {j.es_local ? "vs" : "@"} {j.rival}
-                    </span>
-                    {j.marcador_propio !== null && j.marcador_rival !== null ? (
-                      <span className="shrink-0 text-sm font-semibold text-tinta">
-                        {formatearPunto(j.marcador_propio)}–{formatearPunto(j.marcador_rival)}
+              {(jornadas ?? []).map((j) => {
+                const marcador = marcadorPreferido({
+                  boardsMarcador: marcadorPorTablerosDeMatch.get(j.id),
+                  marcadorPropio: j.marcador_propio,
+                  marcadorRival: j.marcador_rival,
+                });
+                return (
+                  <li key={j.id}>
+                    <Link
+                      href={`/jornadas/${j.id}`}
+                      className="flex items-center gap-2 px-3 py-2.5 hover:bg-tarjeta-suave"
+                    >
+                      <span className="shrink-0 rounded-full bg-tarjeta-suave px-2 py-0.5 text-xs font-semibold text-acento-texto ring-1 ring-borde-acento">
+                        R{j.ronda}
                       </span>
-                    ) : (
-                      marcadorPorTablerosDeMatch.has(j.id) && (
+                      <span className="min-w-0 flex-1 truncate text-sm text-tinta">
+                        {j.es_local ? "vs" : "@"} {j.rival}
+                      </span>
+                      {marcador && (
                         <span className="shrink-0 text-sm font-semibold text-tinta">
-                          {marcadorPorTablerosDeMatch.get(j.id)}
+                          {marcador.texto}
+                          {marcador.parcial && "*"}
                         </span>
-                      )
-                    )}
-                    <span className="shrink-0 text-right text-xs text-tinta-suave">
-                      {formatearFechaCorta(j.fecha_hora)}
-                    </span>
-                    {conConvocatoria.has(j.id) && (
-                      <span className="shrink-0 rounded-full bg-acento-fuerte px-2 py-0.5 text-xs font-semibold text-sobre-acento">
-                        Conv.
+                      )}
+                      <span className="shrink-0 text-right text-xs text-tinta-suave">
+                        {formatearFechaCorta(j.fecha_hora)}
                       </span>
-                    )}
-                    <ChipEstado estado={j.estado as Estado} />
-                  </Link>
-                </li>
-              ))}
+                      {conConvocatoria.has(j.id) && (
+                        <span className="shrink-0 rounded-full bg-acento-fuerte px-2 py-0.5 text-xs font-semibold text-sobre-acento">
+                          Conv.
+                        </span>
+                      )}
+                      <ChipEstado estado={j.estado as Estado} />
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}

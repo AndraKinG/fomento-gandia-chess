@@ -110,6 +110,22 @@ describe("validarContexto — R4 límites autonómicos (art. 51.5.c)", () => {
     expect(infs.some((i) => i.articulo === "51.5.c")).toBe(true);
   });
 
+  // Revisión final 1C, item 7a: con un ÚNICO equipo en el club, el límite A/B
+  // del 51.5.c no tiene sentido (no hay B/C con quien repartir jugadores) —
+  // no debe aplicarse aunque el equipo esté marcado como división autonómica.
+  it("[revisión 1C] nº20 en el equipo A autonómico con un ÚNICO equipo en el club NO genera error 51.5.c", () => {
+    const orden = clubTresEquipos();
+    const alineacion = [t(1, "p20")];
+    const ctx = ctxBase({
+      equipoIndice: 0,
+      totalEquipos: 1,
+      numTablerosPorEquipo: [8],
+      esDivisionAutonomica: [true],
+    });
+    const infs = validarContexto(orden, alineacion, cfgPermisiva(null, 8), ctx);
+    expect(infs.some((i) => i.articulo === "51.5.c")).toBe(false);
+  });
+
   it("nº29 en el equipo B con SOLO dos equipos NO genera error (sin límite superior)", () => {
     const orden = clubTresEquipos();
     const alineacion = [t(1, "p29")];
@@ -218,7 +234,10 @@ describe("validarContexto — R7 misma fecha (arts. 54-55)", () => {
       orden,
       [t(1, "p5")],
       cfgPermisiva(null, 8),
-      ctxBase({ equipoIndice: 0, alineacionesMismaFecha: [{ equipoIndice: 1, playerIds: ["p5"] }] })
+      ctxBase({
+        equipoIndice: 0,
+        alineacionesMismaFecha: [{ equipoIndice: 1, playerIds: ["p5"], estado: "publicada" }],
+      })
     );
     expect(infsA.some((i) => i.articulo === "54/55")).toBe(true);
 
@@ -227,7 +246,10 @@ describe("validarContexto — R7 misma fecha (arts. 54-55)", () => {
       orden,
       [t(1, "p5")],
       cfgPermisiva(null, 8),
-      ctxBase({ equipoIndice: 1, alineacionesMismaFecha: [{ equipoIndice: 0, playerIds: ["p5"] }] })
+      ctxBase({
+        equipoIndice: 1,
+        alineacionesMismaFecha: [{ equipoIndice: 0, playerIds: ["p5"], estado: "publicada" }],
+      })
     );
     expect(infsB.some((i) => i.articulo === "54/55")).toBe(true);
   });
@@ -238,9 +260,49 @@ describe("validarContexto — R7 misma fecha (arts. 54-55)", () => {
       orden,
       [t(1, "p5")],
       cfgPermisiva(null, 8),
-      ctxBase({ equipoIndice: 0, alineacionesMismaFecha: [{ equipoIndice: 1, playerIds: ["p6"] }] })
+      ctxBase({
+        equipoIndice: 0,
+        alineacionesMismaFecha: [{ equipoIndice: 1, playerIds: ["p6"], estado: "publicada" }],
+      })
     );
     expect(infs.some((i) => i.articulo === "54/55")).toBe(false);
+  });
+
+  // Revisión final 1C, item 2: un solape contra una convocatoria PUBLICADA de
+  // otro equipo sigue siendo error bloqueante (es un hecho consumado)...
+  it("[revisión 1C] solape contra convocatoria PUBLICADA de otro equipo: error bloqueante", () => {
+    const orden = clubTresEquipos();
+    const infs = validarContexto(
+      orden,
+      [t(1, "p5")],
+      cfgPermisiva(null, 8),
+      ctxBase({
+        equipoIndice: 0,
+        alineacionesMismaFecha: [{ equipoIndice: 1, playerIds: ["p5"], estado: "publicada" }],
+      })
+    );
+    const inf = infs.find((i) => i.articulo === "54/55");
+    expect(inf).toBeDefined();
+    expect(inf!.nivel).toBe("error");
+  });
+
+  // ...pero contra un BORRADOR de otro equipo (todavía editable, puede
+  // cambiar o nunca publicarse) es solo un aviso preventivo, no bloqueante.
+  it("[revisión 1C] solape contra BORRADOR de otro equipo: aviso, no bloquea", () => {
+    const orden = clubTresEquipos();
+    const infs = validarContexto(
+      orden,
+      [t(1, "p5")],
+      cfgPermisiva(null, 8),
+      ctxBase({
+        equipoIndice: 0,
+        alineacionesMismaFecha: [{ equipoIndice: 1, playerIds: ["p5"], estado: "borrador" }],
+      })
+    );
+    const inf = infs.find((i) => i.articulo === "54/55");
+    expect(inf).toBeDefined();
+    expect(inf!.nivel).toBe("aviso");
+    expect(inf!.mensaje.toLowerCase()).toContain("borrador");
   });
 });
 
@@ -262,13 +324,35 @@ describe("validarContexto — R8 misma sede (art. 52.4)", () => {
       equipoIndice: 1,
       numTablerosPorEquipo: [2, 2],
       totalEquipos: 2,
-      mismaSede: [{ equipoIndice: 0, alineacion: alineacionEquipoA, config: cfgPermisiva(null, 2) }],
+      mismaSede: [{ equipoIndice: 0, alineacion: alineacionEquipoA, config: cfgPermisiva(null, 2), estado: "publicada" }],
     });
 
     const infs = validarContexto(orden, alineacionEquipoB, cfgPermisiva(null, 2), ctx);
     const errores52_4 = infs.filter((i) => i.articulo === "52.4");
     expect(errores52_4.length).toBeGreaterThan(0);
     expect(errores52_4.every((i) => i.nivel === "error")).toBe(true);
+  });
+
+  // Revisión final 1C, item 2: MISMA infracción cruzada que el test anterior,
+  // pero la alineación del equipo A (origen del solape) es un BORRADOR
+  // todavía editable: no debe bloquear, solo avisar.
+  it("[revisión 1C] misma inversión cruzada pero el equipo A es BORRADOR: aviso, no error", () => {
+    const orden = [j(1), j(10), j(11)];
+    const alineacionEquipoA: TableroPropuesto[] = [t(1, "p10"), t(2, "p11")];
+    const alineacionEquipoB: TableroPropuesto[] = [t(1, "p1")];
+
+    const ctx = ctxBase({
+      equipoIndice: 1,
+      numTablerosPorEquipo: [2, 2],
+      totalEquipos: 2,
+      mismaSede: [{ equipoIndice: 0, alineacion: alineacionEquipoA, config: cfgPermisiva(null, 2), estado: "borrador" }],
+    });
+
+    const infs = validarContexto(orden, alineacionEquipoB, cfgPermisiva(null, 2), ctx);
+    const relevantes52_4 = infs.filter((i) => i.articulo === "52.4");
+    expect(relevantes52_4.length).toBeGreaterThan(0);
+    expect(relevantes52_4.every((i) => i.nivel === "aviso")).toBe(true);
+    expect(relevantes52_4.some((i) => i.mensaje.toLowerCase().includes("borrador"))).toBe(true);
   });
 
   it("misma sede sin infracción cruzada no genera errores 52.4", () => {
@@ -280,7 +364,7 @@ describe("validarContexto — R8 misma sede (art. 52.4)", () => {
       equipoIndice: 1,
       numTablerosPorEquipo: [2, 2],
       totalEquipos: 2,
-      mismaSede: [{ equipoIndice: 0, alineacion: alineacionEquipoA, config: cfgPermisiva(null, 2) }],
+      mismaSede: [{ equipoIndice: 0, alineacion: alineacionEquipoA, config: cfgPermisiva(null, 2), estado: "publicada" }],
     });
 
     const infs = validarContexto(orden, alineacionEquipoB, cfgPermisiva(null, 2), ctx);
@@ -312,7 +396,7 @@ describe("validarContexto — R8 misma sede (art. 52.4)", () => {
       equipoIndice: 1,
       numTablerosPorEquipo: [1, 1],
       totalEquipos: 2,
-      mismaSede: [{ equipoIndice: 0, alineacion: alineacionEquipoA, config: cfgPermisiva(200, 1, true) }],
+      mismaSede: [{ equipoIndice: 0, alineacion: alineacionEquipoA, config: cfgPermisiva(200, 1, true), estado: "publicada" }],
     });
 
     const infs = validarContexto(orden, alineacionEquipoB, cfgPermisiva(null, 1, true), ctx);
@@ -339,7 +423,7 @@ describe("validarContexto — R8 misma sede (art. 52.4)", () => {
       equipoIndice: 1,
       numTablerosPorEquipo: [2, 1],
       totalEquipos: 2,
-      mismaSede: [{ equipoIndice: 0, alineacion: alineacionEquipoA, config: cfgPermisiva(null, 2) }],
+      mismaSede: [{ equipoIndice: 0, alineacion: alineacionEquipoA, config: cfgPermisiva(null, 2), estado: "publicada" }],
     });
 
     const infs = validarContexto(orden, alineacionEquipoB, cfgPermisiva(null, 1), ctx);
@@ -370,7 +454,7 @@ describe("validarContexto — R8 misma sede (art. 52.4)", () => {
       equipoIndice: 1,
       numTablerosPorEquipo: [2, 1],
       totalEquipos: 2,
-      mismaSede: [{ equipoIndice: 0, alineacion: alineacionEquipoA, config: cfgPermisiva(null, 2) }],
+      mismaSede: [{ equipoIndice: 0, alineacion: alineacionEquipoA, config: cfgPermisiva(null, 2), estado: "publicada" }],
     });
 
     const infs = validarContexto(orden, alineacionEquipoB, cfgPermisiva(null, 1), ctx);

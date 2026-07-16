@@ -69,7 +69,19 @@ async function notificarConvocados(
     .filter((x): x is { tablero: TableroPropuesto; userId: string } => Boolean(x.userId));
   if (destinatarios.length === 0) return 0;
 
-  const fecha = formatearFechaMadrid(match.fechaHora, { day: "2-digit", month: "long" });
+  // Revisión final 1C, item 7d: la hora (no solo el día) y el rival/sede
+  // entran en el cuerpo del push — ver
+  // docs/superpowers/plans/2026-07-15-fase-1c-validador-convocatorias.md
+  // ("Convocado con el {equipo} · Tablero {n} · {♙/♟} {color} · {fecha}
+  // {sede/rival}"). Antes solo se mostraba el día, sin hora ni rival/sede: el
+  // convocado tenía que abrir la app para saber la hora y dónde se juega.
+  const fecha = formatearFechaMadrid(match.fechaHora, {
+    day: "2-digit",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const rivalYSede = `${match.esLocal ? "vs" : "@"} ${match.rival}${match.sede ? ` · ${match.sede}` : ""}`;
 
   await Promise.allSettled(
     destinatarios.map(({ tablero, userId }) => {
@@ -78,7 +90,7 @@ async function notificarConvocados(
       const colorTexto = color === "blancas" ? "Blancas" : "Negras";
       return enviarPushAUsuario(userId, {
         title: `Convocado con el ${match.equipoNombre}`,
-        body: `Tablero ${tablero.tablero} · ${icono} ${colorTexto} · ${fecha}`,
+        body: `Tablero ${tablero.tablero} · ${icono} ${colorTexto} · ${fecha} · ${rivalYSede}`,
         url: `/jornadas/${matchId}`,
       });
     })
@@ -227,11 +239,17 @@ export async function publicarConvocatoria(matchId: string): Promise<ResultadoPu
   const supabase = await createServerSupabase();
   const { data: lineup, error: lineupError } = await supabase
     .from("lineups")
-    .select("id, lineup_boards(tablero, player_id)")
+    .select("id, estado, lineup_boards(tablero, player_id)")
     .eq("match_id", matchId)
     .maybeSingle();
   if (lineupError) return { error: lineupError.message };
   if (!lineup) return { error: "No hay borrador de convocatoria para publicar" };
+  // Minor (b), revisión final 1C: sin este guard, volver a llamar a publicar
+  // sobre una convocatoria YA publicada simplemente refrescaba
+  // `publicada_at` y reenviaba el push a todo el mundo en silencio.
+  if (lineup.estado === "publicada") {
+    return { error: "La convocatoria ya está publicada" };
+  }
 
   type LineupBoardFila = { tablero: number; player_id: string };
   const tableros: TableroPropuesto[] = (
@@ -263,7 +281,18 @@ export async function publicarConvocatoria(matchId: string): Promise<ResultadoPu
     return { error: `No se puede publicar: ${errores.length} infracciones`, infracciones };
   }
 
-  const { error: updateError } = await supabase
+  // Blindaje BD (item 6, revisión final 1C, migración 0007 —
+  // supabase/migrations/0007_blindaje_convocatorias.sql, gate usuario): un
+  // trigger BEFORE UPDATE en `lineups` rechaza la transición
+  // borrador -> publicada salvo que la conexión sea el service_role. El
+  // validador completo (núcleo + contexto) YA ha corrido justo arriba sin
+  // encontrar ningún error: este es el ÚNICO sitio del código que hace la
+  // transición final, y lo hace con el cliente admin para que, una vez
+  // aplicada la migración, siga funcionando (antes de aplicarla el cliente
+  // admin funciona exactamente igual, porque ya salta la RLS — este cambio
+  // es compatible con el estado de la BD antes y después del gate usuario).
+  const admin = createAdminClient();
+  const { error: updateError } = await admin
     .from("lineups")
     .update({ estado: "publicada", publicada_at: new Date().toISOString() })
     .eq("id", lineup.id);
@@ -280,6 +309,15 @@ export async function publicarConvocatoria(matchId: string): Promise<ResultadoPu
  * publicarla). Solo permitido si la jornada aún no está jugada: una vez
  * jugado el encuentro, la convocatoria publicada es el registro histórico
  * de lo realmente alineado y no debe poder retirarse.
+ *
+ * Item 4 (revisión final 1C): TAMPOCO se permite si ya hay resultados
+ * anotados por tablero (`board_results`), aunque el encuentro siga en
+ * 'pendiente' (p. ej. el capitán anotó algún resultado suelto antes de que
+ * FACV/el resto de tableros confirmen el estado 'jugado'). `guardarBorrador`
+ * reemplaza SIEMPRE los tableros de la convocatoria (borra + inserta,
+ * `ON DELETE CASCADE` hasta `board_results`): despublicar y luego guardar un
+ * borrador con otra alineación borraría en cascada resultados ya anotados
+ * por el capitán sin avisarle.
  */
 export async function despublicarConvocatoria(matchId: string): Promise<ResultadoDespublicar> {
   if (!(await puedeGestionar(matchId))) {
@@ -298,7 +336,37 @@ export async function despublicarConvocatoria(matchId: string): Promise<Resultad
   }
 
   const supabase = await createServerSupabase();
-  const { error } = await supabase
+  const { data: lineup, error: lineupError } = await supabase
+    .from("lineups")
+    .select("id, lineup_boards(id)")
+    .eq("match_id", matchId)
+    .maybeSingle();
+  if (lineupError) return { error: lineupError.message };
+  if (!lineup) return { error: "No hay convocatoria para despublicar" };
+
+  type BoardFila = { id: string };
+  const idsTablero = ((lineup.lineup_boards ?? []) as unknown as BoardFila[]).map((b) => b.id);
+  if (idsTablero.length > 0) {
+    const { data: resultados, error: resultadosError } = await supabase
+      .from("board_results")
+      .select("lineup_board_id")
+      .in("lineup_board_id", idsTablero);
+    if (resultadosError) return { error: resultadosError.message };
+    if ((resultados ?? []).length > 0) {
+      return { error: "La convocatoria tiene resultados anotados; no se puede despublicar" };
+    }
+  }
+
+  // Blindaje BD (item 6): mismo motivo que en `publicarConvocatoria` — el
+  // cliente admin es el único que escribe la transición final de estado de
+  // `lineups`, para que funcione igual antes y después de aplicar la
+  // migración 0007 (que congela `lineups` para cualquier conexión que no sea
+  // el service_role). `despublicarConvocatoria` no hace `borrador ->
+  // publicada` (el trigger no la tocaría igualmente), pero se usa el mismo
+  // cliente por consistencia: esta action tiene sus propios guards arriba
+  // (jornada no jugada, sin resultados anotados) antes de escribir.
+  const admin = createAdminClient();
+  const { error } = await admin
     .from("lineups")
     .update({ estado: "borrador" })
     .eq("match_id", matchId);

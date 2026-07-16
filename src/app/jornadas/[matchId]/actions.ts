@@ -22,6 +22,15 @@ const RESULTADOS_VALIDOS = [1, 0.5, 0];
  * 0005). Cuando, tras guardar, TODOS los tableros de esa convocatoria ya
  * tienen resultado, marca el encuentro como 'jugado' aquí mismo (la action
  * es la única que decide esto; el cliente solo informa qué tablero se tocó).
+ *
+ * Item 7c (revisión final 1C): NO hay ningún guard que impida llamar a esta
+ * action cuando `matches.estado` YA es 'jugado' (a diferencia de las actions
+ * de convocatoria, que congelan la jornada jugada). Es una decisión
+ * DELIBERADA, no un descuido: los capitanes necesitan poder corregir un
+ * resultado mal anotado (typo, tablero equivocado) después de que el
+ * encuentro se cierre, sin tener que reabrir la convocatoria entera. La
+ * migración 0007 (blindaje BD) tampoco lo restringe: solo congela la tabla
+ * `lineups` (estructura de la convocatoria), nunca `board_results`.
  */
 export async function guardarResultado(
   matchId: string,

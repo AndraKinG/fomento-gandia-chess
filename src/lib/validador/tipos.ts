@@ -1,5 +1,12 @@
 // Contrato compartido con Tasks 3-5. NO renombrar campos: otros módulos
 // (validador de contexto, actions, editor en vivo) importan estos tipos.
+//
+// Para el trasfondo de las ambigüedades del RGC citadas en los comentarios de
+// este fichero (`permitirInversionDentroMargen` más abajo, y el bloque de
+// bises en `contexto.ts`) ver la verificación empírica contra datos reales de
+// la liga (docs/referencia/verificacion-empirica-rgc.md, Task 8 Fase 1C):
+// ninguna de las dos ambigüedades se pudo resolver de forma concluyente con
+// los datos disponibles.
 
 export type JugadorOrden = {
   playerId: string;
@@ -61,7 +68,14 @@ export type ContextoClub = {
   totalEquipos: number;
   numTablerosPorEquipo: number[]; // tableros de CADA equipo, en orden de categoría (art. 51.4)
   esDivisionAutonomica: boolean[]; // por equipo, para límites del art. 51.5.c
-  alineacionesMismaFecha: { equipoIndice: number; playerIds: string[] }[]; // arts. 54-55
+  // arts. 54-55. `estado` (revisión final 1C, item 2): la alineación de OTRO
+  // equipo puede venir de un BORRADOR todavía no publicado (se incluyen a
+  // propósito para avisar en vivo, ver `cargarContextoValidacion`) — un
+  // solape contra un borrador ajeno NO debe bloquear la publicación propia
+  // (el otro capitán puede cambiarlo o nunca publicarlo), así que
+  // `validarContexto` degrada esas infracciones a nivel "aviso"; solo un
+  // solape contra una convocatoria ya `publicada` de otro equipo es error.
+  alineacionesMismaFecha: { equipoIndice: number; playerIds: string[]; estado: "borrador" | "publicada" }[];
   // art. 52.4: equipos del club que juegan en la MISMA sede esa jornada.
   // Decisión de interpretación (Task 3, ver informe): el boceto del brief
   // definía este campo como `number[]` (solo índices de equipo). Se amplía
@@ -72,7 +86,13 @@ export type ContextoClub = {
   // alineación conjunta y aplicar R1/R2 sobre ella. El orden de fuerza es
   // el mismo `orden` (club-wide) que se pasa a validarContexto, por lo que
   // no se duplica aquí.
-  mismaSede: { equipoIndice: number; alineacion: TableroPropuesto[]; config: ConfigEquipo }[];
+  // `estado` (revisión final 1C, item 2): mismo razonamiento que en
+  // `alineacionesMismaFecha` — la alineación del otro equipo de la sede puede
+  // ser un borrador todavía editable; `validarMismaSede` (contexto.ts) degrada
+  // a "aviso" cualquier infracción 52.4 cuyo origen sea un equipo cuyo dato es
+  // un borrador ajeno, para no bloquear la publicación por un borrador que
+  // puede cambiar antes de publicarse.
+  mismaSede: { equipoIndice: number; alineacion: TableroPropuesto[]; config: ConfigEquipo; estado: "borrador" | "publicada" }[];
   vecesEnSuperior: Record<string, number>; // playerId -> nº de rondas alineado en equipos superiores (art. 51.3)
   // Finding 3 (Fix round 1): reemplaza el antiguo `rondasJugadasEquipoOrigen:
   // number` (un único escalar). El art. 51.3 exige contar, para CADA

@@ -38,6 +38,9 @@ export type MatchInfo = {
   teamId: string;
   equipoNombre: string;
   rival: string;
+  // Revisión final 1C, item 7d: el push de convocatoria incluye sede/rival
+  // además de la hora (ver `notificarConvocados`, equipos/[id]/convocatoria/actions.ts).
+  sede: string | null;
 };
 
 /** Resultado listo para pasar directamente a `validar()`/`validarContexto()`
@@ -65,7 +68,7 @@ export async function cargarContextoValidacion(matchId: string): Promise<Context
 
   const { data: match, error: matchError } = await admin
     .from("matches")
-    .select("id, team_id, fecha_hora, es_local, estado, rival")
+    .select("id, team_id, fecha_hora, es_local, estado, rival, sede")
     .eq("id", matchId)
     .single();
   if (matchError || !match) {
@@ -219,16 +222,23 @@ export async function cargarContextoValidacion(matchId: string): Promise<Context
 
       type LineupFila = {
         match_id: string;
+        estado: string;
         lineup_boards: { tablero: number; player_id: string }[] | null;
       };
       const lineups = (lineupsMismaFecha ?? []) as unknown as LineupFila[];
       const jornadaPorId = new Map(otrasJornadas.map((m) => [m.id, m]));
 
+      // Revisión final 1C, item 2: se propaga `estado` (borrador/publicada)
+      // de la lineup de origen — el validador (R7, `contexto.ts`) lo usa para
+      // degradar a "aviso" un solape contra un BORRADOR ajeno todavía
+      // editable, y mantener "error" bloqueante solo contra una convocatoria
+      // ya PUBLICADA de otro equipo.
       alineacionesMismaFecha = lineups.map((l) => {
         const jornada = jornadaPorId.get(l.match_id)!;
         return {
           equipoIndice: teamIdAIndice.get(jornada.team_id)!,
           playerIds: (l.lineup_boards ?? []).map((b) => b.player_id),
+          estado: l.estado === "publicada" ? "publicada" : "borrador",
         };
       });
 
@@ -252,6 +262,10 @@ export async function cargarContextoValidacion(matchId: string): Promise<Context
                 playerId: b.player_id,
               })),
               config: configOtroEquipo,
+              // Ídem alineacionesMismaFecha: propaga el estado para que R8
+              // (52.4, `validarMismaSede`) degrade a aviso las infracciones
+              // cuyo origen sea un borrador ajeno todavía editable.
+              estado: (lineup.estado === "publicada" ? "publicada" : "borrador") as "borrador" | "publicada",
             },
           ];
         });
@@ -260,9 +274,26 @@ export async function cargarContextoValidacion(matchId: string): Promise<Context
   }
 
   // --- Regla del 50% (art. 51.3): vecesEnSuperior + rondasJugadasPorEquipo -
-  // NOTA: cuentan SOLO las jornadas con estado 'jugado' (no las pendientes)
-  // Y con lineup en estado 'publicada' (un borrador nunca fue la alineación
-  // realmente disputada) — de la temporada de `equipoActual`.
+  // Revisión final 1C, item 1: el DENOMINADOR (rondasJugadasPorEquipo) cuenta
+  // encuentros con estado 'jugado' de cada equipo, tal cual — el 51.3 habla
+  // de "rondas jugadas", no de "rondas con convocatoria publicada en la app".
+  // Antes de este fix, el denominador solo incrementaba dentro del bucle de
+  // `lineupsPublicadas`, así que un encuentro jugado SIN lineup publicada en
+  // la app (p. ej. datos históricos importados, o una jornada jugada antes de
+  // que el club empezara a usar el editor de convocatorias) no contaba en la
+  // base de ninguna ronda, desinflando el % real de cualquier jugador que
+  // hubiera subido en esa ronda.
+  //
+  // LIMITACIÓN DE BACKFILL (numerador): `vecesEnSuperior` (más abajo) SÍ sigue
+  // dependiendo de que exista una lineup 'publicada' para poder saber QUÉ
+  // jugadores concretos jugaron esa ronda y en qué equipo de origen. Una
+  // ronda jugada sin lineup publicada en la app entra en el denominador
+  // (cuenta como "ronda jugada" del equipo) pero no puede aportar NADA al
+  // numerador de ningún jugador (no hay forma de saber quién jugó arriba sin
+  // el registro de tableros) — el % del art. 51.3 quedaría entonces
+  // ligeramente subestimado para esa ronda en concreto, nunca sobreestimado.
+  // No hay forma de corregir esto sin una fuente adicional de datos
+  // (backfill manual o import de actas históricas), fuera del alcance de 1C.
   const rondasJugadasPorEquipo = new Array<number>(totalEquipos).fill(0);
   const vecesEnSuperior: Record<string, number> = {};
 
@@ -276,6 +307,11 @@ export async function cargarContextoValidacion(matchId: string): Promise<Context
     .eq("estado", "jugado");
   if (matchesJugadosError) {
     throw new Error("No se pudieron cargar las jornadas jugadas de la temporada");
+  }
+
+  for (const m of matchesJugados ?? []) {
+    const idx = teamIdAIndice.get(m.team_id);
+    if (idx !== undefined) rondasJugadasPorEquipo[idx] += 1;
   }
 
   if (matchesJugados && matchesJugados.length > 0) {
@@ -308,8 +344,10 @@ export async function cargarContextoValidacion(matchId: string): Promise<Context
       const idxEquipoJornada = teamIdAIndice.get(jornada.team_id);
       if (idxEquipoJornada === undefined) continue;
 
-      rondasJugadasPorEquipo[idxEquipoJornada] += 1;
-
+      // NOTA: el denominador (rondasJugadasPorEquipo) ya se cuenta arriba,
+      // directamente sobre `matchesJugados`, sin pasar por esta lineup — ver
+      // el comentario extenso más arriba (LIMITACIÓN DE BACKFILL). Aquí solo
+      // se calcula el NUMERADOR (vecesEnSuperior).
       for (const board of lineup.lineup_boards ?? []) {
         const idxJugador = indicePorId.get(board.player_id);
         if (idxJugador === undefined) continue; // ya no está en el orden de fuerza actual
@@ -346,6 +384,7 @@ export async function cargarContextoValidacion(matchId: string): Promise<Context
       teamId: match.team_id as string,
       equipoNombre: equipos[equipoIndice].nombre,
       rival: match.rival as string,
+      sede: match.sede as string | null,
     },
   };
 }
