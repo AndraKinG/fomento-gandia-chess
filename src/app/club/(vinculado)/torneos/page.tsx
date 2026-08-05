@@ -55,10 +55,12 @@ export default async function TorneosPage({
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
+      {/* Sin flecha de volver en la raíz de la sección: para eso está la barra de
+          pestañas, igual que en Interclubs. Solo la llevan las subvistas. */}
       <Cabecera
         titulo={titulo}
         subtitulo={verPasados ? undefined : "A los que vamos como club"}
-        volverA={verTodos || verPasados ? "/club/torneos" : "/club"}
+        volverA={verTodos || verPasados ? "/club/torneos" : undefined}
       />
       <div className="mx-auto max-w-md space-y-3 p-4 sm:max-w-2xl">
         {(torneos ?? []).length === 0 && (
