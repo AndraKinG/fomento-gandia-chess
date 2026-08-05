@@ -88,6 +88,25 @@ club en el que ya llevan años.
 **Cuatro roles: `jugador`, `capitan`, `junta`, `admin`.** Una persona puede tener
 varios a la vez.
 
+Definiciones del propietario (2026-08-05), que son las que gobiernan qué puede
+hacer cada uno:
+
+| Rol | Quién es | Alcance |
+|---|---|---|
+| **admin** | Solo el propietario | Todo |
+| **capitan** | Los que se eligen en cada equipo, **para cada temporada** | Su equipo, esa temporada |
+| **jugador** | Todos los jugadores del club **que tengan su cuenta** | Lo suyo |
+| **junta** | Los que gestionan el club a nivel de gente nueva que se inscribe y demás | Solicitudes de ingreso y gestión de socios |
+
+Dos consecuencias que se leen directamente de esa tabla:
+
+- **`capitan` es por equipo Y por temporada.** `team_captains` cuelga de `teams`,
+  que a su vez cuelga de `seasons`, así que la caducidad por temporada ya sale
+  gratis: al crear los equipos de la temporada siguiente se nombran capitanes de
+  nuevo y los del año pasado dejan de tener alcance sin borrar nada.
+- **`jugador` es, por definición, "tiene cuenta y tiene ficha del club"** — que es
+  exactamente lo que ya responde `esta_vinculado()`. Ver §4.2.
+
 **Los permisos se suman, nunca se restan.** Si alguno de tus roles te permite
 hacer algo, puedes; si ninguno te lo permite, no puedes. Cuando uno dice sí y
 otro dice no, gana el sí. No hay roles que quiten permisos.
@@ -114,6 +133,36 @@ desplegado no necesita cambiar; la conversión a roles se puede hacer poco a poc
 
 Añade también `tiene_rol()` y `es_junta()`, que es lo que necesitará el
 formulario de ingreso.
+
+### 4.2 Problema abierto: `jugador` guardado es verdad duplicada
+
+La definición del propietario es "todos los jugadores del club que tengan su
+cuenta", y eso es literalmente lo que ya responde `esta_vinculado()`
+(`profiles.player_id is not null`). Guardar además una fila `jugador` en
+`member_roles` significa tener la misma verdad en dos sitios, y las dos verdades
+se separan en cuanto una de las dos no se actualiza.
+
+**Y ya hay por dónde se separa:** `aprobarVinculo` (la acción que vincula la ficha
+al aprobar una solicitud) escribe `profiles.player_id` pero **no** inserta el rol.
+El traspaso de la migración cubrió a los socios existentes, así que hoy cuadra —
+pero solo porque hay un socio. El siguiente que apruebes tendrá ficha y no
+tendrá fila `jugador`.
+
+Dos salidas, las dos baratas porque todavía nada consume el rol:
+
+1. **Tratar `jugador` como derivado** y quitarlo de la tabla: una fuente de
+   verdad, imposible que se desincronice. Es la que encaja con la definición.
+2. **Concederlo al aprobar la vinculación**, dejando la tabla como el sitio único
+   donde se leen los rangos, a cambio de mantener los dos sitios en sintonía.
+
+Pendiente de decidir por el propietario.
+
+### 4.3 Falta cómo repartir rangos
+
+Nadie tiene `junta` todavía y no hay ninguna pantalla para conceder o quitar
+roles; la migración solo repartió lo que ya se deducía de `is_admin`. Hace falta
+una pantalla de admin para nombrar junta **antes** del formulario de ingreso, que
+es lo primero que necesita ese rol para funcionar.
 
 ### 4.1 Por qué el booleano actual no llega
 
