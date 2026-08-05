@@ -9,7 +9,6 @@ import { Banner } from "@/components/ui/Banner";
 import {
   borrarTorneo,
   cambiarDeInteres,
-  crearTorneoManual,
   editarFichaTorneo,
   sincronizarTorneos,
 } from "./actions";
@@ -37,7 +36,6 @@ export function PanelTorneos({ torneos }: { torneos: TorneoAdmin[] }) {
     null
   );
   const [editando, setEditando] = useState<string | null>(null);
-  const [creando, setCreando] = useState(false);
   const [pendiente, startTransition] = useTransition();
   const router = useRouter();
 
@@ -51,7 +49,6 @@ export function PanelTorneos({ torneos }: { torneos: TorneoAdmin[] }) {
       }
       if (exito) setAviso({ tipo: "ok", texto: exito });
       setEditando(null);
-      setCreando(false);
       router.refresh();
     });
   }
@@ -89,48 +86,8 @@ export function PanelTorneos({ torneos }: { torneos: TorneoAdmin[] }) {
           <Boton variante="solido" onClick={sincronizar} disabled={pendiente}>
             {pendiente ? "Trabajando…" : "Sincronizar con la FACV"}
           </Boton>
-          <Boton variante="secundario" onClick={() => setCreando((v) => !v)} disabled={pendiente}>
-            Crear torneo a mano
-          </Boton>
         </div>
       </Tarjeta>
-
-      {creando && (
-        <Tarjeta destacada>
-          <form
-            className="flex flex-col gap-3"
-            action={(fd) =>
-              ejecutar(
-                () =>
-                  crearTorneoManual({
-                    nombre: String(fd.get("nombre") ?? ""),
-                    fechaInicio: String(fd.get("fechaInicio") ?? ""),
-                    fechaFin: String(fd.get("fechaFin") ?? ""),
-                    lugar: String(fd.get("lugar") ?? ""),
-                    organizador: String(fd.get("organizador") ?? ""),
-                  }),
-                "Torneo creado y marcado como de interés."
-              )
-            }
-          >
-            <Campo id="nombre" etiqueta="Nombre" requerido />
-            <div className="grid grid-cols-2 gap-3">
-              <Campo id="fechaInicio" etiqueta="Empieza" tipo="date" requerido />
-              <Campo id="fechaFin" etiqueta="Acaba (opcional)" tipo="date" />
-            </div>
-            <Campo id="lugar" etiqueta="Lugar" />
-            <Campo id="organizador" etiqueta="Organiza" />
-            <div className="flex gap-2">
-              <Boton variante="solido" type="submit" disabled={pendiente} className="flex-1">
-                Crear
-              </Boton>
-              <Boton variante="secundario" onClick={() => setCreando(false)} disabled={pendiente}>
-                Cancelar
-              </Boton>
-            </div>
-          </form>
-        </Tarjeta>
-      )}
 
       {torneos.length === 0 && (
         <Tarjeta compacta>

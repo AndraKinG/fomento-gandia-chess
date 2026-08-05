@@ -5,6 +5,7 @@ import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { formatearRangoFechas, hoyISO } from "@/lib/torneos/fechas";
+import { CrearTorneo } from "./CrearTorneo";
 
 type Asistencia = "voy" | "no_voy" | "duda";
 
@@ -23,8 +24,21 @@ export default async function TorneosPage({
   const sesion = await sesionActual();
   const hoy = hoyISO();
 
-  // Por defecto solo los marcados de interés por el admin: la FACV publica casi
-  // 170 torneos al año y volcarlos todos aquí no ayudaría a nadie.
+  // Qué torneos son "del club": aquellos a los que ALGUIEN ha dicho que va o que
+  // duda, más los que el admin haya destacado a mano. La FACV publica casi 170
+  // torneos al año, así que la lista no puede ser el calendario entero — pero
+  // tampoco hace falta que nadie cure nada: **el primero que dice que va saca el
+  // torneo a la luz para los demás**, y a partir de ahí se organizan los coches.
+  //
+  // Se calcula de las asistencias en vez de escribir una marca al apuntarse: una
+  // marca guardada se queda a true cuando el último que iba se borra, y la lista
+  // acabaría llena de torneos a los que ya no va nadie.
+  const { data: conGente } = await supabase
+    .from("tournament_attendance")
+    .select("tournament_id, estado")
+    .in("estado", ["voy", "duda"]);
+  const idsConGente = new Set((conGente ?? []).map((a) => a.tournament_id));
+
   let consulta = supabase
     .from("tournaments")
     .select("id, nombre, fecha_inicio, fecha_fin, lugar, hora, ritmo, de_interes");
@@ -33,12 +47,15 @@ export default async function TorneosPage({
     ? consulta.lt("fecha_fin", hoy).order("fecha_inicio", { ascending: false }).limit(50)
     : consulta.gte("fecha_fin", hoy).order("fecha_inicio");
 
-  if (!verTodos && !verPasados) consulta = consulta.eq("de_interes", true);
+  const { data: todosLosTorneos } = await consulta;
 
-  const { data: torneos } = await consulta;
+  const torneos =
+    verTodos || verPasados
+      ? (todosLosTorneos ?? [])
+      : (todosLosTorneos ?? []).filter((t) => t.de_interes || idsConGente.has(t.id));
 
   // Mi asistencia, solo de los torneos que se van a mostrar.
-  const ids = (torneos ?? []).map((t) => t.id);
+  const ids = torneos.map((t) => t.id);
   const { data: mias } =
     sesion?.playerId && ids.length > 0
       ? await supabase
@@ -50,6 +67,13 @@ export default async function TorneosPage({
   const miEstado = new Map(
     (mias ?? []).map((a) => [a.tournament_id, a.estado as Asistencia])
   );
+
+  // Cuánta gente va a cada torneo, para que la tarjeta lo diga sin abrirla.
+  const cuantosVan = new Map<string, number>();
+  for (const a of conGente ?? []) {
+    if (a.estado !== "voy") continue;
+    cuantosVan.set(a.tournament_id, (cuantosVan.get(a.tournament_id) ?? 0) + 1);
+  }
 
   const titulo = verPasados ? "Torneos pasados" : verTodos ? "Todo el calendario" : "Torneos";
 
@@ -63,21 +87,22 @@ export default async function TorneosPage({
         volverA={verTodos || verPasados ? "/club/torneos" : undefined}
       />
       <div className="mx-auto max-w-md space-y-3 p-4 sm:max-w-2xl">
-        {(torneos ?? []).length === 0 && (
+        {torneos.length === 0 && (
           <EstadoVacio
             icono="🏆"
-            titulo={verPasados ? "Aún no hay torneos pasados" : "No hay torneos a la vista"}
+            titulo={verPasados ? "Aún no hay torneos pasados" : "Todavía nadie va a ningún torneo"}
             detalle={
               verTodos || verPasados
                 ? undefined
-                : "Cuando el club decida ir a algún torneo, aparecerá aquí con quién va y quién lleva coche."
+                : "Mira el calendario completo y di que vas a alguno: en cuanto lo hagas aparecerá aquí para el resto del club."
             }
           />
         )}
 
         <ul className="space-y-3">
-          {(torneos ?? []).map((t) => {
+          {torneos.map((t) => {
             const estado = miEstado.get(t.id);
+            const van = cuantosVan.get(t.id) ?? 0;
             return (
               <li key={t.id}>
                 <Link href={`/club/torneos/${t.id}`} className="block">
@@ -105,6 +130,11 @@ export default async function TorneosPage({
                             {estado === "voy" ? "Vas" : estado === "no_voy" ? "No vas" : "Duda"}
                           </span>
                         )}
+                        {van > 0 && (
+                          <span className="text-xs text-tinta-suave">
+                            {van} {van === 1 ? "va" : "van"}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </Tarjeta>
@@ -113,6 +143,12 @@ export default async function TorneosPage({
             );
           })}
         </ul>
+
+        {sesion?.esJunta && !verPasados && (
+          <div className="pt-2">
+            <CrearTorneo />
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-3 pt-2 text-sm">
           {!verTodos && !verPasados && (

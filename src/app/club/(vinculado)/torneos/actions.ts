@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { enviarPushAMuchos } from "@/lib/push/send";
+import { esJunta } from "@/lib/auth/es-admin";
+import { formatearRangoFechas } from "@/lib/torneos/fechas";
 import {
   efectosDeApuntarse,
   efectosDeBajarse,
@@ -171,6 +173,65 @@ async function avisar(avisos: Aviso[], nombreTorneo: string): Promise<void> {
   }
 }
 
+/**
+ * Avisa al club de que **alguien ha abierto plan** para un torneo.
+ *
+ * Un torneo del calendario de la FACV es invisible hasta que el primer socio dice
+ * que va; ese momento es el que interesa contar, porque es cuando el resto puede
+ * sumarse y organizar los coches. Del segundo en adelante no se avisa: sería
+ * ruido y la gente silenciaría las notificaciones.
+ *
+ * Nunca hace fallar la operación: la asistencia ya está guardada aunque el push
+ * no salga.
+ */
+async function avisarPrimerApuntado(
+  tournamentId: string,
+  quienId: string
+): Promise<void> {
+  try {
+    const admin = createAdminClient();
+    const [{ data: asistencias }, { data: torneo }] = await Promise.all([
+      admin
+        .from("tournament_attendance")
+        .select("player_id, estado")
+        .eq("tournament_id", tournamentId)
+        .in("estado", ["voy", "duda"]),
+      admin
+        .from("tournaments")
+        .select("nombre, fecha_inicio, fecha_fin, lugar, de_interes")
+        .eq("id", tournamentId)
+        .single(),
+    ]);
+
+    // Solo si es el primero, y solo si el torneo no estaba ya en la lista del
+    // club por decisión del admin (en ese caso ya se avisó al marcarlo).
+    const otros = (asistencias ?? []).filter((a) => a.player_id !== quienId);
+    if (otros.length > 0 || !torneo || torneo.de_interes) return;
+
+    const { data: yo } = await admin
+      .from("players")
+      .select("nombre")
+      .eq("id", quienId)
+      .single();
+
+    const { data: perfiles } = await admin
+      .from("profiles")
+      .select("id")
+      .not("player_id", "is", null)
+      .neq("player_id", quienId);
+    const ids = (perfiles ?? []).map((p) => p.id);
+    if (ids.length === 0) return;
+
+    await enviarPushAMuchos(ids, {
+      title: `${yo?.nombre ?? "Un socio"} va a un torneo`,
+      body: `${torneo.nombre}, ${formatearRangoFechas(torneo.fecha_inicio, torneo.fecha_fin)}${torneo.lugar ? ` en ${torneo.lugar}` : ""}. ¿Te apuntas?`,
+      url: `/club/torneos/${tournamentId}`,
+    });
+  } catch {
+    // Silencio a propósito: ver comentario de arriba.
+  }
+}
+
 async function nombreTorneo(tournamentId: string): Promise<string> {
   const supabase = await createServerSupabase();
   const { data } = await supabase
@@ -220,6 +281,10 @@ export async function marcarAsistencia(
   if (error) return { error };
 
   await avisar(avisos, await nombreTorneo(tournamentId));
+  // Si acaba de abrir plan donde no había nadie, se lo cuenta al club.
+  if (estado === "voy" || estado === "duda") {
+    await avisarPrimerApuntado(tournamentId, yo.playerId);
+  }
   refrescar(tournamentId);
   return {};
 }
@@ -329,6 +394,58 @@ export async function borrarCoche(
   if (error) return { error };
 
   refrescar(tournamentId);
+  return {};
+}
+
+/**
+ * Crea un torneo que no está en el calendario oficial de la FACV: amistosos,
+ * torneos de otras federaciones, cosas puntuales.
+ *
+ * Permitido a **junta y admin**, no a cualquier socio: es raro que haga falta
+ * —los 147 del calendario oficial ya están importados— y así la lista no se llena
+ * de entradas duplicadas o mal escritas que alguien tenga que limpiar. Para ir a
+ * un torneo del calendario no hace falta crear nada: basta decir que vas.
+ */
+export async function crearTorneoManual(datos: {
+  nombre: string;
+  fechaInicio: string;
+  fechaFin?: string;
+  lugar?: string;
+  organizador?: string;
+}): Promise<Resultado> {
+  if (!(await esJunta())) return { error: "No autorizado" };
+
+  const nombre = datos.nombre.trim();
+  if (!nombre) return { error: "Ponle un nombre al torneo." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datos.fechaInicio)) {
+    return { error: "La fecha de inicio no es válida." };
+  }
+  const fechaFin = datos.fechaFin?.trim() || datos.fechaInicio;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaFin)) {
+    return { error: "La fecha de fin no es válida." };
+  }
+  if (fechaFin < datos.fechaInicio) {
+    return { error: "El torneo no puede acabar antes de empezar." };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("tournaments").insert({
+    nombre,
+    fecha_inicio: datos.fechaInicio,
+    fecha_fin: fechaFin,
+    lugar: datos.lugar?.trim() || null,
+    organizador: datos.organizador?.trim() || null,
+    origen: "manual",
+    // Un torneo que alguien se toma la molestia de crear a mano es, por
+    // definición, uno al que el club va: aparece en la lista desde el principio
+    // sin esperar a que nadie se apunte.
+    de_interes: true,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/club/torneos");
+  revalidatePath("/club/admin/torneos");
+  revalidatePath("/club");
   return {};
 }
 

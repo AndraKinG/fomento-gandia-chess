@@ -110,48 +110,6 @@ export async function editarFichaTorneo(
   return {};
 }
 
-/** Crea un torneo que no está en el calendario oficial de la FACV. */
-export async function crearTorneoManual(datos: {
-  nombre: string;
-  fechaInicio: string;
-  fechaFin?: string;
-  lugar?: string;
-  organizador?: string;
-}): Promise<Resultado> {
-  if (!(await esAdmin())) return { error: "No autorizado" };
-
-  const nombre = datos.nombre.trim();
-  if (!nombre) return { error: "Ponle un nombre al torneo." };
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(datos.fechaInicio)) {
-    return { error: "La fecha de inicio no es válida." };
-  }
-  const fechaFin = datos.fechaFin?.trim() || datos.fechaInicio;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaFin)) {
-    return { error: "La fecha de fin no es válida." };
-  }
-  if (fechaFin < datos.fechaInicio) {
-    return { error: "El torneo no puede acabar antes de empezar." };
-  }
-
-  const admin = createAdminClient();
-  const { error } = await admin.from("tournaments").insert({
-    nombre,
-    fecha_inicio: datos.fechaInicio,
-    fecha_fin: fechaFin,
-    lugar: datos.lugar?.trim() || null,
-    organizador: datos.organizador?.trim() || null,
-    origen: "manual",
-    // Un torneo que el admin se toma la molestia de crear a mano es, por
-    // definición, uno al que el club va: no tiene sentido crearlo y tener que
-    // marcarlo después.
-    de_interes: true,
-  });
-  if (error) return { error: error.message };
-
-  refrescar();
-  return {};
-}
-
 /** Borra un torneo. Solo tiene sentido para los creados a mano. */
 export async function borrarTorneo(tournamentId: string): Promise<Resultado> {
   if (!(await esAdmin())) return { error: "No autorizado" };
