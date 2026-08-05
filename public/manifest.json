@@ -1,7 +1,7 @@
 {
   "name": "Fomento de Gandia · Ajedrez",
   "short_name": "Fomento",
-  "start_url": "/",
+  "start_url": "/club",
   "display": "standalone",
   "background_color": "#f0f9ff",
   "theme_color": "#0369a1",

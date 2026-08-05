@@ -3,18 +3,24 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+/** Inicio de la zona de socios. Es prefijo de todas las demás pestañas, así que
+ *  solo cuenta como activa con coincidencia exacta: si no, en /club/equipos se
+ *  marcarían como activas Inicio y Equipos a la vez. */
+const INICIO = "/club";
+
 const items = [
-  { href: "/", label: "Inicio", icon: "🏠" },
-  { href: "/equipos", label: "Equipos", icon: "♟" },
-  { href: "/perfil", label: "Perfil", icon: "👤" },
+  { href: INICIO, label: "Inicio", icon: "🏠" },
+  { href: "/club/equipos", label: "Equipos", icon: "♟" },
+  { href: "/club/perfil", label: "Perfil", icon: "👤" },
 ];
 
 export function BottomNav({ esAdmin }: { esAdmin: boolean }) {
   const pathname = usePathname();
   const all = esAdmin
-    ? [...items, { href: "/admin", label: "Admin", icon: "⚙️" }]
+    ? [...items, { href: "/club/admin", label: "Admin", icon: "⚙️" }]
     : items;
-  if (["/login", "/registro"].some((p) => pathname.startsWith(p))) return null;
+  // Ya no hace falta esconderla en login/registro: solo la pinta el layout de
+  // /club, que es donde tiene sentido.
   return (
     <nav
       aria-label="Navegación principal"
@@ -22,8 +28,9 @@ export function BottomNav({ esAdmin }: { esAdmin: boolean }) {
     >
       {all.map((i) => {
         const activo =
-          pathname === i.href ||
-          (i.href !== "/" && pathname.startsWith(i.href + "/"));
+          i.href === INICIO
+            ? pathname === INICIO
+            : pathname === i.href || pathname.startsWith(i.href + "/");
         return (
           <Link key={i.href} href={i.href}
             aria-current={activo ? "page" : undefined}

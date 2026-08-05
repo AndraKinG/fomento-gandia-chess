@@ -45,7 +45,7 @@ export async function registro(formData: FormData): Promise<{ error?: string }> 
   // La cuenta ya existe; si el inicio de sesión falla por lo que sea, que entre
   // por /login en vez de quedarse mirando un error sin salida.
   if (error) redirect("/login?registrado=1");
-  redirect("/vincular");
+  redirect("/club/vincular");
 }
 
 export async function logout() {

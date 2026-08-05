@@ -115,7 +115,7 @@ export async function pedirDisponibilidadSemana(
     {
       title: "¿Puedes jugar?",
       body: `Jornada del ${textoFechas(jornadas)}: marca tu disponibilidad`,
-      url: "/disponibilidad",
+      url: "/club/disponibilidad",
     }
   );
   return { notificados };
@@ -153,7 +153,7 @@ export async function recordarPendientes(
   const notificados = await enviarPushAMuchos(destinatarios, {
     title: "¿Puedes jugar?",
     body: `Jornada del ${textoFechas(jornadas)}: marca tu disponibilidad`,
-    url: "/disponibilidad",
+    url: "/club/disponibilidad",
   });
   return { notificados };
 }

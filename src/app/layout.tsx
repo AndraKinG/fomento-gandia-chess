@@ -1,21 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
-import { PushSubscriber } from "@/components/PushSubscriber";
-import { BottomNav } from "@/components/BottomNav";
-import { createServerSupabase } from "@/lib/supabase/server";
 import "./globals.css";
-
-/**
- * Rutas por las que puede pasar una cuenta autenticada que AÚN NO tiene ficha
- * aprobada. El resto le redirige a /vincular.
- *
- * Es UX, no seguridad: la barrera de verdad son las policies de la migración
- * 0009, que no dejan a un no vinculado leer ni un nombre. Si este redirect
- * fallara, esas pantallas se verían vacías, no llenas.
- */
-const RUTAS_SIN_FICHA = ["/vincular", "/perfil", "/login", "/registro", "/auth"];
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,10 +14,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Fomento de Gandia · Ajedrez",
-  description: "App del club de ajedrez Fomento de Gandia",
+  description: "Club de ajedrez Fomento de Gandia",
   manifest: "/manifest.json",
-  // La app es del club, no un sitio público: no tiene sentido que salga en
-  // búsquedas. No es un control de seguridad (esa es la RLS), solo higiene.
+  // La zona de socios no tiene sentido en buscadores. La web pública sí querrá
+  // indexarse cuando tenga contenido de verdad: entonces se sobrescribe este
+  // `robots` en el metadata de la propia página pública.
   robots: { index: false, follow: false },
 };
 
@@ -43,45 +29,32 @@ export const viewport: Viewport = {
   ],
 };
 
-export default async function RootLayout({
+/**
+ * Layout raíz: solo el documento y el tema.
+ *
+ * Todo lo que es "de socio" (navegación inferior, suscripción a notificaciones,
+ * comprobación de sesión y de ficha) vive en los layouts de `/club`. Antes
+ * estaba aquí y obligaba a saber la ruta actual para decidir si redirigir, algo
+ * que los layouts no reciben y había que pasar por una cabecera desde el proxy.
+ * Con la zona de socios en su propio segmento, la estructura de carpetas ya dice
+ * quién necesita qué y ese truco desaparece.
+ */
+export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-  let esAdmin = false;
-  let tieneFicha = false;
-  if (user) {
-    // Un solo select para las dos cosas: si es admin y si ya tiene ficha.
-    const { data: profile } = await supabase
-      .from("profiles").select("is_admin, player_id").eq("id", user.id).single();
-    esAdmin = Boolean(profile?.is_admin);
-    tieneFicha = profile?.player_id != null;
-
-    if (!tieneFicha && !esAdmin) {
-      const ruta = (await headers()).get("x-pathname") ?? "/";
-      if (!RUTAS_SIN_FICHA.some((r) => ruta.startsWith(r))) redirect("/vincular");
-    }
-  }
-
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
       lang="es"
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col pb-20">
+      <body className="flex min-h-full flex-col">
         <script
           dangerouslySetInnerHTML={{
             __html: `try{const t=localStorage.tema;const s=window.matchMedia("(prefers-color-scheme: dark)").matches;if(t==="oscuro"||(!t||t==="sistema")&&s)document.documentElement.classList.add("dark")}catch(e){}`,
           }}
         />
-        <PushSubscriber />
         {children}
-        {/* Sin ficha aprobada la navegación no lleva a ningún sitio útil: todas
-            sus pestañas redirigen de vuelta a /vincular. */}
-        {(!user || tieneFicha || esAdmin) && <BottomNav esAdmin={esAdmin} />}
       </body>
     </html>
   );
