@@ -97,7 +97,7 @@ export default async function VincularPage({
       ...(fila.players as unknown as { id: string; nombre: string }),
       elo: fila.elo_oficial as number | null,
     }))
-    .filter((p) => p && !ocupados.has(p.id));
+    .filter((p) => p?.id && !ocupados.has(p.id));
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">

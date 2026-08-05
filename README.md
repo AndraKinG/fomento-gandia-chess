@@ -44,7 +44,13 @@ En el SQL Editor de Supabase, ejecuta las migraciones de `supabase/migrations/`
 0004_interclubs.sql      -- teams, matches, availability
 0005_convocatorias.sql   -- convocatorias/lineups
 0006_marcadores.sql      -- resultados/marcadores por tablero
+0007_blindaje_convocatorias.sql  -- trigger anti-publicación por REST directa
+0008_limpieza_datos_prueba.sql   -- limpieza puntual, SALTAR en una BD nueva
+0009_acceso_club.sql     -- código de acceso + lectura solo para vinculados
 ```
+
+`0008` borra datos de prueba concretos de la base de datos original: en una
+instalación nueva no hay nada que borrar, así que se puede saltar sin más.
 
 No hay migrador automático: cópialas y pégalas en el SQL Editor una a una.
 
@@ -120,12 +126,51 @@ desde Vercel) — se invocan desde los botones manuales en `/admin/elo` o desde
 3. En Supabase, **Authentication → URL Configuration**, añade la URL de
    producción de Vercel a *Site URL* y *Redirect URLs* (si no, la confirmación
    de email y los enlaces mágicos redirigen a `localhost`).
-4. Los crons de `vercel.json` se activan solos al desplegar; verifica en
+4. En Supabase, **Authentication → Sign In / Providers → Email**, desactiva
+   **"Allow new users to sign up"**. **Sin este paso el registro está abierto a
+   todo internet** y el código de acceso del club no sirve para nada: la clave
+   anónima vive en el navegador, así que cualquiera puede llamar a
+   `POST /auth/v1/signup` y saltarse el formulario de la app. Ver la sección
+   "Acceso al club" más abajo.
+5. Los crons de `vercel.json` se activan solos al desplegar; verifica en
    Vercel → Cron Jobs que aparecen y que `CRON_SECRET` coincide con la env var.
-5. Configura SMTP propio para los emails de Auth (ver
+6. Configura SMTP propio para los emails de Auth (ver
    `docs/referencia/configurar-smtp-resend.md`) — con el SMTP compartido de
-   Supabase la plantilla de confirmación no se puede personalizar y el límite
-   de envíos es muy bajo para producción real.
+   Supabase la plantilla no se puede personalizar y el límite de envíos es muy
+   bajo para producción real. **El registro de socios no depende de esto** (las
+   cuentas se crean ya confirmadas), pero la recuperación de contraseña sí.
+
+## Acceso al club
+
+La app es privada del club: solo se puede crear cuenta con un **código de
+acceso** que reparte el admin. Tres capas, cada una respondiendo a algo
+distinto:
+
+1. **El código** dice *"eres del club"*. Vive en la tabla `access_codes`, solo
+   puede haber uno activo, y se gestiona en `/admin/acceso`: verlo, copiarlo,
+   regenerarlo (el anterior deja de valer al instante) y **cerrar el registro**
+   cuando ya está todo el club dentro. Los socios ya registrados no se ven
+   afectados por ninguna de esas operaciones.
+2. **`/vincular`** pregunta *"qué ficha dices que eres"*. La lista sale del
+   `force_order` de la temporada activa —el censo oficial del club—, no de
+   `players` entera, para que no se puedan reclamar fichas que no son de
+   socios. Quien no use la app nunca reclama su ficha y su ficha sigue
+   existiendo para convocatorias.
+3. **`/admin/vinculaciones`** confirma *"eres realmente esa persona"*. Es la
+   barrera anti-suplantación: el admin conoce a sus socios.
+
+Las cuentas se crean desde el servidor con `auth.admin.createUser` y ya
+confirmadas (ver `src/lib/acceso/registro.ts`). Motivo: el circuito de
+confirmación por email no aguanta a 46 socios registrándose la misma tarde con
+el SMTP compartido de Supabase. Contrapartida: un email mal escrito deja a ese
+socio sin recuperar su contraseña, y hay que corregírselo desde el dashboard de
+Supabase (*Authentication → Users → Update user*).
+
+Mientras una cuenta no tenga ficha aprobada **no puede leer nada**: la
+migración 0009 exige `esta_vinculado()` en la lectura de `players`,
+`force_order`, `seasons`, `teams`, `team_captains`, `matches`, `standings`,
+`board_results` y las convocatorias publicadas. El redirect a `/vincular` del
+layout raíz es solo comodidad; la barrera es la RLS.
 
 ## Cuentas de prueba
 

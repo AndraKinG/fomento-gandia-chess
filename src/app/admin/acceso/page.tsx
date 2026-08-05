@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { formatearCodigo } from "@/lib/acceso/codigo";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
@@ -7,9 +7,13 @@ import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { cambiarEstadoCodigo, regenerarCodigo } from "./actions";
 
 export default async function AccesoPage() {
-  // El layout de /admin ya ha comprobado que quien llega es admin.
-  const admin = createAdminClient();
-  const { data: codigos } = await admin
+  // Con el cliente de USUARIO, no el de servicio: la policy "access_codes solo
+  // admin" (migración 0009) es la que decide. Así hay dos barreras y no una —
+  // el layout de /admin y la RLS —, igual que en /admin/vinculaciones. Si esta
+  // pantalla se sirviera con el cliente de servicio, un fallo en el layout la
+  // dejaría abierta.
+  const supabase = await createServerSupabase();
+  const { data: codigos } = await supabase
     .from("access_codes")
     .select("id, codigo, activo, usos, notas, created_at")
     .order("activo", { ascending: false })

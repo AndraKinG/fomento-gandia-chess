@@ -10,6 +10,16 @@ export async function proxy(request: NextRequest) {
   // CADA petición y ya hace un viaje a Supabase con getUser(); el layout, en
   // cambio, ya consulta `profiles` para saber si eres admin, así que allí la
   // comprobación sale gratis.
+  //
+  // OJO al tocar esto: mutamos `request.headers` y devolvemos
+  // `NextResponse.next({ request })`, que NO es el patrón de los docs de Next
+  // (ellos hacen `new Headers(request.headers)` + `next({ request: { headers } })`).
+  // Se hace así porque el bloque de cookies de más abajo, que es el patrón
+  // canónico de @supabase/ssr, necesita pasar el `request` entero para que las
+  // cookies refrescadas lleguen al servidor. Verificado empíricamente el
+  // 2026-08-05 que la cabecera llega al layout **tanto en dev como en el build
+  // de producción**; si alguien lo "arregla" al patrón de los docs, comprobar
+  // que siguen funcionando las dos cosas: el redirect Y el refresco de sesión.
   request.headers.set("x-pathname", request.nextUrl.pathname);
   let response = NextResponse.next({ request });
   const supabase = createServerClient(
