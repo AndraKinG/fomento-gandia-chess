@@ -129,8 +129,15 @@ desde Vercel) — se invocan desde los botones manuales en `/admin/elo` o desde
 
 ## Cuentas de prueba
 
-En desarrollo se han usado cuentas `*.prueba@fomentogandia.test` sembradas a
-mano para probar flujos de admin/jugador (ver `docs/superpowers/plans/`). Son
-cuentas de prueba, no de producción: **bórralas o cámbiales la contraseña
-antes de dar acceso real a los socios**, y no reutilices esos emails/contraseñas
-en el proyecto de Supabase de producción.
+En desarrollo se usaron cuentas `*.prueba@fomentogandia.test` sembradas a mano
+para probar flujos de admin/jugador (ver `docs/superpowers/plans/`). **Ya están
+borradas** de la base de datos compartida junto con sus fichas y el encuentro
+de prueba (migración `0008_limpieza_datos_prueba.sql`). Si vuelves a sembrar
+cuentas de prueba, usa el mismo dominio `@fomentogandia.test` para que sean
+fáciles de localizar y bórralas antes de dar acceso real a los socios.
+
+Sí quedan en `players` cuatro fichas que no son socias del club, restos de
+probar los sincronizadores de ELO: "Carlsen, Magnus" y "Nakamura, Hikaru"
+(FIDE), "Aalbersberg Kroon, Pedro" y "Aalders, Hendricus" (FEDA). Están fuera
+del orden de fuerza, así que no entran en convocatorias ni en el cálculo de
+fuerza, pero aparecen en cualquier listado que lea `players` sin filtrar.
