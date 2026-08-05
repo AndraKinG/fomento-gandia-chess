@@ -28,6 +28,12 @@ const ENLACES = [
     detalle: "Dar de alta equipos de la temporada y nombrar capitanes",
   },
   {
+    href: "/club/admin/torneos",
+    icono: "🏆",
+    titulo: "Torneos",
+    detalle: "Sincronizar el calendario FACV, elegir a cuáles vamos y ver el transporte",
+  },
+  {
     href: "/club/admin/elo",
     icono: "📈",
     titulo: "Actualización de ELO",

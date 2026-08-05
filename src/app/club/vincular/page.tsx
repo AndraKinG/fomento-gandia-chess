@@ -33,7 +33,7 @@ export default async function VincularPage({
     .select("player_id")
     .eq("id", user.id)
     .single();
-  if (perfil?.player_id) redirect("/");
+  if (perfil?.player_id) redirect("/club");
 
   // Si ya tiene solicitud pendiente, no se le vuelve a ofrecer la lista: espera.
   const { data: solicitud } = await admin

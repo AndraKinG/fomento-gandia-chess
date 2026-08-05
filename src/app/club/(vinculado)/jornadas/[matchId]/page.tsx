@@ -43,7 +43,7 @@ export default async function JornadaPage({
     )
     .eq("id", matchId)
     .maybeSingle();
-  if (!match) redirect("/");
+  if (!match) redirect("/club");
 
   const equipoNombre = (match.teams as unknown as { nombre: string } | null)?.nombre ?? "Equipo";
 

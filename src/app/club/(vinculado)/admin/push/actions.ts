@@ -12,6 +12,6 @@ export async function enviarPushPrueba() {
   await enviarPushAUsuario(user.id, {
     title: "Fomento de Gandia",
     body: "¡Las notificaciones funcionan! ♞",
-    url: "/",
+    url: "/club",
   });
 }

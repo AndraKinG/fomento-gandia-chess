@@ -4,8 +4,10 @@ import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Banner } from "@/components/ui/Banner";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
+import { Tarjeta } from "@/components/ui/Tarjeta";
 import { TarjetaJornada } from "@/components/ui/TarjetaJornada";
 import { Boton } from "@/components/ui/Boton";
+import { formatearRangoFechas, hoyISO } from "@/lib/torneos/fechas";
 
 type Estado = "disponible" | "no_disponible" | "duda";
 const ICONOS: Record<Estado, string> = { disponible: "✅", no_disponible: "❌", duda: "🤔" };
@@ -44,6 +46,30 @@ export default async function Home() {
     id: string; ronda: number; fecha_hora: string; rival: string; es_local: boolean;
     sede: string | null; teams: { nombre: string } | null;
   } | undefined;
+
+  // Próximos torneos a los que va el club. El Interclubs duerme de abril a
+  // enero, así que fuera de esa ventana esto es lo único que la app tiene que
+  // contar: sin ello, la home queda vacía media temporada.
+  const { data: torneosProximos } = await supabase
+    .from("tournaments")
+    .select("id, nombre, fecha_inicio, fecha_fin, lugar")
+    .eq("de_interes", true)
+    .gte("fecha_fin", hoyISO())
+    .order("fecha_inicio")
+    .limit(3);
+
+  const idsTorneos = (torneosProximos ?? []).map((t) => t.id);
+  const { data: misAsistencias } =
+    profile?.player_id && idsTorneos.length > 0
+      ? await supabase
+          .from("tournament_attendance")
+          .select("tournament_id, estado")
+          .eq("player_id", profile.player_id)
+          .in("tournament_id", idsTorneos)
+      : { data: [] };
+  const asistenciaPorTorneo = new Map(
+    (misAsistencias ?? []).map((a) => [a.tournament_id, a.estado as string])
+  );
 
   let miEstado: Estado | null = null;
   let faltaDisponibilidad = false;
@@ -136,6 +162,42 @@ export default async function Home() {
             titulo="Aún no hay jornadas"
             detalle="Cuando arranque el interclubs verás aquí tu próxima jornada"
           />
+        )}
+
+        {(torneosProximos ?? []).length > 0 && (
+          <section className="space-y-2 pt-2">
+            <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
+              Próximos torneos
+            </h2>
+            {(torneosProximos ?? []).map((t) => {
+              const estado = asistenciaPorTorneo.get(t.id);
+              return (
+                <Link key={t.id} href={`/club/torneos/${t.id}`} className="block">
+                  <Tarjeta
+                    compacta
+                    className="flex items-center justify-between gap-3 transition hover:border-borde-acento"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-tinta">{t.nombre}</p>
+                      <p className="text-sm text-tinta-suave">
+                        {formatearRangoFechas(t.fecha_inicio, t.fecha_fin)}
+                        {t.lugar ? ` · ${t.lugar}` : ""}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-xs text-tinta-suave">
+                      {estado === "voy"
+                        ? "✅ Vas"
+                        : estado === "no_voy"
+                          ? "❌ No vas"
+                          : estado === "duda"
+                            ? "🤔 Duda"
+                            : "¿Vas?"}
+                    </span>
+                  </Tarjeta>
+                </Link>
+              );
+            })}
+          </section>
         )}
       </div>
     </main>
