@@ -33,7 +33,13 @@ const FECHA_RE = /(\d{2})\/(\d{2})\/(\d{4})/;
 const HORA_RE = /🕒\s*(\d{2}:\d{2})/;
 const NOMBRE_EQUIPO_RE = /team-name'>([^<]+)</g;
 
-function decodeEntidades(texto: string): string {
+/**
+ * Entidades HTML que aparecen de verdad en las páginas de la FACV, más colapso
+ * de espacios. Exportada porque la usa también el parser del calendario de
+ * torneos (`facv-calendario-torneos.ts`): duplicar la tabla de entidades
+ * garantizaría que las dos copias se desincronicen.
+ */
+export function decodeEntidades(texto: string): string {
   return texto
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')

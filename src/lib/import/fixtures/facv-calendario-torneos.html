@@ -1,0 +1,1144 @@
+<!doctype html>
+<!-- Fixture recortada de calendario_oficial.php de la FACV, descargada el
+     2026-08-05. Contiene los tres primeros meses de 2026 mas una rejilla
+     mensual, y cubre a proposito estos casos limite:
+       - torneo de varios dias (Ano Nuevo Mutxamel, 02->03/01)
+       - torneos de un dia (inicio == fin, NO viene vacio)
+       - jornadas de Interclubs, que duplican la tabla matches y hay que excluir
+       - torneos organizados por la FACV que NO son Interclubs y SI interesan
+         (Zonal Jocs, Provinciales...): el filtro va por nombre, no por organizador
+       - entidades HTML en el nombre (Blitz de L&#039;olleria)
+       - lugar con coma sobrante ("Olleria,")
+       - una rejilla table-bordered que el parser debe ignorar -->
+<html lang="es"><head><meta charset="utf-8"><title>Calendario Oficial 2026</title></head>
+<body>
+<table class="table table-hover align-middle mb-0">
+                                            <thead class="table-light">
+                                            <tr>
+                                                <th style="width:60px;">#</th>
+                                                <th>Nombre</th>
+                                                <th style="width:120px;">Inicio</th>
+                                                <th style="width:120px;">Final</th>
+                                                <th>Lugar</th>
+                                                <th>Organizador</th>
+                                                <th style="width:120px;">Bloquea</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            
+
+                                                <tr>
+                                                    <td>1</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Año Nuevo Mutxamel</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>02/01/2026</td>
+                                                    <td>03/01/2026</td>
+                                                    <td>
+                                                        Mutxamel                                                    </td>
+
+                                                    <td>C.E. Mutxamel</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>2</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Open Blitz Benimaclet</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>03/01/2026</td>
+                                                    <td>03/01/2026</td>
+                                                    <td>
+                                                        València                                                    </td>
+
+                                                    <td>Club Escacs Benimaclet</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>3</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Interclubs 2026</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>10/01/2026</td>
+                                                    <td>10/01/2026</td>
+                                                    <td>
+                                                        Comunitat Valenciana                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                        <span class='badge-bloqueo'>⛔ A nivel Autonómico</span>                                                    </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>4</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Interclubs. Jornada 2</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>17/01/2026</td>
+                                                    <td>17/01/2026</td>
+                                                    <td>
+                                                        Comunitat Valenciana                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                        <span class='badge-bloqueo'>⛔ A nivel Autonómico</span>                                                    </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>5</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Open Blitz Dama Roja</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>18/01/2026</td>
+                                                    <td>18/01/2026</td>
+                                                    <td>
+                                                        València                                                    </td>
+
+                                                    <td>Club Ajedrez Dama Roja</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>6</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Blitz de L&#039;olleria</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>18/01/2026</td>
+                                                    <td>18/01/2026</td>
+                                                    <td>
+                                                        Olleria,                                                       </td>
+
+                                                    <td>Club Escacs Olleria</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>7</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Interclubs. Jornada 3</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>24/01/2026</td>
+                                                    <td>24/01/2026</td>
+                                                    <td>
+                                                        Comunitat Valenciana                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                        <span class='badge-bloqueo'>⛔ A nivel Autonómico</span>                                                    </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>8</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Zonal Jocs. Jornada 1</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>24/01/2026</td>
+                                                    <td>24/01/2026</td>
+                                                    <td>
+                                                        Comunitat Valenciana                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>9</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Interclubs. Jornada 4</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>31/01/2026</td>
+                                                    <td>31/01/2026</td>
+                                                    <td>
+                                                        Comunitat Valenciana                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                        <span class='badge-bloqueo'>⛔ A nivel Autonómico</span>                                                    </td>
+
+                                                </tr>
+                                                                                        </tbody>
+                                        </table>
+
+<table class="table table-hover align-middle mb-0">
+                                            <thead class="table-light">
+                                            <tr>
+                                                <th style="width:60px;">#</th>
+                                                <th>Nombre</th>
+                                                <th style="width:120px;">Inicio</th>
+                                                <th style="width:120px;">Final</th>
+                                                <th>Lugar</th>
+                                                <th>Organizador</th>
+                                                <th style="width:120px;">Bloquea</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            
+
+                                                <tr>
+                                                    <td>1</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Open Albal</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>01/02/2026</td>
+                                                    <td>01/02/2026</td>
+                                                    <td>
+                                                        Albal                                                    </td>
+
+                                                    <td>Club Ajedrez Albal</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>2</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Interclubs. Jornada 5</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>07/02/2026</td>
+                                                    <td>07/02/2026</td>
+                                                    <td>
+                                                        Comunitat Valenciana                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                        <span class='badge-bloqueo'>⛔ A nivel Autonómico</span>                                                    </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>3</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Blitz Monteolivete Vintage</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>08/02/2026</td>
+                                                    <td>08/02/2026</td>
+                                                    <td>
+                                                        València                                                    </td>
+
+                                                    <td>Club Ajedrez Monteolivete</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>4</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Provinciales Edades Castellón</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>15/02/2026</td>
+                                                    <td>15/02/2026</td>
+                                                    <td>
+                                                        Castelló de la Plana                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>5</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Zonal Jocs. Castellón</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>21/02/2026</td>
+                                                    <td>21/02/2026</td>
+                                                    <td>
+                                                        Castelló de la Plana                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>6</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Interclubs. Jornada 7</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>21/02/2026</td>
+                                                    <td>21/02/2026</td>
+                                                    <td>
+                                                        Comunitat Valenciana                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                        <span class='badge-bloqueo'>⛔ A nivel Autonómico</span>                                                    </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>7</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Zonal Jocs. Jornada 3</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>21/02/2026</td>
+                                                    <td>21/02/2026</td>
+                                                    <td>
+                                                        Comunitat Valenciana                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>8</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Zonal Jocs. Jornada 2</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>28/02/2026</td>
+                                                    <td>28/02/2026</td>
+                                                    <td>
+                                                        Comunitat Valenciana                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>9</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Interclubs. Jornada 8</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>28/02/2026</td>
+                                                    <td>28/02/2026</td>
+                                                    <td>
+                                                        Comunitat Valenciana                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                        <span class='badge-bloqueo'>⛔ A nivel Autonómico</span>                                                    </td>
+
+                                                </tr>
+                                                                                        </tbody>
+                                        </table>
+
+<table class="table table-bordered align-middle mb-0" style="table-layout:fixed;">
+                    <thead class="table-light">
+                    <tr>
+                                                    <th class="text-center" style="width:14.285%; font-size:.9rem;">L</th>
+                                                    <th class="text-center" style="width:14.285%; font-size:.9rem;">M</th>
+                                                    <th class="text-center" style="width:14.285%; font-size:.9rem;">X</th>
+                                                    <th class="text-center" style="width:14.285%; font-size:.9rem;">J</th>
+                                                    <th class="text-center" style="width:14.285%; font-size:.9rem;">V</th>
+                                                    <th class="text-center" style="width:14.285%; font-size:.9rem;">S</th>
+                                                    <th class="text-center" style="width:14.285%; font-size:.9rem;">D</th>
+                                            </tr>
+                    </thead>
+                    <tbody>
+                                            <tr class="week-wrap">
+                                                                                            <td class="cal-out" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-muted" style="font-size:.85rem;">
+                                        29                                    </div>
+                                </td>
+                                                                                            <td class="cal-out" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-muted" style="font-size:.85rem;">
+                                        30                                    </div>
+                                </td>
+                                                                                            <td class="cal-out" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-muted" style="font-size:.85rem;">
+                                        31                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        1                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        2                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        3                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        4                                    </div>
+                                </td>
+                            
+                                                            <td colspan="7" style="padding:0; border:0; height:0;">
+                                    <div class="week-bars">
+                                                                                                                                <div class="bar"
+                                                 title="Año Nuevo Mutxamel (Mutxamel)"
+                                                 style="--c1:5; --c2:6;">
+                                                <span class='mini'>★</span>                                                                                                                                                Año Nuevo Mutxamel                                            </div>
+                                                                                                                                <div class="bar"
+                                                 title="Open Blitz Benimaclet (València)"
+                                                 style="--c1:6; --c2:6;">
+                                                <span class='mini'>★</span>                                                                                                                                                Open Blitz Benimaclet                                            </div>
+                                                                            </div>
+                                </td>
+                            
+                        </tr>
+                                            <tr class="week-wrap">
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        5                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        6                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        7                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        8                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        9                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        10                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        11                                    </div>
+                                </td>
+                            
+                                                            <td colspan="7" style="padding:0; border:0; height:0;">
+                                    <div class="week-bars">
+                                                                                                                                <div class="bar bloq"
+                                                 title="Interclubs 2026 (Comunitat Valenciana)"
+                                                 style="--c1:6; --c2:6;">
+                                                <span class='mini'>★</span>                                                                                                <span class='mini'>⛔</span>                                                Interclubs 2026                                            </div>
+                                                                            </div>
+                                </td>
+                            
+                        </tr>
+                                            <tr class="week-wrap">
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        12                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        13                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        14                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        15                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        16                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        17                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        18                                    </div>
+                                </td>
+                            
+                                                            <td colspan="7" style="padding:0; border:0; height:0;">
+                                    <div class="week-bars">
+                                                                                                                                <div class="bar bloq"
+                                                 title="Interclubs. Jornada 2 (Comunitat Valenciana)"
+                                                 style="--c1:6; --c2:6;">
+                                                <span class='mini'>★</span>                                                                                                <span class='mini'>⛔</span>                                                Interclubs. Jornada 2                                            </div>
+                                                                                                                                <div class="bar"
+                                                 title="Open Blitz Dama Roja (València)"
+                                                 style="--c1:7; --c2:7;">
+                                                <span class='mini'>★</span>                                                                                                                                                Open Blitz Dama Roja                                            </div>
+                                                                                                                                <div class="bar"
+                                                 title="Blitz de L&amp;#039;olleria (Olleria,)"
+                                                 style="--c1:7; --c2:7;">
+                                                <span class='mini'>★</span>                                                                                                                                                Blitz de L&amp;#039;olleria                                            </div>
+                                                                            </div>
+                                </td>
+                            
+                        </tr>
+                                            <tr class="week-wrap">
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        19                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        20                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        21                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        22                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        23                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        24                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        25                                    </div>
+                                </td>
+                            
+                                                            <td colspan="7" style="padding:0; border:0; height:0;">
+                                    <div class="week-bars">
+                                                                                                                                <div class="bar bloq"
+                                                 title="Interclubs. Jornada 3 (Comunitat Valenciana)"
+                                                 style="--c1:6; --c2:6;">
+                                                <span class='mini'>★</span>                                                                                                <span class='mini'>⛔</span>                                                Interclubs. Jornada 3                                            </div>
+                                                                                                                                <div class="bar"
+                                                 title="Zonal Jocs. Jornada 1 (Comunitat Valenciana)"
+                                                 style="--c1:6; --c2:6;">
+                                                <span class='mini'>★</span>                                                                                                                                                Zonal Jocs. Jornada 1                                            </div>
+                                                                            </div>
+                                </td>
+                            
+                        </tr>
+                                            <tr class="week-wrap">
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        26                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        27                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        28                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        29                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        30                                    </div>
+                                </td>
+                                                                                            <td class="" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-secondary" style="font-size:.85rem;">
+                                        31                                    </div>
+                                </td>
+                                                                                            <td class="cal-out" style="vertical-align:top; padding:.35rem; height:120px;">
+                                    <div class="fw-semibold text-muted" style="font-size:.85rem;">
+                                        1                                    </div>
+                                </td>
+                            
+                                                            <td colspan="7" style="padding:0; border:0; height:0;">
+                                    <div class="week-bars">
+                                                                                                                                <div class="bar bloq"
+                                                 title="Interclubs. Jornada 4 (Comunitat Valenciana)"
+                                                 style="--c1:6; --c2:6;">
+                                                <span class='mini'>★</span>                                                                                                <span class='mini'>⛔</span>                                                Interclubs. Jornada 4                                            </div>
+                                                                            </div>
+                                </td>
+                            
+                        </tr>
+                                        </tbody>
+                </table>
+
+<table class="table table-hover align-middle mb-0">
+                                            <thead class="table-light">
+                                            <tr>
+                                                <th style="width:60px;">#</th>
+                                                <th>Nombre</th>
+                                                <th style="width:120px;">Inicio</th>
+                                                <th style="width:120px;">Final</th>
+                                                <th>Lugar</th>
+                                                <th>Organizador</th>
+                                                <th style="width:120px;">Bloquea</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            
+
+                                                <tr>
+                                                    <td>1</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Provincial Jocs</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>01/03/2026</td>
+                                                    <td>01/03/2026</td>
+                                                    <td>
+                                                        Comunitat Valenciana                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>2</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Interclubs. Jornada 9</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>07/03/2026</td>
+                                                    <td>07/03/2026</td>
+                                                    <td>
+                                                        Comunitat Valenciana                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                        <span class='badge-bloqueo'>⛔ A nivel Autonómico</span>                                                    </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>3</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Interclubs. Ronda 6 Aplazada</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>08/03/2026</td>
+                                                    <td>08/03/2026</td>
+                                                    <td>
+                                                        Comunitat Valenciana                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                        <span class='badge-bloqueo'>⛔ A nivel Autonómico</span>                                                    </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>4</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>S2300 Ciudad de Alcoy</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>13/03/2026</td>
+                                                    <td>15/03/2026</td>
+                                                    <td>
+                                                        Alcoi/Alcoy                                                    </td>
+
+                                                    <td>Club Ajedrez Alcoy</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>5</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Festival Integrador Mutxamel</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>14/03/2026</td>
+                                                    <td>15/03/2026</td>
+                                                    <td>
+                                                        Mutxamel                                                    </td>
+
+                                                    <td>C.E. Mutxamel</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>6</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Por Equipos Mutxamel</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>14/03/2026</td>
+                                                    <td>15/03/2026</td>
+                                                    <td>
+                                                        Mutxamel                                                    </td>
+
+                                                    <td>C.E. Mutxamel</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>7</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Femenino Ciudad de Mutxamel</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>14/03/2026</td>
+                                                    <td>14/03/2026</td>
+                                                    <td>
+                                                        Mutxamel                                                    </td>
+
+                                                    <td>C.E. Mutxamel</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>8</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>S1800 Xàbia</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>14/03/2026</td>
+                                                    <td>15/03/2026</td>
+                                                    <td>
+                                                        Xàbia                                                    </td>
+
+                                                    <td>Club Escacs Xàbia</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>9</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Interclubs. Jornada 10</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>21/03/2026</td>
+                                                    <td>21/03/2026</td>
+                                                    <td>
+                                                        Comunitat Valenciana                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                        <span class='badge-bloqueo'>⛔ A nivel Autonómico</span>                                                    </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>10</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Autonómico Circuito Colegios</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>22/03/2026</td>
+                                                    <td>22/03/2026</td>
+                                                    <td>
+                                                        Oliva                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>11</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Autonómico Circuito Base</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>22/03/2026</td>
+                                                    <td>22/03/2026</td>
+                                                    <td>
+                                                        Oliva                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>12</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Prov. Veteranos Individual</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>27/03/2026</td>
+                                                    <td>27/03/2026</td>
+                                                    <td>
+                                                        Comunitat Valenciana                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>13</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Prov. Edades Alicante</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>28/03/2026</td>
+                                                    <td>28/03/2026</td>
+                                                    <td>
+                                                        Alacant                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>14</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Interclubs. Jornada 11</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>28/03/2026</td>
+                                                    <td>28/03/2026</td>
+                                                    <td>
+                                                        Comunitat Valenciana                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                        <span class='badge-bloqueo'>⛔ A nivel Autonómico</span>                                                    </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>15</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Aficionados Villajoyosa</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>29/03/2026</td>
+                                                    <td>29/03/2026</td>
+                                                    <td>
+                                                        Vila Joiosa /Villajoyosa                                                    </td>
+
+                                                    <td>Club Escacs Alonis</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                            
+
+                                                <tr>
+                                                    <td>16</td>
+                                                    <td>
+                                                        
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                            <span class="badge-oficial" title="Oficial">★ Oficial</span>
+                                                            
+                                                            
+                                                            <span>Prov. Edades Valencia</span>
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td>29/03/2026</td>
+                                                    <td>29/03/2026</td>
+                                                    <td>
+                                                        València                                                    </td>
+
+                                                    <td>FACV</td>
+                                                    <td>
+                                                                                                            </td>
+
+                                                </tr>
+                                                                                        </tbody>
+                                        </table>
+</body></html>
