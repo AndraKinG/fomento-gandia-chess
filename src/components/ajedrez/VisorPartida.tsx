@@ -13,7 +13,14 @@ import { Tablero } from "./Tablero";
  * la partida en blanco — si no se puede leer, se avisa y el resto de la ficha
  * (datos y anotaciones) sigue ahí.
  */
-export function VisorPartida({ pgn, volteado = false }: { pgn: string; volteado?: boolean }) {
+export function VisorPartida({
+  pgn,
+  volteado: volteadoInicial = false,
+}: {
+  pgn: string;
+  /** Arranca desde el punto de vista del dueño de la partida. */
+  volteado?: boolean;
+}) {
   const analisis = useMemo(() => {
     try {
       const c = new Chess();
@@ -43,6 +50,7 @@ export function VisorPartida({ pgn, volteado = false }: { pgn: string; volteado?
   }, [pgn]);
 
   const [indice, setIndice] = useState(0);
+  const [volteado, setVolteado] = useState(volteadoInicial);
 
   if ("error" in analisis) {
     return (
@@ -77,6 +85,12 @@ export function VisorPartida({ pgn, volteado = false }: { pgn: string; volteado?
           </span>
         </p>
         <div className="flex gap-1">
+          <Paso
+            etiqueta="Girar el tablero"
+            simbolo="⇅"
+            onClick={() => setVolteado((v) => !v)}
+            deshabilitado={false}
+          />
           <Paso etiqueta="Al inicio" simbolo="⏮" onClick={() => setIndice(0)} deshabilitado={indice === 0} />
           <Paso etiqueta="Anterior" simbolo="◀" onClick={() => setIndice((i) => Math.max(0, i - 1))} deshabilitado={indice === 0} />
           <Paso etiqueta="Siguiente" simbolo="▶" onClick={() => setIndice((i) => Math.min(total, i + 1))} deshabilitado={indice === total} />

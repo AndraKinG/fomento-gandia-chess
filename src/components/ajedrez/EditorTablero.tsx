@@ -27,12 +27,18 @@ const NOMBRE_PIEZA: Record<string, string> = {
  */
 export function EditorTablero({
   onCambio,
-  volteado = false,
+  volteado: volteadoAuto = false,
 }: {
   /** Recibe el PGN cada vez que cambia la partida. */
   onCambio: (pgn: string) => void;
+  /** Orientación automática, según el color con el que jugó el socio. */
   volteado?: boolean;
 }) {
+  // El giro manual GANA sobre el automático, pero solo cuando existe: mientras
+  // no se toque el botón, cambiar el color en el formulario sigue girando el
+  // tablero solo, que es lo que se espera al corregir ese campo.
+  const [giroManual, setGiroManual] = useState<boolean | null>(null);
+  const volteado = giroManual ?? volteadoAuto;
   // El objeto Chess es mutable, así que el estado de React es el historial de
   // jugadas: es lo que hace que la interfaz se vuelva a pintar y lo que permite
   // reconstruir la posición sin depender de mutaciones invisibles.
@@ -180,6 +186,13 @@ export function EditorTablero({
               `Mueven las ${juego.turn() === "w" ? "blancas" : "negras"}`)}
         </p>
         <div className="flex gap-2">
+          <Boton
+            variante="secundario"
+            className="px-3 py-1.5 text-sm"
+            onClick={() => setGiroManual(!volteado)}
+          >
+            <span aria-hidden>⇅</span> Girar
+          </Boton>
           <Boton
             variante="secundario"
             className="px-3 py-1.5 text-sm"
