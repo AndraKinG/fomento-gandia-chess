@@ -8,36 +8,59 @@ import { usePathname } from "next/navigation";
  *  marcarían como activas Inicio y Equipos a la vez. */
 const INICIO = "/club";
 
-const items = [
-  { href: INICIO, label: "Inicio", icon: "🏠" },
-  { href: "/club/equipos", label: "Equipos", icon: "♟" },
-  { href: "/club/perfil", label: "Perfil", icon: "👤" },
+/**
+ * Secciones de la zona de socios, según la estructura acordada con el
+ * propietario: Inicio · Interclubs · Club · Torneos · Perfil · Admin.
+ *
+ * **Falta "Club"** (torneos locales con ELO propio y repositorio de partidas) y
+ * no está por decisión, no por olvido: no tiene ni una pantalla todavía —llega
+ * con las Fases 3 y 4— y una pestaña que no lleva a ningún sitio es peor que no
+ * tenerla. Se añade aquí en cuanto haya algo detrás.
+ *
+ * `rutas` lista los prefijos que pertenecen a la sección, porque una sección
+ * abarca varias rutas: Interclubs cubre equipos, disponibilidad y jornadas, y
+ * todas ellas tienen que dejar su pestaña marcada.
+ */
+const SECCIONES = [
+  { href: INICIO, label: "Inicio", icon: "🏠", rutas: [] as string[] },
+  {
+    href: "/club/equipos",
+    label: "Interclubs",
+    icon: "♟",
+    rutas: ["/club/equipos", "/club/disponibilidad", "/club/jornadas"],
+  },
+  { href: "/club/torneos", label: "Torneos", icon: "🏆", rutas: ["/club/torneos"] },
+  { href: "/club/perfil", label: "Perfil", icon: "👤", rutas: ["/club/perfil"] },
 ];
+
+const ADMIN = { href: "/club/admin", label: "Admin", icon: "⚙️", rutas: ["/club/admin"] };
 
 export function BottomNav({ esAdmin }: { esAdmin: boolean }) {
   const pathname = usePathname();
-  const all = esAdmin
-    ? [...items, { href: "/club/admin", label: "Admin", icon: "⚙️" }]
-    : items;
-  // Ya no hace falta esconderla en login/registro: solo la pinta el layout de
-  // /club, que es donde tiene sentido.
+  const items = esAdmin ? [...SECCIONES, ADMIN] : SECCIONES;
+
   return (
     <nav
       aria-label="Navegación principal"
       className="fixed inset-x-0 bottom-0 flex justify-around border-t border-borde bg-tarjeta p-2"
     >
-      {all.map((i) => {
+      {items.map((i) => {
         const activo =
           i.href === INICIO
             ? pathname === INICIO
-            : pathname === i.href || pathname.startsWith(i.href + "/");
+            : i.rutas.some((r) => pathname === r || pathname.startsWith(r + "/"));
         return (
-          <Link key={i.href} href={i.href}
+          <Link
+            key={i.href}
+            href={i.href}
             aria-current={activo ? "page" : undefined}
-            className={`flex flex-col items-center px-3 text-xs ${
+            className={`flex flex-col items-center px-2 text-xs ${
               activo ? "font-bold text-acento-texto" : "text-tinta-suave"
-            }`}>
-            <span className="text-lg">{i.icon}</span>
+            }`}
+          >
+            <span aria-hidden className="text-lg">
+              {i.icon}
+            </span>
             {i.label}
           </Link>
         );

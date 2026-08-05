@@ -45,7 +45,7 @@ export default async function EquiposPage() {
   if (!season) {
     return (
       <main className="min-h-dvh bg-fondo pb-10">
-        <Cabecera titulo="Equipos" subtitulo="Interclubs FACV" />
+        <Cabecera titulo="Interclubs" subtitulo="Liga por equipos de la FACV" />
         <div className="mx-auto max-w-md p-4">
           <EstadoVacio
             titulo="Los equipos llegan con el interclubs"
@@ -80,8 +80,28 @@ export default async function EquiposPage() {
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Equipos" subtitulo={season.nombre} />
+      <Cabecera titulo="Interclubs" subtitulo={season.nombre} />
       <div className="mx-auto max-w-md space-y-8 p-4">
+        {/* Esta pantalla es la entrada de la sección Interclubs, así que tiene
+            que dar acceso a la disponibilidad: antes solo se llegaba desde la
+            home y quedaba escondida. */}
+        <Link href="/club/disponibilidad" className="block">
+          <Tarjeta
+            compacta
+            className="flex items-center justify-between gap-3 transition hover:border-borde-acento"
+          >
+            <div>
+              <p className="font-semibold text-tinta">Mi disponibilidad</p>
+              <p className="text-sm text-tinta-suave">
+                Marca si puedes jugar cada jornada
+              </p>
+            </div>
+            <span aria-hidden className="text-lg text-tinta-suave">
+              →
+            </span>
+          </Tarjeta>
+        </Link>
+
         {(equipos ?? []).length === 0 ? (
           <EstadoVacio
             titulo="Todavía no hay equipos"
