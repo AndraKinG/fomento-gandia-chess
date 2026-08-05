@@ -144,6 +144,22 @@ export default async function VincularPage({
             detalle="Todas las fichas del orden de fuerza están ya vinculadas o pendientes. Avisa al admin del club."
           />
         )}
+
+        {/* La lista sale del orden de fuerza, que se cierra a principio de
+            temporada: un socio que se haya dado de alta después no se encontrará
+            en ella. Sin este aviso, la salida natural es reclamar la ficha de
+            otro "porque había que elegir alguna". */}
+        {libres.length > 0 && (
+          <Tarjeta compacta>
+            <p className="text-sm text-tinta">
+              <b className="font-semibold">¿No encuentras tu nombre?</b> La lista
+              es el orden de fuerza de esta temporada. Si acabas de entrar en el
+              club puede que todavía no estés en él:{" "}
+              <b className="font-semibold">no elijas otra ficha</b>, avisa al
+              admin y te añade.
+            </p>
+          </Tarjeta>
+        )}
       </div>
     </main>
   );
