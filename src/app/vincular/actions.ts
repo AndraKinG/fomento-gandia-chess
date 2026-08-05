@@ -22,5 +22,8 @@ export async function solicitarVinculo(playerId: string): Promise<{ error?: stri
     }
     return { error: "No se pudo crear la solicitud" };
   }
-  redirect("/?solicitud=enviada");
+  // A /vincular, no a la home: hasta que el admin apruebe, la propia pantalla
+  // de vinculación es la que muestra el estado de espera (y la home le
+  // redirigiría aquí de vuelta).
+  redirect("/vincular");
 }

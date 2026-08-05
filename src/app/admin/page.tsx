@@ -10,6 +10,12 @@ const ENLACES = [
     detalle: "Importar y consultar el orden de fuerza de la temporada",
   },
   {
+    href: "/admin/acceso",
+    icono: "🔑",
+    titulo: "Acceso al club",
+    detalle: "Código de registro para los socios: ver, regenerar o cerrar",
+  },
+  {
     href: "/admin/vinculaciones",
     icono: "🔗",
     titulo: "Vinculaciones",

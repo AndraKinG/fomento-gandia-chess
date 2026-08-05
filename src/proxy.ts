@@ -4,6 +4,13 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLIC_PATHS = ["/login", "/registro", "/auth"];
 
 export async function proxy(request: NextRequest) {
+  // El layout raíz necesita saber en qué ruta estamos para decidir si redirige a
+  // /vincular a una cuenta sin ficha, y los layouts no reciben el pathname. Se
+  // lo pasamos por cabecera en vez de consultar la BD aquí: el proxy corre en
+  // CADA petición y ya hace un viaje a Supabase con getUser(); el layout, en
+  // cambio, ya consulta `profiles` para saber si eres admin, así que allí la
+  // comprobación sale gratis.
+  request.headers.set("x-pathname", request.nextUrl.pathname);
   let response = NextResponse.next({ request });
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,6 +20,8 @@ export async function proxy(request: NextRequest) {
         getAll: () => request.cookies.getAll(),
         setAll: (all) => {
           all.forEach(({ name, value }) => request.cookies.set(name, value));
+          // `request` conserva la cabecera x-pathname puesta arriba, así que
+          // recrear la respuesta aquí no la pierde.
           response = NextResponse.next({ request });
           all.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)

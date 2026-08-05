@@ -56,6 +56,29 @@ export default async function RegistroPage({
               className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta placeholder:text-tinta-suave"
             />
           </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="codigo" className="text-sm text-tinta">
+              Código del club
+            </label>
+            <input
+              id="codigo"
+              name="codigo"
+              type="text"
+              required
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              placeholder="XXXX-XXXX-XXXX"
+              className="rounded-xl border border-borde bg-tarjeta p-3 font-mono uppercase tracking-wider text-tinta placeholder:font-sans placeholder:normal-case placeholder:tracking-normal placeholder:text-tinta-suave"
+            />
+            <p className="text-xs text-tinta-suave">
+              Te lo pasa el club. Solo los socios pueden crear cuenta.
+            </p>
+          </div>
+          <p className="rounded-xl border border-borde bg-tarjeta-suave p-3 text-xs text-tinta-suave">
+            Usa un email al que tengas acceso: lo necesitarás si olvidas la
+            contraseña.
+          </p>
           <Boton variante="degradado">Registrarme</Boton>
         </form>
         <p className="text-center text-sm text-tinta">

@@ -5,6 +5,7 @@ import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { ChipElo } from "@/components/ui/ChipElo";
 import { Banner } from "@/components/ui/Banner";
+import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { solicitarVinculo } from "./actions";
 
 export default async function VincularPage({
@@ -15,17 +16,73 @@ export default async function VincularPage({
   const { error } = await searchParams;
 
   const supabase = await createServerSupabase();
-  const { data: players } = await supabase
-    .from("players")
-    .select("id, nombre, elo_fide, elo_feda")
-    .eq("activo", true)
-    .order("nombre");
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-  // RLS en `profiles` solo deja ver la fila propia a un no-admin, así que con el
-  // cliente de usuario esta consulta no vería vinculaciones de otras personas.
-  // Usamos el cliente admin SOLO para leer `player_id` (ningún otro dato personal
-  // sale del servidor) y así calcular qué fichas están ya ocupadas.
+  // Toda la lectura de esta pantalla va con el cliente de servicio, y es una
+  // excepción deliberada: desde la migración 0009 una cuenta sin ficha aprobada
+  // NO puede leer `players` ni `force_order` por RLS, que es justo el caso de
+  // quien llega aquí. Del censo del club salen solo `nombre` y `elo_oficial`,
+  // que es lo mínimo para reconocerse en la lista.
   const admin = createAdminClient();
+
+  const { data: perfil } = await admin
+    .from("profiles")
+    .select("player_id")
+    .eq("id", user.id)
+    .single();
+  if (perfil?.player_id) redirect("/");
+
+  // Si ya tiene solicitud pendiente, no se le vuelve a ofrecer la lista: espera.
+  const { data: solicitud } = await admin
+    .from("link_requests")
+    .select("player_id, created_at")
+    .eq("user_id", user.id)
+    .eq("status", "pendiente")
+    .maybeSingle();
+
+  if (solicitud) {
+    const { data: ficha } = await admin
+      .from("players")
+      .select("nombre")
+      .eq("id", solicitud.player_id)
+      .single();
+    return (
+      <main className="min-h-dvh bg-fondo pb-10">
+        <Cabecera titulo="Solicitud enviada" />
+        <div className="mx-auto max-w-md space-y-4 p-4">
+          <Banner tipo="ok">
+            Has dicho que eres <b className="font-semibold">{ficha?.nombre}</b>.
+          </Banner>
+          <EstadoVacio
+            titulo="Pendiente de confirmación"
+            detalle="El administrador del club tiene que confirmar que eres tú. En cuanto lo haga tendrás acceso a la app."
+          />
+        </div>
+      </main>
+    );
+  }
+
+  // El censo del club es el ORDEN DE FUERZA de la temporada activa, no la tabla
+  // `players` entera: `players` incluye fichas que no son socios (restos de
+  // probar los importadores de ELO) y ofrecerlas aquí permitiría reclamarlas.
+  const { data: temporada } = await admin
+    .from("seasons")
+    .select("id")
+    .eq("activa", true)
+    .maybeSingle();
+
+  const { data: censo } = temporada
+    ? await admin
+        .from("force_order")
+        .select("numero, bis_index, elo_oficial, players(id, nombre)")
+        .eq("season_id", temporada.id)
+        .order("numero")
+        .order("bis_index")
+    : { data: [] };
+
   const [{ data: vinculados }, { data: pendientes }] = await Promise.all([
     admin.from("profiles").select("player_id").not("player_id", "is", null),
     admin.from("link_requests").select("player_id").eq("status", "pendiente"),
@@ -34,18 +91,24 @@ export default async function VincularPage({
     ...(vinculados ?? []).map((v) => v.player_id),
     ...(pendientes ?? []).map((r) => r.player_id),
   ]);
-  const libres = (players ?? []).filter((p) => !ocupados.has(p.id));
+
+  const libres = (censo ?? [])
+    .map((fila) => ({
+      ...(fila.players as unknown as { id: string; nombre: string }),
+      elo: fila.elo_oficial as number | null,
+    }))
+    .filter((p) => p && !ocupados.has(p.id));
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera
         titulo="¿Quién eres?"
         subtitulo="Busca tu nombre en la lista del club"
-        volverA="/"
       />
       <div className="mx-auto max-w-md space-y-4 p-4 sm:max-w-2xl">
         <p className="text-sm text-tinta-suave">
-          El admin confirmará tu vinculación.
+          Elige tu ficha. El admin del club confirmará que eres tú antes de
+          darte acceso.
         </p>
         {error && <Banner tipo="error">{error}</Banner>}
         <ul className="space-y-2 sm:grid sm:grid-cols-2 sm:gap-3 sm:space-y-0">
@@ -55,7 +118,7 @@ export default async function VincularPage({
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <span className="min-w-0 truncate text-tinta">{p.nombre}</span>
                   <span className="shrink-0">
-                    <ChipElo valor={p.elo_fide} etiqueta="FIDE" />
+                    <ChipElo valor={p.elo} etiqueta="FACV" />
                   </span>
                 </div>
                 <form
@@ -63,7 +126,8 @@ export default async function VincularPage({
                   action={async () => {
                     "use server";
                     const r = await solicitarVinculo(p.id);
-                    if (r?.error) redirect("/vincular?error=" + encodeURIComponent(r.error));
+                    if (r?.error)
+                      redirect("/vincular?error=" + encodeURIComponent(r.error));
                   }}
                 >
                   <button className="shrink-0 rounded-xl bg-acento-fuerte px-4 py-1.5 text-sm font-semibold text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]">
@@ -74,6 +138,12 @@ export default async function VincularPage({
             </li>
           ))}
         </ul>
+        {libres.length === 0 && (
+          <EstadoVacio
+            titulo="No queda ninguna ficha libre"
+            detalle="Todas las fichas del orden de fuerza están ya vinculadas o pendientes. Avisa al admin del club."
+          />
+        )}
       </div>
     </main>
   );
