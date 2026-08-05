@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  claveFACV,
   esJornadaInterclubs,
   parseCalendarioTorneosFACV,
 } from "./facv-calendario-torneos";
@@ -102,6 +103,60 @@ describe("parseCalendarioTorneosFACV", () => {
   it("con HTML vacío o sin tablas devuelve lista vacía en vez de romper", () => {
     expect(parseCalendarioTorneosFACV("")).toEqual([]);
     expect(parseCalendarioTorneosFACV("<html><body><p>nada</p></body></html>")).toEqual([]);
+  });
+});
+
+describe("deduplicación de torneos que cruzan de mes", () => {
+  it("no devuelve la misma clave dos veces", () => {
+    const torneos = parseCalendarioTorneosFACV(html);
+    const claves = torneos.map(claveFACV);
+    expect(new Set(claves).size).toBe(claves.length);
+  });
+
+  it("un torneo listado en dos meses sale una sola vez", () => {
+    // El calendario está partido en una tabla por mes, así que un torneo que
+    // empieza a final de mes aparece en las dos tablas. Se simula con dos
+    // tablas de datos que contienen la misma fila.
+    const fila = `<tr><td>1</td><td><div><span class="badge-oficial">★ Oficial</span><span>Open Que Cruza De Mes</span></div></td><td>30/04/2026</td><td>03/05/2026</td><td>València</td><td>FACV</td><td></td></tr>`;
+    const tabla = (f: string) =>
+      `<table class="table table-hover align-middle mb-0"><tbody>${f}</tbody></table>`;
+    const dosMeses = tabla(fila) + tabla(fila);
+
+    const torneos = parseCalendarioTorneosFACV(dosMeses);
+    expect(torneos).toHaveLength(1);
+    expect(torneos[0]).toEqual({
+      nombre: "Open Que Cruza De Mes",
+      fechaInicio: "2026-04-30",
+      fechaFin: "2026-05-03",
+      lugar: "València",
+      organizador: "FACV",
+    });
+  });
+});
+
+describe("claveFACV", () => {
+  it("ignora mayúsculas y acentos del nombre", () => {
+    expect(claveFACV({ nombre: "Autonómico Circuito Base", fechaInicio: "2026-03-01" })).toBe(
+      claveFACV({ nombre: "AUTONOMICO CIRCUITO BASE", fechaInicio: "2026-03-01" })
+    );
+  });
+
+  it("distingue el mismo torneo en años distintos", () => {
+    expect(claveFACV({ nombre: "Open Albal", fechaInicio: "2026-02-01" })).not.toBe(
+      claveFACV({ nombre: "Open Albal", fechaInicio: "2027-02-01" })
+    );
+  });
+
+  it("distingue dos torneos distintos el mismo día", () => {
+    expect(claveFACV({ nombre: "Open Blitz Dama Roja", fechaInicio: "2026-01-18" })).not.toBe(
+      claveFACV({ nombre: "Blitz de L'olleria", fechaInicio: "2026-01-18" })
+    );
+  });
+
+  it("el separador evita colisiones si el nombre contiene una fecha", () => {
+    expect(claveFACV({ nombre: "Open 2026", fechaInicio: "2026-01-03" })).not.toBe(
+      claveFACV({ nombre: "Open", fechaInicio: "2026-2026-01-03" })
+    );
   });
 });
 

@@ -92,12 +92,36 @@ export function esJornadaInterclubs(nombre: string): boolean {
 }
 
 /**
+ * Identidad de un torneo del calendario FACV: nombre normalizado (sin acentos ni
+ * mayúsculas) más fecha de inicio.
+ *
+ * Hacen falta los dos: el nombre solo no basta porque hay torneos que se
+ * repiten cada año con el mismo nombre, y la fecha sola tampoco porque hay
+ * varios torneos el mismo día. Vive aquí, junto al parser, porque es la noción
+ * de identidad de ESTOS datos; el sincronizador la reutiliza como clave de
+ * deduplicación en base de datos.
+ */
+export function claveFACV(torneo: Pick<TorneoFACV, "nombre" | "fechaInicio">): string {
+  return `${normalizaNombre(torneo.nombre)}|${torneo.fechaInicio}`;
+}
+
+/**
  * Extrae los torneos del HTML del calendario oficial, excluyendo las jornadas
  * de Interclubs. Las filas sin fecha de inicio válida se descartan en silencio:
  * son maquetación, no torneos.
+ *
+ * Devuelve cada torneo UNA sola vez. El calendario está partido en una tabla
+ * por mes, así que un torneo que cruza de mes aparece en las dos: verificado
+ * sobre el año 2026 completo, 10 de las 157 filas son repeticiones byte a byte
+ * de torneos que empiezan a final de mes y acaban en el siguiente (Aut.
+ * Absoluto 30/04→03/05, Open Gran Hotel Bali 27/11→08/12...). Son artefactos de
+ * maquetación, no torneos distintos.
+ *
+ * Antes esto se apoyaba en el índice único de la base de datos para tragárselas,
+ * y el resumen del panel acababa diciendo "157 actualizados" sobre 147 filas.
  */
 export function parseCalendarioTorneosFACV(html: string): TorneoFACV[] {
-  const torneos: TorneoFACV[] = [];
+  const porClave = new Map<string, TorneoFACV>();
 
   for (const tabla of html.match(TABLA_DATOS_RE) ?? []) {
     for (const fila of tabla.match(FILA_RE) ?? []) {
@@ -110,16 +134,20 @@ export function parseCalendarioTorneosFACV(html: string): TorneoFACV[] {
       const nombre = nombreDeCelda(celdas[1]);
       if (!nombre || esJornadaInterclubs(nombre)) continue;
 
-      torneos.push({
+      const torneo: TorneoFACV = {
         nombre,
         fechaInicio,
         // La FACV manda siempre la de fin; si faltara, un torneo de un día.
         fechaFin: aISO(textoPlano(celdas[3])) ?? fechaInicio,
         lugar: limpiaLugar(textoPlano(celdas[4])),
         organizador: textoPlano(celdas[5]),
-      });
+      };
+
+      // Se queda la primera aparición: son idénticas, así que da igual cuál.
+      const clave = claveFACV(torneo);
+      if (!porClave.has(clave)) porClave.set(clave, torneo);
     }
   }
 
-  return torneos;
+  return [...porClave.values()];
 }
