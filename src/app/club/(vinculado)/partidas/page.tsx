@@ -8,6 +8,7 @@ import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { formatearRangoFechas } from "@/lib/torneos/fechas";
 import { textoResultado, type Resultado } from "@/lib/partidas/validar";
 import { Buscador } from "./Buscador";
+import { Exportar } from "./Exportar";
 
 const MARCA: Record<Resultado, string> = { "1": "✓", "0.5": "=", "0": "✗" };
 const COLOR_MARCA: Record<Resultado, string> = {
@@ -73,6 +74,19 @@ export default async function PartidasPage({
         <Boton variante="degradado" href="/club/partidas/nueva" className="w-full">
           Subir una partida
         </Boton>
+
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Boton
+            variante="secundario"
+            href="/club/partidas/importar"
+            className="flex-1 text-sm"
+          >
+            Importar de Lichess o Chess.com
+          </Boton>
+          <div className="flex-1">
+            <Exportar />
+          </div>
+        </div>
 
         {error && (
           <Tarjeta compacta>
