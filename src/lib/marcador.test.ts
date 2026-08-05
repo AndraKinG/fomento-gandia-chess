@@ -46,10 +46,10 @@ describe("calcularMarcador", () => {
   });
 });
 
-// Revisión final 1C, item 3: precedencia compartida entre `/equipos/[id]`
-// (detalle de equipo, lista de jornadas) y `/jornadas/[matchId]` (detalle de
+// Revisión final 1C, item 3: precedencia compartida entre `/club/equipos/[id]`
+// (detalle de equipo, lista de jornadas) y `/club/jornadas/[matchId]` (detalle de
 // jornada) — antes cada pantalla decidía la precedencia por su cuenta y la
-// de `/equipos/[id]` estaba INVERTIDA (prefería el marcador global de la
+// de `/club/equipos/[id]` estaba INVERTIDA (prefería el marcador global de la
 // sync FACV incluso cuando el capitán ya tenía resultados por tablero más
 // fiables/actuales). La regla correcta es "boards del capitán primero":
 // mientras haya AL MENOS un tablero anotado, ese es el marcador a mostrar

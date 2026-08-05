@@ -75,7 +75,7 @@ export default async function EquipoDetallePage({
   // `marcador_propio`/`marcador_rival` en `matches` — esas columnas solo las
   // rellena la sync FACV (Task 8) — así que sin esto la fila se quedaría sin
   // marcador aunque la jornada esté jugada y completa (ver detalle en
-  // `/jornadas/[matchId]`, que ya hace este mismo cálculo).
+  // `/club/jornadas/[matchId]`, que ya hace este mismo cálculo).
   const idsJornadas = (jornadas ?? []).map((j) => j.id);
   const { data: lineupsPublicadas } = idsJornadas.length > 0
     ? await supabase
@@ -128,7 +128,7 @@ export default async function EquipoDetallePage({
           <div className="flex items-center justify-between gap-2">
             <ChipMargen margenElo={equipo.margen_elo} />
             {puedeGestionar && (
-              <Boton variante="secundario" href={`/equipos/${id}/plantilla`} className="text-sm">
+              <Boton variante="secundario" href={`/club/equipos/${id}/plantilla`} className="text-sm">
                 Plantilla y disponibilidad
               </Boton>
             )}
@@ -158,7 +158,7 @@ export default async function EquipoDetallePage({
                 return (
                   <li key={j.id}>
                     <Link
-                      href={`/jornadas/${j.id}`}
+                      href={`/club/jornadas/${j.id}`}
                       className="flex items-center gap-2 px-3 py-2.5 hover:bg-tarjeta-suave"
                     >
                       <span className="shrink-0 rounded-full bg-tarjeta-suave px-2 py-0.5 text-xs font-semibold text-acento-texto ring-1 ring-borde-acento">

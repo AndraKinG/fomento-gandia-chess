@@ -32,8 +32,8 @@ async function puedeGestionar(matchId: string): Promise<boolean> {
 }
 
 function revalidarJornada(teamId: string, matchId: string): void {
-  revalidatePath(`/equipos/${teamId}/convocatoria/${matchId}`);
-  revalidatePath(`/jornadas/${matchId}`);
+  revalidatePath(`/club/equipos/${teamId}/convocatoria/${matchId}`);
+  revalidatePath(`/club/jornadas/${matchId}`);
 }
 
 /**
@@ -91,7 +91,7 @@ async function notificarConvocados(
       return enviarPushAUsuario(userId, {
         title: `Convocado con el ${match.equipoNombre}`,
         body: `Tablero ${tablero.tablero} · ${icono} ${colorTexto} · ${fecha} · ${rivalYSede}`,
-        url: `/jornadas/${matchId}`,
+        url: `/club/jornadas/${matchId}`,
       });
     })
   );

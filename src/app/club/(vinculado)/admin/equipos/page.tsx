@@ -23,7 +23,7 @@ function volver(resultado: { ok?: string; error?: string }): never {
     msg: resultado.ok ?? resultado.error ?? "",
     tipo: resultado.ok ? "ok" : "error",
   });
-  redirect(`/admin/equipos?${params.toString()}`);
+  redirect(`/club/admin/equipos?${params.toString()}`);
 }
 
 function ChipMargen({ margenElo }: { margenElo: number | null }) {
@@ -114,7 +114,7 @@ export default async function EquiposPage({
         ?? `Calendario sincronizado: ${resultado.creadas} jornadas creadas, ${resultado.actualizadas} actualizadas${omitidasMsg}`,
       tipo: resultado.error ? "error" : "ok",
     });
-    redirect(`/admin/equipos?${params.toString()}`);
+    redirect(`/club/admin/equipos?${params.toString()}`);
   }
 
   async function accionSincronizarResultados() {
@@ -139,7 +139,7 @@ export default async function EquiposPage({
           + avisosMsg + discrepanciasMsg + erroresMsg,
       tipo: resultado.error ? "error" : "ok",
     });
-    redirect(`/admin/equipos?${params.toString()}`);
+    redirect(`/club/admin/equipos?${params.toString()}`);
   }
 
   return (

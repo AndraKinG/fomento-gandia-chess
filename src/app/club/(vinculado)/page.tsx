@@ -126,7 +126,7 @@ export default async function Home() {
 
         {proxima ? (
           <>
-            <Link href={`/jornadas/${proxima.id}`} className="block">
+            <Link href={`/club/jornadas/${proxima.id}`} className="block">
               <TarjetaJornada
                 equipo={proxima.teams?.nombre ?? "Equipo"}
                 rival={proxima.rival}

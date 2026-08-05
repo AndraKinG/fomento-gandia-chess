@@ -12,7 +12,9 @@ export async function login(formData: FormData): Promise<{ error?: string }> {
     password: String(formData.get("password")),
   });
   if (error) return { error: "Email o contraseña incorrectos" };
-  redirect("/");
+  // A /club, no a "/": la raíz es la web pública del club, así que redirigir ahí
+  // dejaba al socio recién identificado mirando la página de presentación.
+  redirect("/club");
 }
 
 /**

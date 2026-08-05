@@ -10,7 +10,9 @@ export async function GET(request: NextRequest) {
   if (token_hash && type) {
     const supabase = await createServerSupabase();
     const { error } = await supabase.auth.verifyOtp({ type, token_hash });
-    if (!error) redirect("/");
+    // A /club: quien acaba de confirmar su email es un socio entrando, no una
+    // visita que llega a la web pública.
+    if (!error) redirect("/club");
   }
   redirect("/login");
 }

@@ -23,7 +23,7 @@ export default async function ConvocatoriaPage({
   const { id, matchId } = await params;
 
   const [tieneCapitania, admin] = await Promise.all([esCapitanDeMatch(matchId), esAdmin()]);
-  if (!tieneCapitania && !admin) redirect(`/equipos/${id}`);
+  if (!tieneCapitania && !admin) redirect(`/club/equipos/${id}`);
 
   let contexto: ContextoValidacion | null = null;
   try {
@@ -31,13 +31,13 @@ export default async function ConvocatoriaPage({
   } catch {
     contexto = null;
   }
-  if (!contexto) redirect(`/equipos/${id}`);
+  if (!contexto) redirect(`/club/equipos/${id}`);
   const { orden, config, ctx, match } = contexto;
 
   // La jornada del matchId debe pertenecer al equipo de la URL (defensa en
   // profundidad: evita una convocatoria servida bajo el equipo equivocado
   // aunque el capitán/admin tenga permiso sobre ambos).
-  if (match.teamId !== id) redirect(`/equipos/${id}`);
+  if (match.teamId !== id) redirect(`/club/equipos/${id}`);
 
   const supabase = await createServerSupabase();
 
@@ -72,7 +72,7 @@ export default async function ConvocatoriaPage({
       <Cabecera
         titulo="Convocatoria"
         subtitulo={`${match.equipoNombre} · ${match.esLocal ? "vs" : "@"} ${match.rival} · ${fecha}`}
-        volverA={`/equipos/${id}`}
+        volverA={`/club/equipos/${id}`}
       />
       <div className="mx-auto max-w-md p-4">
         <EditorConvocatoria

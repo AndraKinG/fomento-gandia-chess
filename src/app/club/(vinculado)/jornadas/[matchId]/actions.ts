@@ -103,8 +103,8 @@ export async function guardarResultado(
     }
   }
 
-  revalidatePath(`/jornadas/${matchId}`);
-  revalidatePath(`/equipos/${match.team_id}`);
+  revalidatePath(`/club/jornadas/${matchId}`);
+  revalidatePath(`/club/equipos/${match.team_id}`);
   revalidatePath("/");
 
   return { ok: true, marcador, jugado: completo, guardado: true };

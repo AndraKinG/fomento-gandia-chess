@@ -183,7 +183,7 @@ async function nombreTorneo(tournamentId: string): Promise<string> {
 
 function refrescar(tournamentId: string): void {
   revalidatePath("/club/torneos");
-  revalidatePath(`/torneos/${tournamentId}`);
+  revalidatePath(`/club/torneos/${tournamentId}`);
   revalidatePath("/");
 }
 

@@ -17,7 +17,7 @@ export default async function EloAdminPage({
     const fichero = formData.get("fichero");
     if (!(fichero instanceof File) || fichero.size === 0) {
       redirect(
-        `/admin/elo?${new URLSearchParams({
+        `/club/admin/elo?${new URLSearchParams({
           msg: "Selecciona un fichero .xlsx",
           tipo: "error",
         }).toString()}`
@@ -39,7 +39,7 @@ export default async function EloAdminPage({
         `ELO FEDA actualizado: ${resultado.actualizados} jugadores`,
       tipo: resultado.error ? "error" : "ok",
     });
-    redirect(`/admin/elo?${params.toString()}`);
+    redirect(`/club/admin/elo?${params.toString()}`);
   }
 
   async function refrescarFeda() {
@@ -51,7 +51,7 @@ export default async function EloAdminPage({
         `ELO FEDA actualizado: ${resultado.actualizados} jugadores`,
       tipo: resultado.error ? "error" : "ok",
     });
-    redirect(`/admin/elo?${params.toString()}`);
+    redirect(`/club/admin/elo?${params.toString()}`);
   }
 
   async function refrescarFide() {
@@ -63,7 +63,7 @@ export default async function EloAdminPage({
         `ELO FIDE actualizado: ${resultado.actualizados} jugadores`,
       tipo: resultado.error ? "error" : "ok",
     });
-    redirect(`/admin/elo?${params.toString()}`);
+    redirect(`/club/admin/elo?${params.toString()}`);
   }
 
   return (

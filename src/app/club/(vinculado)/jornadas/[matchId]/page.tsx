@@ -25,7 +25,7 @@ type BoardFila = {
  * convocatoria PUBLICADA — un borrador no es RLS-invisible aquí a propósito
  * (se filtra explícitamente por `estado = 'publicada'`) incluso para el
  * propio capitán: esta pantalla es la vista pública de la jornada, no el
- * editor (`/equipos/[id]/convocatoria/[matchId]`), así que un borrador a
+ * editor (`/club/equipos/[id]/convocatoria/[matchId]`), así que un borrador a
  * medio montar se trata igual que si no existiera convocatoria.
  */
 export default async function JornadaPage({
@@ -77,7 +77,7 @@ export default async function JornadaPage({
     }
   }
 
-  // Revisión final 1C, item 3: precedencia compartida con `/equipos/[id]`
+  // Revisión final 1C, item 3: precedencia compartida con `/club/equipos/[id]`
   // (marcadorPreferido, src/lib/marcador.ts) — boards del capitán primero,
   // marcador global de la sync FACV solo como fallback sin ningún resultado
   // por tablero.
@@ -114,7 +114,7 @@ export default async function JornadaPage({
       <Cabecera
         titulo={`R${match.ronda} · ${match.es_local ? "vs" : "@"} ${match.rival}`}
         subtitulo={`${equipoNombre} · ${fecha}`}
-        volverA={`/equipos/${match.team_id}`}
+        volverA={`/club/equipos/${match.team_id}`}
       />
       <div className="mx-auto max-w-md space-y-4 p-4">
         <Tarjeta className="flex flex-col gap-1">

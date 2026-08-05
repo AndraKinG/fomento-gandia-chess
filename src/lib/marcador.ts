@@ -69,9 +69,9 @@ export type MarcadorPreferidoResultado = {
 
 /**
  * Revisión final 1C, item 3: precedencia ÚNICA del marcador de una jornada,
- * compartida por `/equipos/[id]` (lista de jornadas) y `/jornadas/[matchId]`
+ * compartida por `/club/equipos/[id]` (lista de jornadas) y `/club/jornadas/[matchId]`
  * (detalle) — antes cada pantalla decidía por su cuenta y la de
- * `/equipos/[id]` tenía la precedencia INVERTIDA (mostraba el marcador de la
+ * `/club/equipos/[id]` tenía la precedencia INVERTIDA (mostraba el marcador de la
  * sync FACV con prioridad sobre los resultados por tablero del capitán,
  * pudiendo mostrar un marcador desactualizado si el capitán ya había
  * corregido algo por tablero).

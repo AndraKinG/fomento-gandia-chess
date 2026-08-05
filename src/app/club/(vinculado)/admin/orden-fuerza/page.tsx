@@ -37,7 +37,7 @@ export default async function OrdenFuerzaPage({
       msg: resultado.ok ?? resultado.error ?? "",
       tipo: resultado.ok ? "ok" : "error",
     });
-    redirect(`/admin/orden-fuerza?${params.toString()}`);
+    redirect(`/club/admin/orden-fuerza?${params.toString()}`);
   }
 
   async function accionSincronizar() {
@@ -51,7 +51,7 @@ export default async function OrdenFuerzaPage({
     if (resultado.avisos?.length) {
       params.set("avisos", resultado.avisos.join(SEPARADOR_AVISOS));
     }
-    redirect(`/admin/orden-fuerza?${params.toString()}`);
+    redirect(`/club/admin/orden-fuerza?${params.toString()}`);
   }
 
   return (

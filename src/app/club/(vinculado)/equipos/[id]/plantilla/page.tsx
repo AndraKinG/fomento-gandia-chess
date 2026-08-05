@@ -56,7 +56,7 @@ export default async function PlantillaPage({
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Plantilla" subtitulo={equipo.nombre} volverA={`/equipos/${id}`} />
+      <Cabecera titulo="Plantilla" subtitulo={equipo.nombre} volverA={`/club/equipos/${id}`} />
       <div className="mx-auto max-w-md space-y-4 p-4">
         {propiasJornadas.length === 0 || propioOrden.length === 0 ? (
           <EstadoVacio
@@ -115,12 +115,12 @@ export default async function PlantillaPage({
                   <div className="mb-3 flex gap-2">
                     <Boton
                       variante="secundario"
-                      href={`/equipos/${id}/convocatoria/${j.id}`}
+                      href={`/club/equipos/${id}/convocatoria/${j.id}`}
                       className="flex-1 text-sm"
                     >
                       Montar convocatoria
                     </Boton>
-                    <Boton variante="secundario" href={`/jornadas/${j.id}`} className="flex-1 text-sm">
+                    <Boton variante="secundario" href={`/club/jornadas/${j.id}`} className="flex-1 text-sm">
                       Ver jornada
                     </Boton>
                   </div>

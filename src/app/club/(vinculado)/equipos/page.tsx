@@ -92,7 +92,7 @@ export default async function EquiposPage() {
             const capitanes = (eq.team_captains ?? []) as unknown as Capitan[];
             const resumen = resumenJornadas(jornadasPorEquipo.get(eq.id) ?? []);
             return (
-              <Link key={eq.id} href={`/equipos/${eq.id}`}>
+              <Link key={eq.id} href={`/club/equipos/${eq.id}`}>
                 <Tarjeta className="flex flex-col gap-3">
                   <div className="flex items-start justify-between gap-2">
                     <div>
