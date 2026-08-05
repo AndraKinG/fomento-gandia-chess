@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { sesionActual } from "@/lib/auth/sesion";
 import { fuerza } from "@/lib/elo/fuerza";
 import { ActivarNotificaciones } from "@/components/PushSubscriber";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -14,12 +15,23 @@ import { logout } from "@/app/(auth)/actions";
 
 export default async function PerfilPage() {
   const supabase = await createServerSupabase();
+  const sesion = await sesionActual();
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = await supabase
     .from("profiles")
     .select("email, player_id, players(nombre, elo_fide, elo_feda, elo_otro, fide_id, feda_id)")
     .eq("id", user!.id)
     .single();
+
+  // Solicitudes de ingreso sin resolver. Esta es la ÚNICA puerta de la junta a
+  // esa pantalla: no tiene acceso a /club/admin. Va en el perfil y no en el
+  // inicio porque el inicio cuenta lo que pasa en el club, no tareas de gestión.
+  const { count: solicitudesPendientes } = sesion?.esJunta
+    ? await supabase
+        .from("membership_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("estado", "pendiente")
+    : { count: 0 };
   const p = profile?.players as unknown as {
     nombre: string; elo_fide: number | null; elo_feda: number | null;
     elo_otro: number | null; fide_id: string | null; feda_id: string | null;
@@ -54,6 +66,27 @@ export default async function PerfilPage() {
             </Link>
           </p>
         )}
+        {sesion?.esJunta && (
+          <Link href="/club/solicitudes" className="block">
+            <Tarjeta
+              destacada={(solicitudesPendientes ?? 0) > 0}
+              className="flex items-center justify-between gap-3 transition hover:border-borde-acento"
+            >
+              <div>
+                <p className="font-semibold text-tinta">Solicitudes de ingreso</p>
+                <p className="text-sm text-tinta-suave">
+                  {(solicitudesPendientes ?? 0) === 0
+                    ? "Nada pendiente"
+                    : `${solicitudesPendientes} sin resolver`}
+                </p>
+              </div>
+              <span aria-hidden className="text-lg text-tinta-suave">
+                →
+              </span>
+            </Tarjeta>
+          </Link>
+        )}
+
         <ThemeToggle />
         <ActivarNotificaciones />
         <form action={logout}>
