@@ -11,20 +11,52 @@
 
 ---
 
-## Tareas
+## Tareas — TODAS COMPLETADAS (2026-08-05)
 
-| # | Tarea | Depende de | Tipo |
-|---|---|---|---|
-| 1 | Migración `0010_torneos_coches.sql` | — | **gate usuario** |
-| 2 | Parser del calendario de torneos FACV + tests | — | lógica pura |
-| 3 | Módulo de reglas de coches + tests | — | lógica pura |
-| 4 | Sincronizador `facv-torneos-apply.ts` | 1, 2 | integración |
-| 5 | Server actions de asistencia y coches | 1, 3 | integración |
-| 6 | `/torneos` y `/torneos/[id]` (socio) | 5 | UI |
-| 7 | `/admin/torneos` | 4, 5 | UI |
-| 8 | Push de los tres avisos | 5 | integración |
-| 9 | Próximo torneo en la home cuando no hay jornada | 6 | UI |
-| 10 | Verificación de los 8 criterios de aceptación | todas | verificación |
+| # | Tarea | Estado |
+|---|---|---|
+| 1 | Migración `0010_torneos_coches.sql` | ✅ aplicada y verificada por comportamiento |
+| 2 | Parser del calendario de torneos FACV + tests | ✅ 19 tests contra fixture real |
+| 3 | Módulo de reglas de coches + tests | ✅ 39 tests |
+| 4 | Sincronizador `facv-torneos-apply.ts` | ✅ 147 torneos reales importados |
+| 5 | Server actions de asistencia y coches | ✅ |
+| 6 | `/club/torneos` y `/club/torneos/[id]` | ✅ |
+| 7 | `/club/admin/torneos` | ✅ |
+| 8 | Push de los tres avisos | ✅ incluido en la tarea 5 |
+| 9 | Próximos torneos en la home | ✅ |
+| 10 | Verificación de los criterios de aceptación | ✅ 7 de 8; ver abajo |
+
+### Estado de los criterios de aceptación
+
+| # | Criterio | Cómo se comprobó |
+|---|---|---|
+| 1 | El parser excluye Interclubs y conserva el resto de lo organizado por la FACV | Tests contra fixture real: 23 torneos, 11 de la FACV conservados |
+| 2 | Re-sincronizar no duplica ni pisa lo que escribió el admin | En vivo: 147 filas, segunda sync 0 creados / 147 actualizados, los 5 campos manuales intactos |
+| 3 | Un coche nunca acepta más pasajeros que plazas, ni con escrituras concurrentes | En vivo: dos peticiones simultáneas a la última plaza → entra 1 de 2 |
+| 4 | Nadie en dos coches del mismo torneo | En vivo: rechazado por el índice único |
+| 5 | Apuntarse pone la asistencia en `voy`; `no_voy` libera la plaza y avisa | Tests del módulo puro |
+| 6 | Borrar un coche deja a los pasajeros sin plaza pero con su asistencia | Tests del módulo puro |
+| 7 | Un socio sin ficha aprobada no ve ningún torneo | En vivo con JWT real: 0 filas en las 4 tablas |
+| 8 | Los tests siguen pasando | 257 tests |
+
+**Lo único que no se ha podido verificar: el aspecto real de las pantallas en un
+móvil.** Requiere sesión y no hay acceso a la contraseña del propietario. La
+lógica y los permisos sí están verificados contra la base de datos real con JWT
+de socio, incluidas las nueve escrituras que deben fallar (marcar la asistencia
+de otro, apuntar a otro en un coche, ofrecer coche en nombre de otro, borrar el
+coche de otro y editar un torneo sin ser admin).
+
+## Huecos de la spec encontrados al implementar
+
+1. **Un conductor con pasajeros podía decir "no voy"** y dejaba el coche en pie
+   sin nadie que conduzca. Ahora se bloquea con un mensaje que le pide borrar el
+   coche a propósito; si el coche está vacío, sí puede y el coche se retira solo.
+2. **El calendario de la FACV repite los torneos que cruzan de mes**, porque está
+   partido en una tabla por mes. 10 de las 157 filas de 2026. Se deduplican en el
+   parser; antes el resumen del panel decía "157 actualizados" sobre 147 filas.
+3. **Filtrar Interclubs por organizador habría borrado un tercio del
+   calendario**: 53 de los 168 torneos del año los organiza la FACV y casi todos
+   interesan al club. El filtro va por nombre.
 
 **Orden de ejecución:** las tareas 2 y 3 son módulos puros, no dependen de la base de datos y se pueden hacer y testear enteras antes de tocar nada. Se empieza por ahí: es donde está la lógica que importa y donde los tests dan valor real. La 1 va en paralelo (la escribo yo, la aplicas tú) y desbloquea el resto.
 

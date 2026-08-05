@@ -104,6 +104,17 @@ alcance y un capitán del B podría gestionar el A. Así que el modelo es: tabla
 roles globales (`jugador`, `junta`, `admin`) **más** `team_captains` como está,
 y el helper de RLS de capitán sigue recibiendo el equipo.
 
+**Estado: migración `0011_roles.sql` escrita, PENDIENTE de aplicar.** Está hecha
+para no romper nada: `profiles.is_admin` sigue existiendo y funcionando, e
+`is_admin()` pasa a devolver true si lo dice la columna vieja **o** la tabla
+nueva. Como esa función la usan las policies de casi todas las tablas,
+redefinirla es lo que hace la migración indolora: en el momento de ejecutarla,
+todas empiezan a entender el rol nuevo sin tocar ni una policy. El código
+desplegado no necesita cambiar; la conversión a roles se puede hacer poco a poco.
+
+Añade también `tiene_rol()` y `es_junta()`, que es lo que necesitará el
+formulario de ingreso.
+
 ### 4.1 Por qué el booleano actual no llega
 
 Hoy hay `profiles.is_admin` (booleano) y `team_captains` (por equipo). La visión
