@@ -23,26 +23,26 @@ que el propietario navegue con el móvil.
 - **`<nav>` sin nombre accesible** en la barra inferior y en el índice de admin.
   Un lector de pantalla anunciaba "navegación" sin decir cuál.
 
+- **Contraste de `--tinta-suave` en el tema claro.** Daba 4.46 sobre `--fondo` y
+  `--tarjeta-suave`, por debajo del 4.50 que pide WCAG AA para texto normal, y
+  ese token lleva todo el texto secundario de la app (subtítulos, detalles de
+  estados vacíos, textos de ayuda). Cambiado de `#64748b` a **`#556577`** por
+  decisión del propietario, que eligió margen sobre cambio mínimo: sube a 5.61.
+  **Con esto los 18 pares de color medidos en los dos temas pasan AA**, y cuatro
+  llegan a AAA. Verificado además en la página, no solo sobre el papel: el color
+  calculado del texto secundario es `rgb(85,101,119)` sobre `rgb(240,249,255)`.
+
 ## Pendiente, por orden de lo que más se nota
 
-1. **Contraste de `--tinta-suave` en el tema claro: 4.46 sobre el fondo, cuando
-   AA pide 4.50.** Medido, no estimado. Afecta a todo el texto secundario
-   (subtítulos, detalles de estados vacíos, textos de ayuda) sobre `--fondo` y
-   `--tarjeta-suave`; sobre `--tarjeta` blanca sí cumple (4.76). El tema oscuro
-   cumple de sobra en todos los pares (5.17 a 15.17).
-   **No lo he tocado porque cambia la identidad visual**, y el `CLAUDE.md` dice
-   que eso no se cambia sin preguntar. Basta oscurecer el token del tema claro:
-   `#5d6d82` da 4.96 (el cambio más pequeño que cumple) y `#556577` da 5.61 si
-   se quiere margen. Una línea en `globals.css`.
-2. **Iconos de la PWA: solo hay un SVG.** iOS no admite SVG como icono de
+1. **Iconos de la PWA: solo hay un SVG.** iOS no admite SVG como icono de
    pantalla de inicio, así que un socio de iPhone que instale la app verá un
    icono genérico o una captura de la página. Hacen falta PNG de 192 y 512, y
    un `apple-touch-icon` de 180. Requiere generar imágenes, no es un cambio de
    código.
-3. **`background_color` del manifest es el del tema claro** (`#f0f9ff`), así que
+2. **`background_color` del manifest es el del tema claro** (`#f0f9ff`), así que
    al abrir la app instalada en modo oscuro hay un destello blanco antes de
    pintar. Cosmético.
-4. **Objetivos táctiles de la barra inferior** ~34 px de alto. Cumple el mínimo
+3. **Objetivos táctiles de la barra inferior** ~34 px de alto. Cumple el mínimo
    de WCAG (24 px) pero queda por debajo de los 44 px que recomienda Apple.
    Subir el `p-2` del `<nav>` lo resolvería; conviene comprobarlo en móvil real
    antes, porque roba alto a la pantalla.

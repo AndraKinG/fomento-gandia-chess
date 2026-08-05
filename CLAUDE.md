@@ -24,7 +24,7 @@ App PWA del club de ajedrez Fomento de Gandia (Gandía). Propietario: J. Ribes (
 
 ## Decisiones técnicas clave (no cambiar sin preguntar)
 
-- **Identidad visual**: blanco y azul "gandiblues". Doble tema: claro *Mediterráneo* / oscuro *Azul profundo* (tokens en `globals.css`, en español: `bg-fondo`, `text-tinta`, `text-acento-texto`...). Tablero de ajedrez blanquiazul cuando llegue la Fase 3.
+- **Identidad visual**: blanco y azul "gandiblues". Doble tema: claro *Mediterráneo* / oscuro *Azul profundo* (tokens en `globals.css`, en español: `bg-fondo`, `text-tinta`, `text-acento-texto`...). Tablero de ajedrez blanquiazul cuando llegue la Fase 3. **`--tinta-suave` del tema claro es `#556577` por accesibilidad, no por gusto**: el `#64748b` original daba 4.46 de contraste sobre `--fondo` y AA pide 4.50. No aclararlo. Los 18 pares medidos de ambos temas pasan AA (ver `docs/superpowers/plans/2026-08-05-deuda-pulido.md`).
 - **Fuerza del jugador** = `force_order.elo_oficial` (orden de fuerza oficial FACV, sincronizado de `of_publico.php?id=56`); fallback `max(FEDA, FIDE)` (RGC art. 52.1). IDs de club/temporada FACV en `src/lib/import/facv-config.ts` (actualizar cada temporada).
 - **Validador RGC** (`src/lib/validador/`): módulo puro, flag REQUERIDO `permitirInversionDentroMargen` — **estricto (false) por defecto**; dos ambigüedades del reglamento documentadas en `docs/referencia/verificacion-empirica-rgc.md` (0 inversiones en 11 rondas reales de 2026). No relajar sin confirmación FACV del usuario.
 - **Publicar convocatoria**: única puerta = server action con re-validación completa + escritura service_role (trigger de blindaje en migración 0007). El cliente valida en vivo solo como ayuda.

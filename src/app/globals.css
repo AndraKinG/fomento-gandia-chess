@@ -10,7 +10,11 @@
   --borde: #e2e8f0;
   --borde-acento: #bae6fd;
   --tinta: #0c4a6e;
-  --tinta-suave: #64748b;
+  /* Antes #64748b, que daba 4.46 de contraste sobre --fondo y --tarjeta-suave:
+     por debajo del 4.50 que pide WCAG AA para texto normal, y este token lleva
+     todo el texto secundario de la app. #556577 sube a 5.61 sobre esos fondos
+     manteniendo el gris azulado del tema Mediterráneo. */
+  --tinta-suave: #556577;
   --acento: #0ea5e9;
   --acento-fuerte: #0369a1;
   --acento-texto: #0369a1;
