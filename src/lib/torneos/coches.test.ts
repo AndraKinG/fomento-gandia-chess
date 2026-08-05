@@ -9,6 +9,7 @@ import {
   ocupadas,
   plazasLibres,
   puedeApuntarse,
+  puedeCambiarAsistencia,
   puedeCambiarPlazas,
   resumenTransporte,
   type Estado,
@@ -170,6 +171,42 @@ describe("efectosDeCambiarAsistencia", () => {
     const { cambios, avisos } = efectosDeCambiarAsistencia("diana", "no_voy", base());
     expect(cambios).toEqual([{ tipo: "asistencia", playerId: "diana", estado: "no_voy" }]);
     expect(avisos).toEqual([]);
+  });
+});
+
+describe("puedeCambiarAsistencia (el conductor no se puede escurrir)", () => {
+  it("un conductor CON pasajeros no puede decir que no va", () => {
+    // Ana lleva a Carlos. Si pudiera decir "no voy", el coche quedaría en pie
+    // con un pasajero dentro y sin nadie que conduzca.
+    expect(puedeCambiarAsistencia("ana", "no_voy", base())).toEqual({
+      puede: false,
+      motivo: "conduces_con_pasajeros",
+      pasajeros: 1,
+    });
+  });
+
+  it("un conductor con el coche VACÍO sí puede decir que no va", () => {
+    expect(puedeCambiarAsistencia("berta", "no_voy", base())).toEqual({ puede: true });
+  });
+
+  it("y al hacerlo, su coche vacío se retira", () => {
+    const { cambios } = efectosDeCambiarAsistencia("berta", "no_voy", base());
+    expect(cambios).toContainEqual({ tipo: "borrar_coche", cocheId: "coche-berta" });
+  });
+
+  it("decir 'voy' o 'duda' nunca se bloquea, ni conduciendo", () => {
+    expect(puedeCambiarAsistencia("ana", "voy", base())).toEqual({ puede: true });
+    expect(puedeCambiarAsistencia("ana", "duda", base())).toEqual({ puede: true });
+  });
+
+  it("quien no conduce nunca se bloquea", () => {
+    expect(puedeCambiarAsistencia("carlos", "no_voy", base())).toEqual({ puede: true });
+    expect(puedeCambiarAsistencia("diana", "no_voy", base())).toEqual({ puede: true });
+  });
+
+  it("un conductor que pasa a 'duda' conserva su coche", () => {
+    const { cambios } = efectosDeCambiarAsistencia("berta", "duda", base());
+    expect(cambios.some((c) => c.tipo === "borrar_coche")).toBe(false);
   });
 });
 

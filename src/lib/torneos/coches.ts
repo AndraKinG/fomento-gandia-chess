@@ -143,12 +143,43 @@ export function efectosDeBajarse(playerId: string, estado: Estado): Efectos {
 }
 
 /**
+ * ¿Puede este socio cambiar su asistencia a `nueva`?
+ *
+ * Solo hay un caso que se bloquea: **un conductor con pasajeros no puede decir
+ * que no va**. Este hueco no estaba en la spec y salió al conectar las reglas
+ * con la base de datos: sin él, el coche se quedaba en pie con pasajeros dentro
+ * y sin nadie que conduzca, que es exactamente la confusión que esto viene a
+ * eliminar.
+ *
+ * Se bloquea en vez de borrarle el coche automáticamente: borrar el transporte
+ * de tres personas como efecto secundario de tocar tu propia asistencia es
+ * demasiada consecuencia para un gesto pequeño. Que lo borre él a propósito.
+ */
+export function puedeCambiarAsistencia(
+  playerId: string,
+  nueva: Asistencia,
+  estado: Estado
+): { puede: true } | { puede: false; motivo: "conduces_con_pasajeros"; pasajeros: number } {
+  if (nueva !== "no_voy") return { puede: true };
+  const miCoche = estado.coches.find((c) => c.conductorId === playerId);
+  if (!miCoche) return { puede: true };
+  const pasajeros = ocupadas(miCoche.id, estado.asientos);
+  return pasajeros > 0
+    ? { puede: false, motivo: "conduces_con_pasajeros", pasajeros }
+    : { puede: true };
+}
+
+/**
  * Regla 3: **pasar a `no_voy` libera la plaza** y avisa al conductor. Sin esto,
  * los coches acumulan plazas ocupadas por gente que ya dijo que no viene, que es
  * exactamente el problema que tiene hoy el club en WhatsApp.
  *
  * `duda` NO libera la plaza: quien duda pero tiene sitio reservado sigue
  * contando, y es el conductor quien decide si espera.
+ *
+ * Si quien dice `no_voy` conduce un coche VACÍO, ese coche se retira: nadie se
+ * queda tirado y no tiene sentido anunciar plazas de un viaje que no se hace.
+ * Con pasajeros dentro, `puedeCambiarAsistencia` lo habría bloqueado antes.
  */
 export function efectosDeCambiarAsistencia(
   playerId: string,
@@ -167,6 +198,11 @@ export function efectosDeCambiarAsistencia(
         destinatarioId: coche.conductorId,
         pasajeroId: playerId,
       });
+    }
+
+    const miCoche = estado.coches.find((c) => c.conductorId === playerId);
+    if (miCoche && ocupadas(miCoche.id, estado.asientos) === 0) {
+      cambios.push({ tipo: "borrar_coche", cocheId: miCoche.id });
     }
   }
 
