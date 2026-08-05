@@ -6,6 +6,7 @@ import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Boton } from "@/components/ui/Boton";
 import { Banner } from "@/components/ui/Banner";
 import { editarPartida, guardarPartida } from "./actions";
+import { EditorTablero } from "@/components/ajedrez/EditorTablero";
 
 export type TorneoOpcion = { id: string; nombre: string };
 export type SocioOpcion = { id: string; nombre: string };
@@ -56,6 +57,11 @@ export function FormularioPartida({
   const v = inicial ?? VACIA;
   const [error, setError] = useState<string | null>(null);
   const [rivalId, setRivalId] = useState(v.rivalId);
+  const [color, setColor] = useState(v.color);
+  // Con PGN ya escrito se arranca en modo texto; si no, en tablero: quien no
+  // tiene PGN es justo el caso que el tablero viene a resolver.
+  const [modoPgn, setModoPgn] = useState<"tablero" | "texto">(v.pgn ? "texto" : "tablero");
+  const [pgnTablero, setPgnTablero] = useState(v.pgn && false ? v.pgn : "");
   const [pendiente, startTransition] = useTransition();
   const router = useRouter();
 
@@ -155,7 +161,8 @@ export function FormularioPartida({
             <select
               id="color"
               name="color"
-              defaultValue={v.color}
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
               className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta"
             >
               <option value="blancas">♙ Blancas</option>
@@ -232,15 +239,49 @@ export function FormularioPartida({
           marcador="Qué pasó, dónde se decidió, qué aprendiste…"
         />
 
-        <Area
-          id="pgn"
-          etiqueta="PGN (opcional)"
-          valor={v.pgn}
-          filas={6}
-          mono
-          marcador={'[Event "..."]\n1. e4 e5 2. Nf3 ...'}
-          ayuda="Si la tienes en Lichess o Chess.com, copia el PGN y pégalo aquí."
-        />
+        {/* Las jugadas: en el tablero o pegando el PGN. El tablero va primero
+            porque es el caso normal —una partida de tablero no tiene PGN hasta
+            que alguien la escribe— y teclear "1. e4 e5" a mano es pedirle al
+            socio que no la suba. */}
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium text-tinta">Las jugadas (opcional)</span>
+          <div className="flex gap-2">
+            <BotonModo
+              activo={modoPgn === "tablero"}
+              onClick={() => setModoPgn("tablero")}
+            >
+              Meterlas en el tablero
+            </BotonModo>
+            <BotonModo activo={modoPgn === "texto"} onClick={() => setModoPgn("texto")}>
+              Pegar un PGN
+            </BotonModo>
+          </div>
+
+          {modoPgn === "tablero" ? (
+            <>
+              <p className="text-xs text-tinta-suave">
+                Toca la pieza y luego la casilla. Solo deja hacer jugadas legales, y
+                el PGN se escribe solo.
+              </p>
+              <EditorTablero
+                onCambio={setPgnTablero}
+                volteado={color === "negras"}
+              />
+              {/* Lo que se envía es el PGN que ha generado el tablero. */}
+              <input type="hidden" name="pgn" value={pgnTablero} />
+            </>
+          ) : (
+            <Area
+              id="pgn"
+              etiqueta="PGN"
+              valor={v.pgn}
+              filas={6}
+              mono
+              marcador={'[Event "..."]\n1. e4 e5 2. Nf3 ...'}
+              ayuda="Si la tienes en Lichess o Chess.com, copia el PGN y pégalo aquí."
+            />
+          )}
+        </div>
 
         <div className="flex gap-2">
           <Boton variante="degradado" type="submit" disabled={pendiente} className="flex-1">
@@ -252,6 +293,31 @@ export function FormularioPartida({
         </div>
       </form>
     </Tarjeta>
+  );
+}
+
+function BotonModo({
+  activo,
+  onClick,
+  children,
+}: {
+  activo: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={activo}
+      className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition duration-100 active:scale-[0.97] ${
+        activo
+          ? "bg-acento-fuerte text-sobre-acento"
+          : "border border-borde bg-tarjeta text-tinta-suave hover:bg-tarjeta-suave"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 

@@ -8,6 +8,7 @@ import { Boton } from "@/components/ui/Boton";
 import { formatearRangoFechas } from "@/lib/torneos/fechas";
 import { textoResultado, type Resultado } from "@/lib/partidas/validar";
 import { AccionesPartida } from "./AccionesPartida";
+import { VisorPartida } from "@/components/ajedrez/VisorPartida";
 
 export default async function PartidaPage({
   params,
@@ -96,18 +97,18 @@ export default async function PartidaPage({
               PGN
             </h2>
             <Tarjeta>
-              {/* Se muestra en texto, seleccionable para copiarlo a Lichess o a
-                  cualquier analizador. El tablero reproducible llega en una
-                  tarea aparte: es una pieza grande y no tenerlo no impide que la
-                  partida quede guardada y consultable, que es lo que hacía
-                  falta. */}
-              <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words font-mono text-xs text-tinta">
+              {/* El tablero se orienta desde el punto de vista del dueño de la
+                  partida: quien la consulta quiere verla como la vivió él. */}
+              <VisorPartida pgn={p.pgn} volteado={p.color === "negras"} />
+            </Tarjeta>
+            <details className="px-1">
+              <summary className="cursor-pointer text-xs text-tinta-suave">
+                Ver el PGN en texto (para copiarlo)
+              </summary>
+              <pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap break-words rounded-xl border border-borde bg-tarjeta p-3 font-mono text-xs text-tinta">
                 {p.pgn}
               </pre>
-              <p className="mt-2 text-xs text-tinta-suave">
-                Cópialo y pégalo en Lichess o Chess.com para verlo en un tablero.
-              </p>
-            </Tarjeta>
+            </details>
           </section>
         )}
 
