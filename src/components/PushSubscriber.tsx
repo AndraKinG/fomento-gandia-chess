@@ -44,45 +44,80 @@ export function PushSubscriber() {
   return null;
 }
 
-type EstadoActivacion = "idle" | "activado" | "denegado";
+type EstadoActivacion =
+  | "idle"
+  | "activando"
+  | "activado"
+  | "denegado"
+  | "incompatible"
+  | "error";
+
+const MENSAJE: Record<Exclude<EstadoActivacion, "idle" | "activando">, string> = {
+  activado: "Notificaciones activadas ✓",
+  denegado:
+    "No has dado permiso. Puedes cambiarlo en los ajustes de notificaciones de tu navegador.",
+  incompatible:
+    "Este navegador no admite notificaciones. En iPhone hay que instalar la app en la pantalla de inicio primero.",
+  error: "No se pudieron activar. Comprueba tu conexión y vuelve a intentarlo.",
+};
 
 export function ActivarNotificaciones() {
   const [estado, setEstado] = useState<EstadoActivacion>("idle");
 
+  // Antes este flujo tenía un `.catch(() => {})` que se comía cualquier fallo:
+  // el socio pulsaba, no pasaba nada visible y no había forma de saber por qué.
+  // Ahora cada final del camino tiene su mensaje, incluido el caso de iOS, que
+  // no permite push hasta que la PWA está instalada en la pantalla de inicio.
   async function activar() {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
-    const reg = await navigator.serviceWorker.register("/sw.js");
-    const permiso = await Notification.requestPermission();
-    if (permiso !== "granted") {
-      setEstado("denegado");
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setEstado("incompatible");
       return;
     }
-    await suscribir(reg);
-    setEstado("activado");
+    setEstado("activando");
+    try {
+      const reg = await navigator.serviceWorker.register("/sw.js");
+      const permiso = await Notification.requestPermission();
+      if (permiso !== "granted") {
+        setEstado("denegado");
+        return;
+      }
+      await suscribir(reg);
+      setEstado("activado");
+    } catch {
+      setEstado("error");
+    }
   }
 
-  if (estado === "activado") {
+  if (estado !== "idle" && estado !== "activando") {
     return (
-      <p className="rounded-xl border border-borde bg-tarjeta p-3 text-center font-semibold text-tinta">
-        Notificaciones activadas ✓
-      </p>
-    );
-  }
-
-  if (estado === "denegado") {
-    return (
-      <p className="rounded-xl border border-borde bg-tarjeta p-3 text-center font-semibold text-tinta">
-        Permiso denegado
+      <p
+        role="status"
+        className="rounded-xl border border-borde bg-tarjeta p-3 text-center text-sm text-tinta"
+      >
+        {MENSAJE[estado]}
+        {estado === "error" && (
+          <button
+            type="button"
+            onClick={() => setEstado("idle")}
+            className="ml-1 font-semibold text-acento-texto underline"
+          >
+            Reintentar
+          </button>
+        )}
       </p>
     );
   }
 
   return (
     <button
-      onClick={() => activar().catch(() => {})}
-      className="w-full rounded-xl bg-degradado-club p-3 font-semibold text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]"
+      type="button"
+      disabled={estado === "activando"}
+      onClick={() => {
+        void activar();
+      }}
+      className="w-full rounded-xl bg-degradado-club p-3 font-semibold text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97] disabled:opacity-50"
     >
-      Activar notificaciones
+      {estado === "activando" ? "Activando…" : "Activar notificaciones"}
     </button>
   );
 }

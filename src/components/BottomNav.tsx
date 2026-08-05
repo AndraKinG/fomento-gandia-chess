@@ -16,7 +16,10 @@ export function BottomNav({ esAdmin }: { esAdmin: boolean }) {
     : items;
   if (["/login", "/registro"].some((p) => pathname.startsWith(p))) return null;
   return (
-    <nav className="fixed inset-x-0 bottom-0 flex justify-around border-t border-borde bg-tarjeta p-2">
+    <nav
+      aria-label="Navegación principal"
+      className="fixed inset-x-0 bottom-0 flex justify-around border-t border-borde bg-tarjeta p-2"
+    >
       {all.map((i) => {
         const activo =
           pathname === i.href ||

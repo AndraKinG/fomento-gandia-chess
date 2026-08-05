@@ -51,7 +51,10 @@ export default function AdminPage() {
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera titulo="Administración" />
-      <nav className="mx-auto flex max-w-md flex-col gap-3 p-4">
+      <nav
+        aria-label="Secciones de administración"
+        className="mx-auto flex max-w-md flex-col gap-3 p-4"
+      >
         {ENLACES.map((enlace) => (
           <Link key={enlace.href} href={enlace.href}>
             <Tarjeta className="flex items-center gap-3 transition hover:border-borde-acento">
