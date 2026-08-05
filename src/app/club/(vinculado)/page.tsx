@@ -8,6 +8,7 @@ import { Tarjeta } from "@/components/ui/Tarjeta";
 import { TarjetaJornada } from "@/components/ui/TarjetaJornada";
 import { Boton } from "@/components/ui/Boton";
 import { formatearRangoFechas, hoyISO } from "@/lib/torneos/fechas";
+import { sesionActual } from "@/lib/auth/sesion";
 
 type Estado = "disponible" | "no_disponible" | "duda";
 const ICONOS: Record<Estado, string> = { disponible: "✅", no_disponible: "❌", duda: "🤔" };
@@ -25,6 +26,7 @@ function formatearFecha(fechaHoraISO: string | null): string {
 
 export default async function Home() {
   const supabase = await createServerSupabase();
+  const sesion = await sesionActual();
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = await supabase
     .from("profiles").select("player_id").eq("id", user!.id).single();
@@ -70,6 +72,16 @@ export default async function Home() {
   const asistenciaPorTorneo = new Map(
     (misAsistencias ?? []).map((a) => [a.tournament_id, a.estado as string])
   );
+
+  // Solicitudes de ingreso sin resolver. La junta no tiene acceso a /club/admin,
+  // así que esta tarjeta es su única puerta a la pantalla: se muestra siempre que
+  // sea junta, con o sin solicitudes, para que sepa dónde está.
+  const { count: solicitudesPendientes } = sesion?.esJunta
+    ? await supabase
+        .from("membership_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("estado", "pendiente")
+    : { count: 0 };
 
   let miEstado: Estado | null = null;
   let faltaDisponibilidad = false;
@@ -122,6 +134,28 @@ export default async function Home() {
           <Banner tipo="ok">
             Solicitud de vinculación pendiente de aprobación.
           </Banner>
+        )}
+
+        {sesion?.esJunta && (
+          <Link href="/club/solicitudes" className="block">
+            <Tarjeta
+              compacta
+              destacada={(solicitudesPendientes ?? 0) > 0}
+              className="flex items-center justify-between gap-3 transition hover:border-borde-acento"
+            >
+              <div>
+                <p className="font-semibold text-tinta">Solicitudes de ingreso</p>
+                <p className="text-sm text-tinta-suave">
+                  {(solicitudesPendientes ?? 0) === 0
+                    ? "Nada pendiente"
+                    : `${solicitudesPendientes} sin resolver`}
+                </p>
+              </div>
+              <span aria-hidden className="text-lg text-tinta-suave">
+                →
+              </span>
+            </Tarjeta>
+          </Link>
         )}
 
         {proxima ? (

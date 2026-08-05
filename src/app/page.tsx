@@ -49,12 +49,12 @@ export default function PaginaPublica() {
             >
               Entrar (socios)
             </Link>
-            <a
-              href="#unirse"
+            <Link
+              href="/unirse"
               className="rounded-xl border border-sobre-acento/40 px-5 py-3 font-semibold text-sobre-acento transition duration-100 hover:bg-white/10 active:scale-[0.97]"
             >
               Quiero jugar
-            </a>
+            </Link>
           </div>
         </div>
       </header>
@@ -84,9 +84,16 @@ export default function PaginaPublica() {
           <h2 className="text-2xl font-bold text-tinta">¿Quieres unirte?</h2>
           <p className="mt-3 text-tinta-suave">
             Da igual tu nivel: hay sitio tanto si compites como si solo quieres
-            jugar. Estamos preparando el formulario de solicitud; hasta entonces,
-            acércate al club y pregunta por cualquiera de nosotros.
+            jugar. Déjanos tus datos y te contamos cómo va.
           </p>
+          <div className="mt-4">
+            <Link
+              href="/unirse"
+              className="inline-flex rounded-xl bg-acento-fuerte px-5 py-3 font-semibold text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]"
+            >
+              Solicitar entrar en el club
+            </Link>
+          </div>
           <p className="mt-4 text-sm text-tinta-suave">
             Si ya eres socio y tienes el código del club,{" "}
             <Link href="/registro" className="font-semibold text-acento-texto underline">
