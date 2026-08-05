@@ -1,1 +1,39 @@
 @AGENTS.md
+
+# Chess Club Manager — Fomento de Gandia · Guía de trabajo
+
+App PWA del club de ajedrez Fomento de Gandia (Gandía). Propietario: J. Ribes ("Joan", admin del club, capitán del equipo A, ficha "Joan Martínez Ribes"). Idioma de trabajo: **español**.
+
+## Dónde está todo
+
+- **Producción:** https://fomento-gandia-chess-swart.vercel.app (Vercel despliega `main` automáticamente)
+- **Repo:** https://github.com/AndraKinG/fomento-gandia-chess (cuenta GitHub principal del usuario)
+- **Supabase:** proyecto `fomento-gandia-chess` en su cuenta Google secundaria (jony9vcf@...). Cuenta real del usuario en la app: jony9vcf@gmail.com (admin + capitán A)
+- **Specs y planes:** `docs/superpowers/specs/` y `docs/superpowers/plans/` (Fases 0, 1A, 1B, 1C completadas)
+- **Referencia de dominio:** `docs/referencia/` — reglamento RGC FACV extraído, verificación empírica de ambigüedades, guía SMTP Resend
+- **`.env.local` NO está en el repo** (gitignorado): claves de Supabase (nuevas `sb_publishable_`/`sb_secret_`), VAPID pública/privada (deben ser LAS MISMAS en todas las máquinas — las suscripciones push dependen de ellas), `CRON_SECRET`. Al montar el proyecto en otra máquina, copiar el archivo por canal privado; el resto está en el README.
+
+## Cómo trabajamos (reglas del propietario)
+
+1. **Claude NUNCA hace `git push`.** Se commitea en local y se avisa al usuario con un bloque de comandos copy-paste que SIEMPRE empieza por `cd "<ruta del proyecto>"`. Él pushea con su cuenta.
+2. **Migraciones SQL**: Claude escribe el fichero en `supabase/migrations/` (numeradas, en orden) y se lo deja al usuario en el portapapeles (`Set-Clipboard`) para que lo pegue en el SQL Editor de Supabase. Verificar después vía REST que las tablas/columnas existen. Aplicadas hasta ahora: 0001→0007.
+3. **Flujo de desarrollo**: brainstorm → spec escrita y aprobada → plan de tareas pequeñas → ejecución por subagentes con revisión (spec + calidad) por tarea, fix-loops hasta aprobar, y revisión global adversarial al final de cada fase (plugin `superpowers` de Claude Code; el ledger local vive en `.superpowers/sdd/progress.md`, gitignorado).
+4. **Prioridad lógica sobre pulido** (decisión expresa del usuario): hallazgos visuales menores van al ledger para una pasada de pulido global futura, NO a fix-loops — salvo roturas de layout o accesibilidad grave. La lógica (validador, permisos, datos) mantiene el listón completo.
+5. **Gates de usuario**: acciones que requieren sus cuentas (SQL Editor, Vercel, Resend, push de git) se le piden con pasos exactos clic a clic. Es desarrollador junior: instrucciones concretas, sin jerga innecesaria.
+6. **Verificación en vivo con datos reales** siempre que sea posible (la BD compartida tiene el orden de fuerza real de 46 jugadores, calendario y resultados 2026 reales). No borrar/alterar datos reales sin permiso; los datos de prueba se etiquetan claramente (p. ej. rival "PRUEBA - BORRAR").
+
+## Decisiones técnicas clave (no cambiar sin preguntar)
+
+- **Identidad visual**: blanco y azul "gandiblues". Doble tema: claro *Mediterráneo* / oscuro *Azul profundo* (tokens en `globals.css`, en español: `bg-fondo`, `text-tinta`, `text-acento-texto`...). Tablero de ajedrez blanquiazul cuando llegue la Fase 3.
+- **Fuerza del jugador** = `force_order.elo_oficial` (orden de fuerza oficial FACV, sincronizado de `of_publico.php?id=56`); fallback `max(FEDA, FIDE)` (RGC art. 52.1). IDs de club/temporada FACV en `src/lib/import/facv-config.ts` (actualizar cada temporada).
+- **Validador RGC** (`src/lib/validador/`): módulo puro, flag REQUERIDO `permitirInversionDentroMargen` — **estricto (false) por defecto**; dos ambigüedades del reglamento documentadas en `docs/referencia/verificacion-empirica-rgc.md` (0 inversiones en 11 rondas reales de 2026). No relajar sin confirmación FACV del usuario.
+- **Publicar convocatoria**: única puerta = server action con re-validación completa + escritura service_role (trigger de blindaje en migración 0007). El cliente valida en vivo solo como ayuda.
+- **Marcadores**: los resultados por tablero del capitán SIEMPRE prevalecen sobre el marcador FACV (`marcadorPreferido` en `src/lib/marcador.ts`).
+- **Permisos en 3 capas** (RLS dura + actions re-verifican + UI oculta): matriz vinculante en el anexo del plan 1B (+ adenda 1C). Jugador solo su disponibilidad; capitán solo SU equipo; admin todo.
+- **fide.com bloquea IPs de datacenter** (Vercel Y GitHub Actions): el ELO FIDE en vivo es cosmético — botón manual en local o `scripts/actualizar-elo-fide.mjs`. El cron de Vercel es único (`/api/cron/director`, diario, multiplexado por día: lunes pedir disponibilidad, jueves recordar, viernes sync FACV).
+
+## Estado y pendientes (actualizar al avanzar)
+
+- Fases 0 (cimientos), 1A (diseño), 1B (equipos/calendario/disponibilidad) y 1C (validador/convocatorias/resultados) **completas y aprobadas** (última revisión global: "Ready to deploy", 166/166 tests).
+- Pendientes de usuario al cierre de 1C: prueba de convocatoria real en móvil (jornada A/R99 "Amistoso de prueba" preparada), SMTP Resend (guía en docs/referencia), y borrar cuentas/fichas de prueba (`*.prueba@fomentogandia.test`, jugadores "Carlsen/Nakamura/Jugador Prueba *") antes del lanzamiento al club.
+- Fases futuras: **2** posts/torneos/coches · **3** BD de partidas + tablero blanquiazul · **4** torneos internos + ELO de club. Antes de invitar al club: pasada de pulido global con la deuda menor del ledger.
