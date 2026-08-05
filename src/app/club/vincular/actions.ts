@@ -19,11 +19,19 @@ import { enviarPushAMuchos } from "@/lib/push/send";
 async function avisarAdminsDeSolicitud(nombreFicha: string): Promise<void> {
   try {
     const admin = createAdminClient();
-    const { data: admins } = await admin
-      .from("profiles")
-      .select("id")
-      .eq("is_admin", true);
-    const ids = (admins ?? []).map((a) => a.id);
+    // Las DOS fuentes de rango, igual que `is_admin()` en Postgres: la columna
+    // vieja y el rol. Si solo se mirara la columna, a un admin nombrado por rol
+    // no le llegarían las solicitudes que tiene que aprobar.
+    const [{ data: porColumna }, { data: porRol }] = await Promise.all([
+      admin.from("profiles").select("id").eq("is_admin", true),
+      admin.from("member_roles").select("profile_id").eq("rol", "admin"),
+    ]);
+    const ids = [
+      ...new Set([
+        ...(porColumna ?? []).map((a) => a.id),
+        ...(porRol ?? []).map((r) => r.profile_id),
+      ]),
+    ];
     if (ids.length === 0) return;
     await enviarPushAMuchos(ids, {
       title: "Nueva solicitud de vinculación",

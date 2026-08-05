@@ -22,6 +22,12 @@ const ENLACES = [
     detalle: "Aprobar o rechazar solicitudes de vinculación pendientes",
   },
   {
+    href: "/club/admin/roles",
+    icono: "🎖️",
+    titulo: "Rangos",
+    detalle: "Nombrar junta y admin; ver quién es jugador y capitán",
+  },
+  {
     href: "/club/admin/equipos",
     icono: "🛡️",
     titulo: "Equipos y capitanes",
