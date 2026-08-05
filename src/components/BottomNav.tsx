@@ -30,6 +30,7 @@ const SECCIONES = [
     rutas: ["/club/equipos", "/club/disponibilidad", "/club/jornadas"],
   },
   { href: "/club/torneos", label: "Torneos", icon: "🏆", rutas: ["/club/torneos"] },
+  { href: "/club/partidas", label: "Partidas", icon: "♜", rutas: ["/club/partidas"] },
   { href: "/club/perfil", label: "Perfil", icon: "👤", rutas: ["/club/perfil"] },
 ];
 
