@@ -28,6 +28,24 @@ export default async function OrdenFuerzaPage({
         .order("numero").order("bis_index")
     : { data: null };
 
+  // QUIÉN HA JUGADO POR EL CLUB Y NO TIENE FICHA.
+  //
+  // Es el aviso que hacía falta para el caso de quien entra a mitad de temporada: si un
+  // socio juega una jornada y su nombre no cruza con ninguna ficha, aquí sale. No hace
+  // falta guardar nada nuevo — las filas del acta sin `nuestro_player_id` YA son la
+  // señal —, y se lee en la pantalla desde la que se corrige, que es esta.
+  //
+  // Puede salir por tres motivos, y los tres se arreglan aquí: la ficha no existe
+  // todavía (sincroniza el orden de fuerza), el nombre de la ficha está escrito de otra
+  // forma que el acta (corrígelo), o jugó alguien que ya no es socio (no hay nada que
+  // hacer).
+  const { data: sinFicha } = await supabase
+    .from("match_boards")
+    .select("nuestro_nombre")
+    .is("nuestro_player_id", null);
+  const nombresSinFicha = [...new Set((sinFicha ?? []).map((f) => f.nuestro_nombre as string))]
+    .sort();
+
   async function accion(formData: FormData) {
     "use server";
     const resultado = await importarOrdenFuerza(
@@ -69,6 +87,27 @@ export default async function OrdenFuerzaPage({
             </ul>
           </Banner>
         ) : null}
+        {nombresSinFicha.length > 0 && (
+          <Banner tipo="aviso">
+            <p className="font-semibold">
+              {nombresSinFicha.length === 1
+                ? "Un jugador del acta no tiene ficha en el club"
+                : `${nombresSinFicha.length} jugadores del acta no tienen ficha en el club`}
+            </p>
+            <ul className="mt-1 list-disc space-y-0.5 pl-4 text-sm">
+              {nombresSinFicha.map((n) => (
+                <li key={n}>{n}</li>
+              ))}
+            </ul>
+            <p className="mt-2 text-sm">
+              Han jugado alguna jornada del Interclubs pero su nombre no cuadra con
+              ninguna ficha. Si acaban de entrar al club, sincroniza el orden de fuerza:
+              la FACV les da un número «bis». Si ya están, revisa cómo está escrito el
+              nombre en su ficha.
+            </p>
+          </Banner>
+        )}
+
         <form action={accionSincronizar}>
           {/* Esto descarga y parsea una página de la FACV: los segundos que tarda
               tienen que verse, o parece que el botón no ha hecho nada. */}

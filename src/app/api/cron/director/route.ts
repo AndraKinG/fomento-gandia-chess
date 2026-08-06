@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { pedirDisponibilidadSemana, recordarPendientes } from "@/lib/push/disponibilidad";
-import { sincronizarResultadosFACVCore } from "@/lib/import/facv-resultados-apply";
-import { sincronizarActasCore } from "@/lib/import/chessresults-apply";
+import { sincronizarSemanalCore } from "@/lib/import/sync-semanal";
 
 export const maxDuration = 300;
 
@@ -17,8 +16,9 @@ const DIAS_VENTANA_PRUEBA = 60;
  * acción de disponibilidad ejecutar.
  * - Lunes (1): pide disponibilidad de la semana (`pedirDisponibilidadSemana`).
  * - Jueves (4): recuerda a quien no ha contestado (`recordarPendientes`).
- * - Viernes (5): sync de resultados y clasificación FACV
- *   (`sincronizarResultadosFACVCore`, Task 8, Fase 1C).
+ * - Viernes (5): las tres sincronizaciones con la FACV en cadena
+ *   (`sincronizarSemanalCore`): orden de fuerza, resultados y clasificación, y actas
+ *   por tablero. El orden importa, ver ese fichero.
  * - Resto de días: no hace nada.
  *
  * Acepta `?forzar=pedir|recordar|sync` (gated por el mismo CRON_SECRET) para
@@ -46,9 +46,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ accion: "recordar", forzado: true, ...resultado });
   }
   if (forzar === "sync") {
-    const resultado = await sincronizarResultadosFACVCore();
-    const actas = await sincronizarActasCore();
-    return NextResponse.json({ accion: "sync", forzado: true, ...resultado, actas });
+    const resultado = await sincronizarSemanalCore();
+    return NextResponse.json({ accion: "sync", forzado: true, ...resultado });
   }
 
   const dia = new Date().getUTCDay();
@@ -64,13 +63,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ dia, accion: "recordar", ...resultado });
     }
     case 5: {
-      // Viernes: sync de resultados y clasificación FACV, y detrás el acta por
-      // tableros de chess-results. En este orden y no en paralelo: el acta necesita
-      // que las jornadas existan ya en `matches`, y es el paso anterior el que las
-      // crea si falta alguna.
-      const resultado = await sincronizarResultadosFACVCore();
-      const actas = await sincronizarActasCore();
-      return NextResponse.json({ dia, accion: "sync", ...resultado, actas });
+      // Viernes: las tres sincronizaciones con la FACV, en cadena.
+      const resultado = await sincronizarSemanalCore();
+      return NextResponse.json({ dia, accion: "sync", ...resultado });
     }
     default:
       return NextResponse.json({ dia, accion: "nada" });
