@@ -45,23 +45,28 @@ export default async function InternoPage() {
         medida="panel"
       />
       <Contenedor medida="panel" className="space-y-4">
-        <PestanasTorneos activa="interno" />
-
-        {/* Los dos botones en fila desde tableta: apilados ocupaban dos líneas
-            enteras antes de llegar a lo que importa, la lista de torneos. */}
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Boton variante="degradado" href="/club/torneos/interno/ranking" className="flex-1">
-            Ranking de ELO del club
-          </Boton>
-          {sesion?.esJunta && (
+        {/* Pestañas y acciones en la MISMA fila desde `sm`. Apiladas eran cuatro
+            bloques a todo lo ancho antes de llegar al primer torneo. */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <PestanasTorneos activa="interno" />
+          <div className="flex flex-wrap items-center gap-2">
             <Boton
               variante="secundario"
-              href="/club/torneos/interno/nuevo"
-              className="flex-1 text-sm"
+              href="/club/torneos/interno/ranking"
+              className="text-sm"
             >
-              Organizar un torneo interno
+              Ranking de ELO
             </Boton>
-          )}
+            {sesion?.esJunta && (
+              <Boton
+                variante="secundario"
+                href="/club/torneos/interno/nuevo"
+                className="text-sm"
+              >
+                Organizar torneo
+              </Boton>
+            )}
+          </div>
         </div>
 
         {(torneos ?? []).length === 0 && (

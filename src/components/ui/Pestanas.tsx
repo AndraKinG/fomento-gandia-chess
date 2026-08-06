@@ -24,7 +24,9 @@ export function Pestana({
     <Link
       href={href}
       aria-current={activa ? "page" : undefined}
-      className={`flex-1 rounded-xl px-4 py-2 text-center text-sm font-semibold transition duration-100 ${
+      // A lo ancho en móvil, donde importa el tamaño del toque; compacta desde `sm`.
+      // Estiradas ocupaban media pantalla cada una y competían con el contenido.
+      className={`flex-1 rounded-xl px-4 py-2 text-center text-sm font-semibold transition duration-100 sm:flex-initial sm:px-5 ${
         activa
           ? "bg-acento-fuerte text-sobre-acento"
           : "border border-borde bg-tarjeta text-tinta-suave hover:bg-tarjeta-suave"

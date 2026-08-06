@@ -21,8 +21,12 @@ export function CrearTorneo() {
 
   if (!abierto) {
     return (
-      <Boton variante="secundario" className="w-full" onClick={() => setAbierto(true)}>
-        Crear un torneo que no está en el calendario
+      <Boton
+        variante="secundario"
+        className="w-full text-sm sm:w-auto"
+        onClick={() => setAbierto(true)}
+      >
+        Crear torneo
       </Boton>
     );
   }

@@ -4,6 +4,7 @@ import { sesionActual } from "@/lib/auth/sesion";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
+import { Boton } from "@/components/ui/Boton";
 import { formatearRangoFechas, hoyISO } from "@/lib/torneos/fechas";
 import { CrearTorneo } from "./CrearTorneo";
 import { Contenedor, REJILLA } from "@/components/ui/Contenedor";
@@ -92,7 +93,24 @@ export default async function TorneosPage({
         volverA={verTodos || verPasados ? "/club/torneos/facv" : undefined} medida="panel"
       />
       <Contenedor medida="panel" className="space-y-3">
-        <PestanasTorneos activa="facv" />
+        {/* Pestañas y acciones en la MISMA fila desde `sm`. Apiladas eran tres bloques
+            a todo lo ancho antes de llegar al primer torneo. */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <PestanasTorneos activa="facv" />
+          <div className="flex flex-wrap items-center gap-2">
+            {!verTodos && !verPasados && (
+              <Boton variante="secundario" href="/club/torneos/facv?todos=1" className="text-sm">
+                Calendario FACV
+              </Boton>
+            )}
+            {!verPasados && (
+              <Boton variante="secundario" href="/club/torneos/facv?pasados=1" className="text-sm">
+                Pasados
+              </Boton>
+            )}
+            {sesion?.esJunta && !verPasados && <CrearTorneo />}
+          </div>
+        </div>
 
         {torneos.length === 0 && (
           <EstadoVacio
@@ -151,24 +169,6 @@ export default async function TorneosPage({
           })}
         </ul>
 
-        {sesion?.esJunta && !verPasados && (
-          <div className="pt-2">
-            <CrearTorneo />
-          </div>
-        )}
-
-        <div className="flex flex-wrap gap-3 pt-2 text-sm">
-          {!verTodos && !verPasados && (
-            <Link href="/club/torneos/facv?todos=1" className="text-acento-texto underline">
-              Ver todo el calendario FACV
-            </Link>
-          )}
-          {!verPasados && (
-            <Link href="/club/torneos/facv?pasados=1" className="text-acento-texto underline">
-              Torneos pasados
-            </Link>
-          )}
-        </div>
       </Contenedor>
     </main>
   );
