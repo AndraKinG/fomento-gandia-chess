@@ -131,6 +131,35 @@ export function parseEnlacesClasificacionFACV(
   html: string,
   nombreClub: string
 ): EnlaceClasificacionFACV[] {
+  return parseEnlacesPorGrupoFACV(html, nombreClub, "Clasificación");
+}
+
+/**
+ * Enlace "Alineación" general de chess-results (`art=3`, sin `&rd=`) de cada grupo
+ * del club: la página con el acta tablero a tablero de las once rondas.
+ *
+ * Mismo criterio que el de clasificación — el de arriba del grupo, no el de cada
+ * ronda —, porque sin `&rd=` esa única página ya trae todas las rondas.
+ */
+export function parseEnlacesAlineacionFACV(
+  html: string,
+  nombreClub: string
+): EnlaceClasificacionFACV[] {
+  return parseEnlacesPorGrupoFACV(html, nombreClub, "Alineación");
+}
+
+/**
+ * Motor común de los dos anteriores: busca, en cada grupo donde aparezca el club, el
+ * enlace de chess-results cuyo texto es `etiqueta` y que NO lleva `rd=`.
+ *
+ * Estaba escrito dos veces cuando llegó el acta por tableros; la única diferencia
+ * entre las dos versiones era el texto del enlace.
+ */
+function parseEnlacesPorGrupoFACV(
+  html: string,
+  nombreClub: string,
+  etiqueta: string
+): EnlaceClasificacionFACV[] {
   const clubNorm = normalizaNombre(nombreClub);
   if (!clubNorm) return [];
 
@@ -148,7 +177,7 @@ export function parseEnlacesClasificacionFACV(
 
     if (!normalizaNombre(bloque).includes(clubNorm)) continue;
 
-    const linkRe = /<a href='([^']+)'[^>]*>Clasificación<\/a>/g;
+    const linkRe = new RegExp(`<a href='([^']+)'[^>]*>${etiqueta}</a>`, "g");
     let urlGeneral: string | null = null;
     for (const m of bloque.matchAll(linkRe)) {
       const url = decodeEntidades(m[1]);

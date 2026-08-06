@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { esAdmin } from "@/lib/auth/es-admin";
 import { sincronizarCalendarioFACVCore } from "@/lib/import/facv-calendario-apply";
 import { sincronizarResultadosFACVCore, type ResultadoSyncResultados } from "@/lib/import/facv-resultados-apply";
+import { sincronizarActasCore, type ResumenSyncActas } from "@/lib/import/chessresults-apply";
 import { offsetMadrid } from "@/lib/import/facv-calendario";
 
 type Resultado = { ok?: string; error?: string };
@@ -145,6 +146,30 @@ export async function sincronizarResultadosFACV(): Promise<ResultadoSyncResultad
   if (!resultado.error) {
     revalidatePath("/club/admin/equipos");
     revalidatePath("/club/equipos");
+  }
+  return resultado;
+}
+
+/**
+ * Descarga de chess-results el acta tablero a tablero de todas las jornadas y la
+ * guarda en `match_boards`. Acción de servidor gateada por sesión admin.
+ *
+ * Es lo que hace que la pantalla de una jornada jugada tenga algo que enseñar: sin
+ * esto solo hay marcador global, que es lo único que publica el calendario FACV.
+ */
+export async function sincronizarActas(): Promise<ResumenSyncActas> {
+  if (!(await esAdmin())) {
+    return {
+      jornadas: 0, tableros: 0, vinculados: 0, omitidos: 0, avisos: [],
+      error: "Solo el admin puede hacer esto",
+    };
+  }
+  const resultado = await sincronizarActasCore();
+  if (!resultado.error) {
+    revalidatePath("/club/admin/equipos");
+    // Las actas se ven en el detalle de cada jornada, y son muchas rutas para
+    // revalidarlas una a una: se revalida el prefijo entero.
+    revalidatePath("/club/jornadas", "layout");
   }
   return resultado;
 }

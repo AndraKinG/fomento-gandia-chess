@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { pedirDisponibilidadSemana, recordarPendientes } from "@/lib/push/disponibilidad";
 import { sincronizarResultadosFACVCore } from "@/lib/import/facv-resultados-apply";
+import { sincronizarActasCore } from "@/lib/import/chessresults-apply";
 
 export const maxDuration = 300;
 
@@ -46,7 +47,8 @@ export async function GET(request: NextRequest) {
   }
   if (forzar === "sync") {
     const resultado = await sincronizarResultadosFACVCore();
-    return NextResponse.json({ accion: "sync", forzado: true, ...resultado });
+    const actas = await sincronizarActasCore();
+    return NextResponse.json({ accion: "sync", forzado: true, ...resultado, actas });
   }
 
   const dia = new Date().getUTCDay();
@@ -62,9 +64,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ dia, accion: "recordar", ...resultado });
     }
     case 5: {
-      // Viernes: sync de resultados y clasificación FACV.
+      // Viernes: sync de resultados y clasificación FACV, y detrás el acta por
+      // tableros de chess-results. En este orden y no en paralelo: el acta necesita
+      // que las jornadas existan ya en `matches`, y es el paso anterior el que las
+      // crea si falta alguna.
       const resultado = await sincronizarResultadosFACVCore();
-      return NextResponse.json({ dia, accion: "sync", ...resultado });
+      const actas = await sincronizarActasCore();
+      return NextResponse.json({ dia, accion: "sync", ...resultado, actas });
     }
     default:
       return NextResponse.json({ dia, accion: "nada" });

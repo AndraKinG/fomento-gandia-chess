@@ -8,6 +8,7 @@ import {
   nombrarCapitan,
   quitarCapitan,
   sincronizarCalendarioFACV,
+  sincronizarActas,
   sincronizarResultadosFACV,
 } from "./actions";
 import { Cabecera } from "@/components/ui/Cabecera";
@@ -15,6 +16,7 @@ import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Banner } from "@/components/ui/Banner";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { Contenedor } from "@/components/ui/Contenedor";
+import { BotonAccion } from "@/components/ui/BotonAccion";
 
 const CAMPO =
   "rounded-xl border border-borde bg-tarjeta p-3 text-tinta placeholder:text-tinta-suave";
@@ -143,6 +145,23 @@ export default async function EquiposPage({
     redirect(`/club/admin/equipos?${params.toString()}`);
   }
 
+  async function accionSincronizarActas() {
+    "use server";
+    const resultado = await sincronizarActas();
+    const avisosMsg =
+      resultado.avisos.length > 0 ? ` — avisos: ${resultado.avisos.join("; ")}` : "";
+    const params = new URLSearchParams({
+      msg:
+        resultado.error ??
+        `Actas sincronizadas: ${resultado.jornadas} jornadas, ${resultado.tableros} tableros, ` +
+          `${resultado.vinculados} cruzados con fichas del club` +
+          (resultado.omitidos > 0 ? ` (${resultado.omitidos} encuentros sin jornada creada)` : "") +
+          avisosMsg,
+      tipo: resultado.error ? "error" : "ok",
+    });
+    redirect(`/club/admin/equipos?${params.toString()}`);
+  }
+
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera titulo="Equipos y capitanes" subtitulo={season.nombre} volverA="/club/admin" medida="panel" />
@@ -176,17 +195,29 @@ export default async function EquiposPage({
           </form>
         </Tarjeta>
 
-        <form action={accionSincronizarCalendario}>
-          <button className="w-full rounded-xl bg-degradado-club p-3 font-semibold text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]">
-            Importar calendario FACV
-          </button>
-        </form>
+        {/* Los tres importadores en fila desde tableta: apilados ocupaban tres
+            líneas enteras antes de llegar a los equipos. El orden es el de
+            dependencia — calendario, resultados y por último las actas, que
+            necesitan que las jornadas existan ya. */}
+        <div className="grid gap-2 sm:grid-cols-3">
+          <form action={accionSincronizarCalendario}>
+            <BotonAccion trabajando="Descargando el calendario…" className="w-full text-sm">
+              Importar calendario FACV
+            </BotonAccion>
+          </form>
 
-        <form action={accionSincronizarResultados}>
-          <button className="w-full rounded-xl bg-degradado-club p-3 font-semibold text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]">
-            Sincronizar resultados FACV
-          </button>
-        </form>
+          <form action={accionSincronizarResultados}>
+            <BotonAccion trabajando="Consultando resultados…" className="w-full text-sm">
+              Sincronizar resultados FACV
+            </BotonAccion>
+          </form>
+
+          <form action={accionSincronizarActas}>
+            <BotonAccion trabajando="Leyendo las actas…" className="w-full text-sm">
+              Sincronizar actas por tablero
+            </BotonAccion>
+          </form>
+        </div>
 
         {(equipos ?? []).length === 0 ? (
           <EstadoVacio titulo="Todavía no hay equipos" detalle="Da de alta el primero con el formulario de arriba." />

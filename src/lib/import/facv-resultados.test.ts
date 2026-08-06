@@ -3,9 +3,11 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   parseClasificacionFACV,
+  parseEnlacesAlineacionFACV,
   parseEnlacesClasificacionFACV,
   parseResultadosFACV,
 } from "./facv-resultados";
+import { tnrDeUrl } from "./chessresults";
 
 const htmlCalendario = readFileSync(join(__dirname, "fixtures", "facv-calendario.html"), "utf-8");
 const htmlClasifA = readFileSync(join(__dirname, "fixtures", "facv-clasificacion-a.html"), "utf-8");
@@ -167,5 +169,26 @@ describe("parseClasificacionFACV", () => {
 
   it("devuelve [] con HTML vacío", () => {
     expect(parseClasificacionFACV("")).toEqual([]);
+  });
+});
+
+describe("parseEnlacesAlineacionFACV", () => {
+  it("saca el enlace de acta por tableros de cada grupo del club", () => {
+    const enlaces = parseEnlacesAlineacionFACV(htmlCalendario, "Fomento de Gandia");
+    // Tres grupos, uno por equipo (A, B y C).
+    expect(enlaces).toHaveLength(3);
+    for (const e of enlaces) {
+      expect(e.url).toContain("art=3");
+      // El general, no el de una ronda: es el que trae las once de una vez.
+      expect(e.url).not.toContain("rd=");
+      expect(tnrDeUrl(e.url)).toBeGreaterThan(0);
+    }
+  });
+
+  it("los tres grupos son los tres torneos distintos de chess-results", () => {
+    const ids = parseEnlacesAlineacionFACV(htmlCalendario, "Fomento de Gandia")
+      .map((e) => tnrDeUrl(e.url))
+      .sort();
+    expect(new Set(ids).size).toBe(3);
   });
 });
