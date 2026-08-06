@@ -48,9 +48,13 @@ export function FormularioPartida({
   torneos,
   socios,
   inicial,
+  pairingId,
 }: {
   torneos: TorneoOpcion[];
   socios: SocioOpcion[];
+  /** Emparejamiento de torneo interno del que sale esta partida, si viene de uno.
+   *  Al guardar se enlaza, para que la ficha del torneo lleve a las jugadas. */
+  pairingId?: string;
   /** Valores de partida. Con `id` no vacio el formulario EDITA; sin el, crea. */
   inicial?: PartidaInicial;
 }) {
@@ -97,7 +101,7 @@ export function FormularioPartida({
             // `inicial` existe la habria hecho editar una partida inexistente.
             const r = inicial?.id
               ? await editarPartida(inicial.id, datos)
-              : await guardarPartida(datos);
+              : await guardarPartida({ ...datos, pairingId });
             if (r.error) {
               setError(r.error);
               return;

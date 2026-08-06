@@ -49,6 +49,9 @@ export default async function TorneoInternoPage({
       blancasNombre: nombrePorFicha.get(e.blancas) ?? "Socio",
       negrasNombre: nombrePorFicha.get(e.negras) ?? "Socio",
       resultado: e.resultado,
+      // Solo quien jugo la partida puede subir sus jugadas.
+      esMia: e.blancas === sesion?.playerId || e.negras === sesion?.playerId,
+      gameId: r.pares[i]?.gameId ?? null,
     })),
   }));
 

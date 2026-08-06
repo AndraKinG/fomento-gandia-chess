@@ -3,7 +3,7 @@
   "short_name": "Fomento",
   "start_url": "/club",
   "display": "standalone",
-  "background_color": "#f0f9ff",
+  "background_color": "#0a1628",
   "theme_color": "#0369a1",
   "icons": [
     { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }

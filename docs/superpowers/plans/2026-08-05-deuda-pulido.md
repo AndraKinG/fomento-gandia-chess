@@ -32,6 +32,11 @@ que el propietario navegue con el móvil.
   llegan a AAA. Verificado además en la página, no solo sobre el papel: el color
   calculado del texto secundario es `rgb(85,101,119)` sobre `rgb(240,249,255)`.
 
+- **`background_color` del manifest** era el del tema claro (`#f0f9ff`), así que al
+  abrir la app instalada en modo oscuro había un destello blanco antes de pintar.
+  Puesto al azul profundo del tema oscuro: la app se usa mucho de noche en el club
+  y el destello blanco es más molesto que el contrario.
+
 ## Pendiente, por orden de lo que más se nota
 
 1. **Iconos de la PWA: solo hay un SVG.** iOS no admite SVG como icono de
@@ -39,10 +44,7 @@ que el propietario navegue con el móvil.
    icono genérico o una captura de la página. Hacen falta PNG de 192 y 512, y
    un `apple-touch-icon` de 180. Requiere generar imágenes, no es un cambio de
    código.
-2. **`background_color` del manifest es el del tema claro** (`#f0f9ff`), así que
-   al abrir la app instalada en modo oscuro hay un destello blanco antes de
-   pintar. Cosmético.
-3. **Objetivos táctiles de la barra inferior** ~34 px de alto. Cumple el mínimo
+2. **Objetivos táctiles de la barra inferior** ~34 px de alto. Cumple el mínimo
    de WCAG (24 px) pero queda por debajo de los 44 px que recomienda Apple.
    Subir el `p-2` del `<nav>` lo resolvería; conviene comprobarlo en móvil real
    antes, porque roba alto a la pantalla.

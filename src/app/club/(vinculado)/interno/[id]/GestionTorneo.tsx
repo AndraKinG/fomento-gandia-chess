@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Boton } from "@/components/ui/Boton";
 import { Banner } from "@/components/ui/Banner";
@@ -19,6 +20,10 @@ export type ParVista = {
   blancasNombre: string;
   negrasNombre: string;
   resultado: "1" | "0.5" | "0" | null;
+  /** true si el socio que mira jugo esta partida: solo el puede subir sus jugadas. */
+  esMia: boolean;
+  /** Partida del repositorio ya enlazada, si la subio. */
+  gameId: string | null;
 };
 
 export type RondaVista = {
@@ -204,6 +209,31 @@ export function GestionTorneo({
               </div>
             </Tarjeta>
           ))}
+          {r.pares.some((p) => p.esMia && p.resultado !== null) && (
+            <p className="px-1 text-xs text-tinta-suave">
+              {r.pares
+                .filter((p) => p.esMia && p.resultado !== null)
+                .map((p) =>
+                  p.gameId ? (
+                    <Link
+                      key={p.id}
+                      href={`/club/partidas/${p.gameId}`}
+                      className="text-acento-texto underline"
+                    >
+                      Ver tus jugadas de esta ronda
+                    </Link>
+                  ) : (
+                    <Link
+                      key={p.id}
+                      href={`/club/partidas/nueva?emparejamiento=${p.id}`}
+                      className="text-acento-texto underline"
+                    >
+                      Subir tus jugadas de esta ronda
+                    </Link>
+                  )
+                )}
+            </p>
+          )}
           {r.descansaNombre && (
             <p className="px-1 text-xs text-tinta-suave">
               Descansa {r.descansaNombre} (suma medio punto)

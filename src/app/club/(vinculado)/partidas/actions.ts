@@ -20,7 +20,7 @@ function refrescar(id?: string): void {
  * datos no dejaría guardar una partida en nombre de otro.
  */
 export async function guardarPartida(
-  datos: DatosPartida & { tournamentId?: string; rivalId?: string }
+  datos: DatosPartida & { tournamentId?: string; rivalId?: string; pairingId?: string }
 ): Promise<Resultado> {
   const sesion = await sesionActual();
   if (!sesion?.playerId) return { error: "No tienes una ficha vinculada" };
@@ -57,6 +57,20 @@ export async function guardarPartida(
     .select("id")
     .single();
   if (error) return { error: error.message };
+
+  // Si la partida viene de un emparejamiento de torneo interno, se enlaza. Así la
+  // ficha del torneo puede llevar a las jugadas, que es lo que cierra el círculo
+  // entre los torneos del club y el repositorio.
+  //
+  // Un fallo aquí NO deshace la partida: ya está guardada y es lo que el socio
+  // quería. Perder el enlace es molesto; perder la partida, no vale.
+  if (datos.pairingId) {
+    await supabase
+      .from("club_pairings")
+      .update({ game_id: data.id })
+      .eq("id", datos.pairingId);
+    revalidatePath("/club/interno");
+  }
 
   refrescar();
   return { id: data.id };

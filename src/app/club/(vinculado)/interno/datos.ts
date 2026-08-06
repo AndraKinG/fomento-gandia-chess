@@ -14,7 +14,10 @@ export type TorneoInterno = {
   fechaInicio: string | null;
   notas: string | null;
   inscritos: { ficha: string; nombre: string; eloInicial: number }[];
-  rondas: (RondaJugada & { id: string; pares: { id: string; mesa: number }[] })[];
+  rondas: (RondaJugada & {
+    id: string;
+    pares: { id: string; mesa: number; gameId: string | null }[];
+  })[];
 };
 
 /**
@@ -53,7 +56,7 @@ export async function leerTorneo(
     idsRondas.length > 0
       ? await supabase
           .from("club_pairings")
-          .select("id, round_id, mesa, blancas_id, negras_id, resultado")
+          .select("id, round_id, mesa, blancas_id, negras_id, resultado, game_id")
           .in("round_id", idsRondas)
           .order("mesa")
       : { data: [] };
@@ -82,7 +85,7 @@ export async function leerTorneo(
           negras: p.negras_id,
           resultado: p.resultado as "1" | "0.5" | "0" | null,
         })),
-        pares: suyos.map((p) => ({ id: p.id, mesa: p.mesa })),
+        pares: suyos.map((p) => ({ id: p.id, mesa: p.mesa, gameId: p.game_id })),
       };
     }),
   };
