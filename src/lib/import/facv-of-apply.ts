@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseOrdenFuerzaFACV, URL_OF_CLUB } from "@/lib/import/facv-orden-fuerza";
 import { fetchConLimite } from "@/lib/import/red";
+import { buscarFicha, indicePorNombre } from "@/lib/import/cruzar-nombres";
 
 /**
  * Lógica interna (sin gate de autorización) que descarga la página pública
@@ -62,6 +63,21 @@ export async function sincronizarOrdenFuerzaFACVCore(): Promise<{
     );
     const vistos = new Set<string>();
 
+    // Índice de TODAS las fichas por conjunto de palabras del nombre, para poder
+    // reconocer a alguien cuya ficha está escrita en el otro formato.
+    //
+    // POR QUÉ HACE FALTA: hasta ahora este importador resolvía la ficha por `fide_id`
+    // y, si no, por nombre EXACTO. Y en `players` conviven dos formatos —"Apellidos,
+    // Nombre" del propio orden de fuerza y "Nombre Apellidos" de las fichas creadas a
+    // mano— así que una ficha manual de alguien todavía sin federar se quedaba sin
+    // reconocer en cuanto la FACV lo publicaba: el importador creaba una SEGUNDA ficha
+    // y ese socio acababa con dos, una con su cuenta vinculada y sus partidas y otra en
+    // el orden de fuerza. Con el índice se funden solas.
+    const { data: todasLasFichas } = await admin.from("players").select("id, nombre");
+    const indicePorPalabras = indicePorNombre(
+      (todasLasFichas ?? []).map((p) => ({ id: p.id as string, nombre: p.nombre as string }))
+    );
+
     let creados = 0;
     let actualizados = 0;
 
@@ -76,7 +92,8 @@ export async function sincronizarOrdenFuerzaFACVCore(): Promise<{
     const resueltas: FilaResuelta[] = [];
 
     for (const fila of filas) {
-      // a. Resolver el jugador: por fide_id, si no por nombre exacto, si no crearlo.
+      // a. Resolver el jugador: por fide_id, si no por nombre exacto, si no por
+      // conjunto de palabras del nombre, y si no, crearlo.
       let playerId: string | null = null;
       if (fila.fideId) {
         const { data } = await admin
@@ -99,6 +116,11 @@ export async function sincronizarOrdenFuerzaFACVCore(): Promise<{
         }
         playerId = data?.id ?? null;
       }
+      // c. Por conjunto de palabras del nombre, que reconoce el otro formato. El
+      // índice ya descarta las claves ambiguas, así que esto nunca elige entre dos.
+      if (!playerId) {
+        playerId = buscarFicha(fila.nombre, indicePorPalabras);
+      }
       if (!playerId) {
         const { data: creado, error: createErr } = await admin
           .from("players")
@@ -109,6 +131,17 @@ export async function sincronizarOrdenFuerzaFACVCore(): Promise<{
         }
         playerId = creado.id;
       }
+      // Si la ficha se reconoció por nombre y la FACV ya le da un `fide_id` que la
+      // ficha no tenía, se le guarda: es lo que hará que la próxima vez se resuelva por
+      // id y no dependa de cómo esté escrito el nombre.
+      if (playerId && fila.fideId) {
+        await admin
+          .from("players")
+          .update({ fide_id: fila.fideId })
+          .eq("id", playerId)
+          .is("fide_id", null);
+      }
+
       // playerId está garantizado no-nulo aquí: o se resolvió arriba o se creó.
       const idJugador = playerId as string;
       vistos.add(idJugador);

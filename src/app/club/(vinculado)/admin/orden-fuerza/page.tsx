@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { importarOrdenFuerza, sincronizarOrdenFuerzaFACV } from "./actions";
+import { crearFichaManual, importarOrdenFuerza, sincronizarOrdenFuerzaFACV } from "./actions";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Banner } from "@/components/ui/Banner";
 import { ChipElo } from "@/components/ui/ChipElo";
@@ -52,6 +52,16 @@ export default async function OrdenFuerzaPage({
       String(formData.get("season")),
       String(formData.get("texto"))
     );
+    const params = new URLSearchParams({
+      msg: resultado.ok ?? resultado.error ?? "",
+      tipo: resultado.ok ? "ok" : "error",
+    });
+    redirect(`/club/admin/orden-fuerza?${params.toString()}`);
+  }
+
+  async function accionCrearFicha(formData: FormData) {
+    "use server";
+    const resultado = await crearFichaManual(formData);
     const params = new URLSearchParams({
       msg: resultado.ok ?? resultado.error ?? "",
       tipo: resultado.ok ? "ok" : "error",
@@ -142,7 +152,60 @@ export default async function OrdenFuerzaPage({
         ) : null}
         <details className="group rounded-xl border border-borde bg-tarjeta p-3">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-medium text-tinta">
-            Importación manual (respaldo)
+            Crear una ficha a mano
+            <span
+              aria-hidden
+              className="shrink-0 text-tinta-suave transition-transform group-open:rotate-180"
+            >
+              ▾
+            </span>
+          </summary>
+          <p className="mt-2 text-sm text-tinta-suave">
+            Para el socio que acaba de entrar y <b className="font-semibold">todavía no
+            está federado</b>. Sin ficha no puede vincular su cuenta, porque la lista de
+            vinculación sale del orden de fuerza. Se coloca por ELO, detrás del último
+            jugador igual o más fuerte.
+          </p>
+          <p className="mt-2 text-sm text-tinta-suave">
+            Cuando la FACV lo publique, la sincronización semanal{" "}
+            <b className="font-semibold">funde esta ficha con la oficial</b> en vez de
+            crear otra: la reconoce por el nombre aunque esté escrito del otro modo. Si
+            sabes su ID FIDE, ponlo — así el cruce no depende del nombre.
+          </p>
+          <form action={accionCrearFicha} className="mt-3 flex flex-col gap-3">
+            <input
+              name="nombre"
+              required
+              placeholder="Nombre y apellidos"
+              className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta"
+            />
+            <div className="grid gap-3 sm:grid-cols-3">
+              <input name="elo_fide" type="number" min={0} max={3500} placeholder="ELO FIDE"
+                className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta" />
+              <input name="elo_feda" type="number" min={0} max={3500} placeholder="ELO FEDA"
+                className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta" />
+              <input name="elo_otro" type="number" min={0} max={3500} placeholder="ELO estimado"
+                className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta" />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <input name="fide_id" placeholder="ID FIDE (si lo tiene)"
+                className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta" />
+              <input name="feda_id" placeholder="ID FEDA (si lo tiene)"
+                className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta" />
+            </div>
+            <p className="text-xs text-tinta-suave">
+              Los ELO son opcionales. Sin ninguno se le asigna 1400, que es lo que manda
+              el reglamento (art. 52.1), y quedará al final del orden.
+            </p>
+            <BotonAccion variante="solido" trabajando="Creando la ficha…">
+              Crear ficha y colocarla en el orden
+            </BotonAccion>
+          </form>
+        </details>
+
+        <details className="group rounded-xl border border-borde bg-tarjeta p-3">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-medium text-tinta">
+            Importación manual del orden completo (respaldo)
             <span
               aria-hidden
               className="shrink-0 text-tinta-suave transition-transform group-open:rotate-180"
