@@ -110,10 +110,8 @@ export default async function OrdenFuerzaPage({
               ))}
             </ul>
             <p className="mt-2 text-sm">
-              Han jugado alguna jornada del Interclubs pero su nombre no cuadra con
-              ninguna ficha. Si acaban de entrar al club, sincroniza el orden de fuerza:
-              la FACV les da un número «bis». Si ya están, revisa cómo está escrito el
-              nombre en su ficha.
+              Si acaban de entrar, sincroniza el orden de fuerza. Si ya están, revisa
+              cómo está escrito el nombre en su ficha.
             </p>
           </Banner>
         )}
@@ -162,15 +160,12 @@ export default async function OrdenFuerzaPage({
           </summary>
           <p className="mt-2 text-sm text-tinta-suave">
             Para el socio que acaba de entrar y <b className="font-semibold">todavía no
-            está federado</b>. Sin ficha no puede vincular su cuenta, porque la lista de
-            vinculación sale del orden de fuerza. Se coloca por ELO, detrás del último
-            jugador igual o más fuerte.
+            está federado</b>: sin ficha no puede vincular su cuenta. Se coloca por ELO.
           </p>
           <p className="mt-2 text-sm text-tinta-suave">
             Cuando la FACV lo publique, la sincronización semanal{" "}
-            <b className="font-semibold">funde esta ficha con la oficial</b> en vez de
-            crear otra: la reconoce por el nombre aunque esté escrito del otro modo. Si
-            sabes su ID FIDE, ponlo — así el cruce no depende del nombre.
+            <b className="font-semibold">funde esta ficha con la oficial</b>. Si sabes su
+            ID FIDE, ponlo.
           </p>
           <form action={accionCrearFicha} className="mt-3 flex flex-col gap-3">
             <input
@@ -194,8 +189,8 @@ export default async function OrdenFuerzaPage({
                 className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta" />
             </div>
             <p className="text-xs text-tinta-suave">
-              Los ELO son opcionales. Sin ninguno se le asigna 1400, que es lo que manda
-              el reglamento (art. 52.1), y quedará al final del orden.
+              Los ELO son opcionales. Sin ninguno se le asigna 1400 (RGC 52.1) y queda al
+              final del orden.
             </p>
             <BotonAccion variante="solido" trabajando="Creando la ficha…">
               Crear ficha y colocarla en el orden

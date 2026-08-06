@@ -101,7 +101,7 @@ export default async function TorneosPage({
             detalle={
               verTodos || verPasados
                 ? undefined
-                : "Mira el calendario completo y di que vas a alguno: en cuanto lo hagas aparecerá aquí para el resto del club."
+                : "Di que vas a alguno del calendario y aparecerá aquí para todos."
             }
           />
         )}

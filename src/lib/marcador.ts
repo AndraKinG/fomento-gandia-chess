@@ -53,6 +53,9 @@ export type MarcadorPreferidoInput = {
    * si hay convocatoria publicada. `undefined`/`null` si no hay convocatoria
    * (nada que anotar por tablero todavía). */
   boardsMarcador?: Marcador | null;
+  /** Marcador calculado del ACTA OFICIAL (`match_boards`, importada de
+   * chess-results). Existe para toda jornada jugada. */
+  actaMarcador?: Marcador | null;
   /** `matches.marcador_propio`/`marcador_rival`: solo los rellena la sync
    * FACV (Task 8, Fase 1C) cuando el capitán NO ha anotado nada por tablero. */
   marcadorPropio?: number | null;
@@ -64,7 +67,7 @@ export type MarcadorPreferidoResultado = {
   /** true si el marcador viene de tableros pero AÚN quedan tableros sin
    * resultado (completos < total): quien lo muestre puede señalarlo. */
   parcial: boolean;
-  fuente: "tableros" | "facv";
+  fuente: "tableros" | "acta" | "facv";
 };
 
 /**
@@ -80,11 +83,23 @@ export type MarcadorPreferidoResultado = {
  * por tablero anotado (aunque la convocatoria no esté completa todavía), ese
  * es el marcador que se muestra — es el dato más fino y más actual, y
  * `decidirEncuentro` (facv-resultados-apply.ts) ya nunca pisa estos datos.
- * El marcador global de FACV (`marcadorPropio`/`marcadorRival`) solo se usa
- * como *fallback* cuando no hay NINGÚN resultado por tablero todavía.
+ * EL ACTA OFICIAL SE METIÓ EN MEDIO (2026-08-06), entre los tableros del capitán y el
+ * marcador global de la FACV. Dos razones:
+ *
+ * - Es MEJOR dato que el marcador global aunque venga de la misma federación: es el
+ *   mismo resultado pero tablero a tablero, así que se puede decir si está completo.
+ * - Sin ella había jornadas jugadas SIN NINGÚN marcador. La sync de la FACV no escribe
+ *   `marcador_propio` cuando el capitán ya ha anotado por tablero, así que si esa
+ *   convocatoria desaparece —pasó al borrar una de pruebas— la jornada se queda sin las
+ *   dos fuentes y en la lista aparece sin marcador. Con el acta eso no puede pasar:
+ *   existe para toda jornada jugada.
+ *
+ * Los tableros del capitán SIGUEN mandando: es lo que él ha anotado en vivo y puede ir
+ * por delante de lo que publique la federación.
  */
 export function marcadorPreferido({
   boardsMarcador,
+  actaMarcador,
   marcadorPropio,
   marcadorRival,
 }: MarcadorPreferidoInput): MarcadorPreferidoResultado | null {
@@ -93,6 +108,13 @@ export function marcadorPreferido({
       texto: boardsMarcador.texto,
       parcial: boardsMarcador.completos < boardsMarcador.total,
       fuente: "tableros",
+    };
+  }
+  if (actaMarcador && actaMarcador.completos > 0) {
+    return {
+      texto: actaMarcador.texto,
+      parcial: actaMarcador.completos < actaMarcador.total,
+      fuente: "acta",
     };
   }
   if (marcadorPropio !== null && marcadorPropio !== undefined && marcadorRival !== null && marcadorRival !== undefined) {

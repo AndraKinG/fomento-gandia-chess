@@ -70,8 +70,8 @@ export default async function InternoPage() {
             titulo="Todavía no hay torneos internos"
             detalle={
               sesion?.esJunta
-                ? "Organiza el primero: la app hace los emparejamientos, lleva las rondas y calcula el ELO del club."
-                : "Cuando el club organice uno, aparecerá aquí con sus rondas y su clasificación."
+                ? "Organiza el primero: la app empareja, lleva las rondas y calcula el ELO."
+                : "Aquí aparecerán con sus rondas y su clasificación."
             }
           />
         )}

@@ -135,7 +135,7 @@ export default async function EquiposPage() {
           <Acceso
             href="/club/orden-fuerza"
             titulo="Ranking oficial"
-            detalle="ELO de la FACV y orden de fuerza del club"
+            detalle="ELO de la FACV y orden de fuerza"
           />
         </Rejilla>
 

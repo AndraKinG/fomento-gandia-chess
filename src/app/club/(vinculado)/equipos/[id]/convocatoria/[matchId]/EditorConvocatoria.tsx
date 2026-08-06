@@ -68,7 +68,11 @@ function LineaInfraccion({ infraccion }: { infraccion: Infraccion }) {
         esError ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400"
       }`}
     >
-      {esError ? "⛔" : "⚠"} [{infraccion.articulo}] {infraccion.mensaje}
+      {esError ? "⛔" : "⚠"}{" "}
+      {/* El artículo solo se enseña si es uno del reglamento: "borrador" es la
+          etiqueta interna del validador para los avisos que no vienen del RGC. */}
+      {infraccion.articulo !== "borrador" && `[${infraccion.articulo}] `}
+      {infraccion.mensaje}
     </p>
   );
 }
@@ -113,6 +117,11 @@ export function EditorConvocatoria({
     (i) => i.nivel === "error" && i.articulo === "estructural"
   ).length;
   const infraccionesGlobales = infracciones.filter((i) => i.tablero === null);
+  /** Tableros sin asignar, para resumirlos en una línea en vez de una por hueco. */
+  const vacios = infracciones
+    .filter((i) => i.articulo === "borrador" && i.tablero !== null)
+    .map((i) => i.tablero as number)
+    .sort((a, b) => a - b);
 
   const asignadoPorTablero = useMemo(() => new Map(tableros.map((t) => [t.tablero, t.playerId])), [tableros]);
   const tableroPorJugador = useMemo(() => new Map(tableros.map((t) => [t.playerId, t.tablero])), [tableros]);
@@ -214,19 +223,33 @@ export function EditorConvocatoria({
           <ContadorInfracciones errores={erroresCount} avisos={avisosCount} />
         </div>
 
-        {infraccionesGlobales.length > 0 && (
+        {(infraccionesGlobales.length > 0 || vacios.length > 1) && (
           <Tarjeta compacta>
+            {/* UN aviso en vez de ocho. El validador emite "el tablero N está vacío"
+                por cada hueco, y con la convocatoria recién empezada eso son ocho
+                líneas idénticas que tapan las infracciones de verdad. */}
+            {vacios.length > 1 && (
+              <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                ⚠ Faltan {vacios.length} tableros por asignar: {vacios.join(", ")}.
+              </p>
+            )}
             {infraccionesGlobales.map((inf, i) => (
               <LineaInfraccion key={i} infraccion={inf} />
             ))}
           </Tarjeta>
         )}
 
+        <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
         {Array.from({ length: config.numTableros }, (_, i) => i + 1).map((t) => {
           const playerId = asignadoPorTablero.get(t);
           const jugador = playerId ? porId.get(playerId) : undefined;
           const color = colorDeTablero(t, esLocal);
-          const infraccionesTablero = infracciones.filter((inf) => inf.tablero === t);
+          const infraccionesTablero = infracciones.filter(
+            (inf) =>
+              inf.tablero === t &&
+              // El "está vacío" ya se resume arriba cuando falta más de uno.
+              !(vacios.length > 1 && inf.articulo === "borrador")
+          );
           const seleccionado = seleccion?.tipo === "tablero" && seleccion.tablero === t;
           const noDisponible = playerId ? disponibilidad[playerId] === "no_disponible" : false;
 
@@ -247,7 +270,9 @@ export function EditorConvocatoria({
                   {jugador ? (
                     <span className="min-w-0 flex-1 truncate text-sm font-medium text-tinta">{jugador.nombre}</span>
                   ) : (
-                    <span className="flex-1 text-sm text-tinta-suave">Toca para asignar</span>
+                    <span className="flex-1 text-sm text-tinta-suave">
+                      {soloLectura ? "Sin asignar" : "Toca para asignar"}
+                    </span>
                   )}
                 </button>
                 {jugador && !soloLectura && (
@@ -272,6 +297,7 @@ export function EditorConvocatoria({
             </Tarjeta>
           );
         })}
+        </div>
       </section>
 
       {!soloLectura && (

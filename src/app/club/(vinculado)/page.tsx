@@ -200,6 +200,7 @@ export default async function Home() {
     miDisponibilidad,
     { data: misDisponibilidades },
     { data: convocatoria },
+    { data: actaHome },
     { data: miInscripcion },
     { data: rondasInterno },
   ] = await Promise.all([
@@ -238,6 +239,14 @@ export default async function Home() {
           .eq("match_id", jugada.id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    // El acta oficial de esa jornada: es la que decide el marcador cuando el capitán
+    // no anotó por tablero, que es el caso de las 31 jornadas de 2026.
+    jugada
+      ? supabase
+          .from("match_boards")
+          .select("resultado")
+          .eq("match_id", jugada.id)
+      : Promise.resolve({ data: [] as { resultado: string | null }[] }),
     playerId && internoVivo
       ? supabase
           .from("club_tournament_players")
@@ -263,8 +272,10 @@ export default async function Home() {
   const respondidas = new Set((misDisponibilidades ?? []).map((d) => d.match_id));
   const faltaDisponibilidad = idsVentana.some((id) => !respondidas.has(id));
 
+  const filasActaHome = (actaHome ?? []) as unknown as { resultado: string | null }[];
+
   // Marcador de la jornada jugada, con la precedencia compartida de la app: los
-  // tableros del capitán primero, la sync de la FACV solo como respaldo.
+  // tableros del capitán primero, después el acta oficial y la sync de la FACV al final.
   //
   // `board_results` llega como OBJETO, no como lista: su clave ajena es también
   // su clave primaria, así que PostgREST lo trata como relación 1:1. Se normaliza
@@ -283,6 +294,12 @@ export default async function Home() {
           tableros.length > 0
             ? calcularMarcador(resultadosTablero, tableros.length)
             : null,
+        actaMarcador: calcularMarcador(
+          filasActaHome
+            .filter((f) => f.resultado !== null)
+            .map((f) => Number(f.resultado)),
+          filasActaHome.length
+        ),
         marcadorPropio: jugada.marcador_propio,
         marcadorRival: jugada.marcador_rival,
       })
@@ -361,7 +378,7 @@ export default async function Home() {
                   <EstadoVacio
                     icono="♟"
                     titulo="Aún no hay jornadas"
-                    detalle="Cuando arranque el interclubs verás aquí tu próxima jornada"
+                    detalle="Aquí verás tu próxima jornada"
                   />
                 </Tarjeta>
               )}
@@ -467,7 +484,7 @@ export default async function Home() {
               ) : (
                 <Tarjeta compacta>
                   <p className="text-sm text-tinta-suave">
-                    Ahora mismo no hay ningún torneo del club en marcha.
+                    No hay ningún torneo del club en marcha.
                   </p>
                   <Link
                     href="/club/torneos/interno/ranking"

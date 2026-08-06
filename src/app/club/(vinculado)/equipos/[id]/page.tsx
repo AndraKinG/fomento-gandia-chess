@@ -107,6 +107,25 @@ export default async function EquipoDetallePage({
   // marcador de tableros si ya estaba completo, y la precedencia de la fila
   // (ver JSX más abajo) estaba INVERTIDA: prefería el marcador global de la
   // sync FACV incluso habiendo resultados por tablero más fiables.
+  // Acta oficial de cada jornada, para que ninguna jugada se quede sin marcador: la
+  // sync de la FACV no escribe `marcador_propio` si el capitán anotó por tablero, así
+  // que sin el acta una jornada podía no tener ninguna de las dos fuentes.
+  const { data: filasActa } = idsJornadas.length > 0
+    ? await supabase.from("match_boards").select("match_id, resultado").in("match_id", idsJornadas)
+    : { data: [] };
+  const actaPorMatch = new Map<string, { resultados: number[]; total: number }>();
+  for (const f of filasActa ?? []) {
+    const clave = f.match_id as string;
+    const acumulado = actaPorMatch.get(clave) ?? { resultados: [], total: 0 };
+    acumulado.total++;
+    if (f.resultado !== null) acumulado.resultados.push(Number(f.resultado));
+    actaPorMatch.set(clave, acumulado);
+  }
+  const marcadorPorActaDeMatch = new Map<string, ReturnType<typeof calcularMarcador>>();
+  for (const [matchId, { resultados, total }] of actaPorMatch) {
+    marcadorPorActaDeMatch.set(matchId, calcularMarcador(resultados, total));
+  }
+
   const marcadorPorTablerosDeMatch = new Map<string, ReturnType<typeof calcularMarcador>>();
   for (const [matchId, idsTablero] of idsTableroPorMatch) {
     if (idsTablero.length === 0) continue;
@@ -178,6 +197,7 @@ export default async function EquipoDetallePage({
               {(jornadas ?? []).map((j) => {
                 const marcador = marcadorPreferido({
                   boardsMarcador: marcadorPorTablerosDeMatch.get(j.id),
+                  actaMarcador: marcadorPorActaDeMatch.get(j.id),
                   marcadorPropio: j.marcador_propio,
                   marcadorRival: j.marcador_rival,
                 });

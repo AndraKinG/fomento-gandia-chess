@@ -5,7 +5,7 @@ import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { SelectorDisponibilidad } from "./SelectorDisponibilidad";
-import { Contenedor } from "@/components/ui/Contenedor";
+import { Contenedor, Rejilla } from "@/components/ui/Contenedor";
 
 type Valor = "disponible" | "no_disponible" | "duda";
 
@@ -95,7 +95,8 @@ export default async function DisponibilidadPage() {
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera titulo="Disponibilidad" subtitulo="Marca si puedes jugar cada jornada" volverA="/club/equipos" medida="panel" />
-      <Contenedor medida="panel" className="space-y-4">
+      <Contenedor medida="panel">
+        <Rejilla>
         {[...grupos.entries()].map(([fecha, grupo]) => {
           // El grupo solo cuenta como "respondido" si TODAS sus jornadas
           // (A/B/C del mismo día) tienen fila de disponibilidad y, además,
@@ -108,15 +109,22 @@ export default async function DisponibilidadPage() {
           const mismoEstado = todasRespondidas && estados.every((e) => e === estados[0]);
           const valorInicial = mismoEstado ? (estados[0] as Valor) : null;
           return (
-            <Tarjeta key={fecha} className="flex flex-col gap-2">
+            <Tarjeta
+              key={fecha}
+              // Destacada mientras no la hayas contestado: es lo que se viene a hacer
+              // aquí, y con varias fechas a la vez hay que ver de un golpe cuál falta.
+              destacada={valorInicial === null}
+              className="flex h-full flex-col gap-2"
+            >
               <p className="font-semibold text-tinta">{formatearFechaGrupo(fecha)}</p>
-              <p className="text-sm text-tinta-suave">
-                Juegan: {grupo.equipos.join(" · ")}
-              </p>
-              <SelectorDisponibilidad fecha={fecha} valorInicial={valorInicial} />
+              <p className="text-sm text-tinta-suave">{grupo.equipos.join(" · ")}</p>
+              <div className="mt-auto pt-1">
+                <SelectorDisponibilidad fecha={fecha} valorInicial={valorInicial} />
+              </div>
             </Tarjeta>
           );
         })}
+        </Rejilla>
       </Contenedor>
     </main>
   );

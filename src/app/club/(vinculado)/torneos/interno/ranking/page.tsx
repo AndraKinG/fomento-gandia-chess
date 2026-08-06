@@ -88,23 +88,18 @@ export default async function RankingPage() {
 
             <Tarjeta compacta>
               <p className="text-xs text-tinta-suave">
-                Cada uno arranca con su ELO oficial (FACV, FIDE o FEDA), y la
-                columna <b className="font-semibold">Dif.</b> es cuánto ha subido o
-                bajado jugando en el club. El número entre paréntesis son las
-                partidas jugadas cuando todavía son menos de{" "}
-                {PARTIDAS_PROVISIONALES}: hasta ahí el ELO se mueve el doble para
-                llegar antes a su nivel real.
+                Cada uno arranca con su ELO oficial. <b className="font-semibold">Dif.</b>{" "}
+                es lo que ha subido o bajado jugando en el club. El número entre
+                paréntesis son las partidas jugadas: con menos de{" "}
+                {PARTIDAS_PROVISIONALES} el ELO se mueve el doble.
               </p>
               <p className="mt-2 text-xs text-tinta-suave">
-                Solo cuentan las partidas de torneos internos. Las del repositorio no
-                afectan al ranking: cada uno sube las que quiere y no habría forma de
-                comprobarlas.
+                Solo cuentan las partidas de torneos internos, no las del repositorio.
               </p>
               {/* Los dos rankings se confunden con facilidad, así que cada uno dice
                   dónde está el otro. */}
               <p className="mt-2 text-xs text-tinta-suave">
-                El ranking <b className="font-semibold">oficial</b> —ELO de la FACV y
-                orden de fuerza, que es el que manda en las convocatorias— está en{" "}
+                El ranking oficial de la FACV está en{" "}
                 <Link
                   href="/club/orden-fuerza"
                   className="font-semibold text-acento-texto underline"

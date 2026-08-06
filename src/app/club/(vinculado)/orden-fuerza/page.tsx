@@ -124,7 +124,7 @@ export default async function OrdenFuerzaPage({
           <EstadoVacio
             icono="📋"
             titulo="Todavía no hay orden de fuerza"
-            detalle="Se importa de la web de la FACV al empezar la temporada. En cuanto esté, aquí aparece el ranking del club."
+            detalle="La FACV lo publica al empezar la temporada."
           />
         ) : (
           <>
@@ -142,9 +142,8 @@ export default async function OrdenFuerzaPage({
               </div>
               {season && (
                 <p className="mt-3 text-xs text-tinta-suave">
-                  Temporada {season.nombre}. El orden lo publica la FACV y es el que
-                  manda en las convocatorias: nadie puede jugar en un tablero por
-                  delante de otro con mejor número.
+                  {season.nombre}. Lo publica la FACV y es el orden que manda en las
+                  convocatorias.
                 </p>
               )}
             </Tarjeta>
@@ -225,17 +224,13 @@ export default async function OrdenFuerzaPage({
 
             <Tarjeta compacta>
               <p className="text-xs text-tinta-suave">
-                <b className="font-semibold">Oficial</b> es el ELO que usa la FACV para
-                el orden de fuerza. Cuando falta, el reglamento manda usar el mayor
-                entre FEDA y FIDE (art. 52.1). Un número con{" "}
-                <b className="font-semibold">bis</b> es de alguien que entró después de
-                publicarse la lista: se coloca junto a otro de fuerza parecida en vez de
-                recolocar toda la lista.
+                <b className="font-semibold">Oficial</b>: el ELO con el que la FACV hace
+                el orden. Si falta, el mayor entre FEDA y FIDE (RGC 52.1).{" "}
+                <b className="font-semibold">bis</b>: entró después de publicarse la
+                lista.
               </p>
               <p className="mt-2 text-xs text-tinta-suave">
-                Este ranking es el oficial. El del{" "}
-                <b className="font-semibold">ELO propio del club</b>, que sale solo de
-                los torneos internos, está en Torneos → Del club.
+                El ELO propio del club está en Torneos → Del club.
               </p>
             </Tarjeta>
           </>

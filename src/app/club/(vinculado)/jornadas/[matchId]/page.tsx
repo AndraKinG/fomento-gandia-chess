@@ -99,6 +99,7 @@ function Acta({ filas, miFicha }: { filas: ActaFila[]; miFicha: string | null })
                     <ChipTablero
                       tablero={f.tablero}
                       color={f.nuestras_blancas ? "blancas" : "negras"}
+                      compacto
                     />
                   </td>
                   <td className="py-1.5 pr-2 text-tinta">
@@ -216,6 +217,13 @@ export default async function JornadaPage({
   );
   const marcador = marcadorPreferido({
     boardsMarcador,
+    // El acta ya está cargada para la tabla de abajo: aquí solo se suma.
+    actaMarcador: calcularMarcador(
+      filasActa
+        .filter((f) => f.resultado !== null)
+        .map((f) => Number(f.resultado)),
+      filasActa.length
+    ),
     marcadorPropio: match.marcador_propio,
     marcadorRival: match.marcador_rival,
   });
@@ -277,8 +285,7 @@ export default async function JornadaPage({
             <h2 className="font-semibold text-tinta">Acta oficial</h2>
             <Acta filas={filasActa} miFicha={sesion?.playerId ?? null} />
             <p className="px-1 text-xs text-tinta-suave">
-              Tal y como la publica la FACV en chess-results. Se sincroniza sola con
-              los resultados; el color es el de nuestro jugador en ese tablero.
+              Según la FACV. El color es el de nuestro jugador.
             </p>
           </section>
         )}
