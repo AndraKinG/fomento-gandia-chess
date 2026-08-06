@@ -7,6 +7,7 @@ import { Boton } from "@/components/ui/Boton";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { formatearRangoFechas } from "@/lib/torneos/fechas";
 import { Contenedor, REJILLA } from "@/components/ui/Contenedor";
+import { PestanasTorneos } from "@/components/ui/Pestanas";
 
 const ETIQUETA_ESTADO: Record<string, string> = {
   inscripcion: "Inscripción abierta",
@@ -38,17 +39,30 @@ export default async function InternoPage() {
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Club" subtitulo="Torneos internos y ranking propio" medida="panel" />
+      <Cabecera
+        titulo="Torneos del club"
+        subtitulo="Los que organizamos nosotros, con ELO propio"
+        medida="panel"
+      />
       <Contenedor medida="panel" className="space-y-4">
-        <Boton variante="degradado" href="/club/interno/ranking" className="w-full">
-          Ranking de ELO del club
-        </Boton>
+        <PestanasTorneos activa="interno" />
 
-        {sesion?.esJunta && (
-          <Boton variante="secundario" href="/club/interno/nuevo" className="w-full text-sm">
-            Organizar un torneo interno
+        {/* Los dos botones en fila desde tableta: apilados ocupaban dos líneas
+            enteras antes de llegar a lo que importa, la lista de torneos. */}
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Boton variante="degradado" href="/club/torneos/interno/ranking" className="flex-1">
+            Ranking de ELO del club
           </Boton>
-        )}
+          {sesion?.esJunta && (
+            <Boton
+              variante="secundario"
+              href="/club/torneos/interno/nuevo"
+              className="flex-1 text-sm"
+            >
+              Organizar un torneo interno
+            </Boton>
+          )}
+        </div>
 
         {(torneos ?? []).length === 0 && (
           <EstadoVacio
@@ -65,7 +79,7 @@ export default async function InternoPage() {
         <ul className={REJILLA[2]}>
           {(torneos ?? []).map((t) => (
             <li key={t.id}>
-              <Link href={`/club/interno/${t.id}`} className="block">
+              <Link href={`/club/torneos/interno/${t.id}`} className="block">
                 <Tarjeta
                   destacada={t.estado === "en_curso"}
                   className="flex items-start justify-between gap-3 transition hover:border-borde-acento"

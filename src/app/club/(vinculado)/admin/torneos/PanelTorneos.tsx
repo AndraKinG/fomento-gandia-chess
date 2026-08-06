@@ -102,7 +102,7 @@ export function PanelTorneos({ torneos }: { torneos: TorneoAdmin[] }) {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="font-semibold text-tinta">
-                <Link href={`/club/torneos/${t.id}`} className="hover:underline">
+                <Link href={`/club/torneos/facv/${t.id}`} className="hover:underline">
                   {t.nombre}
                 </Link>
               </p>

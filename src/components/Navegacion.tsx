@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { Escudo } from "@/components/ui/Escudo";
 import {
   IconoAdmin,
-  IconoClub,
   IconoInicio,
   IconoInterclubs,
   IconoPartidas,
@@ -43,7 +42,10 @@ const SECCIONES: Seccion[] = [
     Icono: IconoInterclubs,
     rutas: ["/club/equipos", "/club/disponibilidad", "/club/jornadas"],
   },
-  { href: "/club/interno", label: "Club", Icono: IconoClub, rutas: ["/club/interno"] },
+  // Una sola entrada para los dos tipos de torneo, con pestañas dentro: para el
+  // socio los dos son "torneos", y separarlos en dos secciones dejaba siete
+  // pestañas que no caben en un móvil. `rutas` es el prefijo padre, así que la
+  // entrada queda marcada tanto en los de fuera como en los del club.
   { href: "/club/torneos", label: "Torneos", Icono: IconoTorneos, rutas: ["/club/torneos"] },
   {
     href: "/club/partidas",

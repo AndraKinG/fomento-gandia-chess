@@ -19,7 +19,7 @@ export default async function TorneoInternoPage({
   const sesion = await sesionActual();
 
   const torneo = await leerTorneo(supabase, id);
-  if (!torneo) redirect("/club/interno");
+  if (!torneo) redirect("/club/torneos/interno");
 
   // Todos los jugadores activos, para la lista de inscripción.
   const { data: jugadores } = await supabase
@@ -70,7 +70,7 @@ export default async function TorneoInternoPage({
         subtitulo={`${torneo.sistema === "liguilla" ? "Liguilla" : "Suizo"}${
           torneo.rondasTotales ? ` · ${torneo.rondasTotales} rondas` : ""
         }`}
-        volverA="/club/interno" medida="panel"
+        volverA="/club/torneos/interno" medida="panel"
       />
       <Contenedor medida="panel" className="space-y-4">
         {torneo.estado === "terminado" && (

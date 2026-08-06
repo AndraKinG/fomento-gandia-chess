@@ -17,7 +17,7 @@ export default async function RankingPage() {
       <Cabecera
         titulo="Ranking del club"
         subtitulo="ELO interno, solo con torneos del club"
-        volverA="/club/interno" medida="panel"
+        volverA="/club/torneos/interno" medida="panel"
       />
       <Contenedor medida="panel" className="space-y-4">
         {ranking.length === 0 && (

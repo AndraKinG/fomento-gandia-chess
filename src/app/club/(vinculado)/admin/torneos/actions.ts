@@ -12,9 +12,9 @@ type Resultado = { error?: string };
 
 function refrescar(id?: string): void {
   revalidatePath("/club/admin/torneos");
-  revalidatePath("/club/torneos");
+  revalidatePath("/club/torneos/facv");
   revalidatePath("/club");
-  if (id) revalidatePath(`/club/torneos/${id}`);
+  if (id) revalidatePath(`/club/torneos/facv/${id}`);
 }
 
 /**
@@ -66,7 +66,7 @@ export async function cambiarDeInteres(
         await enviarPushAMuchos(ids, {
           title: `Torneo: ${torneo.nombre}`,
           body: `${formatearRangoFechas(torneo.fecha_inicio, torneo.fecha_fin)}${torneo.lugar ? ` en ${torneo.lugar}` : ""}. ¿Vas?`,
-          url: `/club/torneos/${tournamentId}`,
+          url: `/club/torneos/facv/${tournamentId}`,
         });
       }
     } catch {

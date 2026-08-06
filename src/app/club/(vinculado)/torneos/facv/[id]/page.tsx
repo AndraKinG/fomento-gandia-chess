@@ -26,7 +26,7 @@ export default async function TorneoPage({
     .select("id, nombre, fecha_inicio, fecha_fin, lugar, organizador, hora, ritmo, info_extra, url_bases")
     .eq("id", id)
     .maybeSingle();
-  if (!torneo) redirect("/club/torneos");
+  if (!torneo) redirect("/club/torneos/facv");
 
   const [{ data: coches }, { data: asientos }, { data: asistencias }, { data: jugadores }] =
     await Promise.all([
@@ -103,7 +103,7 @@ export default async function TorneoPage({
       <Cabecera
         titulo={torneo.nombre}
         subtitulo={formatearRangoFechas(torneo.fecha_inicio, torneo.fecha_fin)}
-        volverA="/club/torneos"
+        volverA="/club/torneos/facv"
       />
       <Contenedor medida="lectura" className="space-y-4">
         {enCurso && <Banner tipo="ok">Se está jugando ahora mismo.</Banner>}

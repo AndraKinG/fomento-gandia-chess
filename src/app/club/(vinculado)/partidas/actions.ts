@@ -69,7 +69,7 @@ export async function guardarPartida(
       .from("club_pairings")
       .update({ game_id: data.id })
       .eq("id", datos.pairingId);
-    revalidatePath("/club/interno");
+    revalidatePath("/club/torneos/interno");
   }
 
   refrescar();

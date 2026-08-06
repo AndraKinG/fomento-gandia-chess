@@ -48,16 +48,6 @@ export function IconoInterclubs({ className }: Props) {
   );
 }
 
-/** Club: corona, los torneos internos y el ELO propio. */
-export function IconoClub({ className }: Props) {
-  return (
-    <svg {...COMUN} className={className}>
-      <path d="M4 8l3 3.5L12 5l5 6.5L20 8l-1.5 9h-13L4 8Z" />
-      <path d="M5.5 20h13" />
-    </svg>
-  );
-}
-
 /** Torneos: copa. */
 export function IconoTorneos({ className }: Props) {
   return (

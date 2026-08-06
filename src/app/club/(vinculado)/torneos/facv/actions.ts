@@ -159,12 +159,12 @@ async function avisar(avisos: Aviso[], nombreTorneo: string): Promise<void> {
           ? {
               title: "Se ha liberado una plaza",
               body: `${nombrePorFicha.get(aviso.pasajeroId) ?? "Un socio"} ya no va a ${nombreTorneo}.`,
-              url: "/club/torneos",
+              url: "/club/torneos/facv",
             }
           : {
               title: "Te has quedado sin coche",
               body: `El coche al que ibas a ${nombreTorneo} ya no está disponible.`,
-              url: "/club/torneos",
+              url: "/club/torneos/facv",
             };
       await enviarPushAMuchos([cuenta], payload);
     }
@@ -225,7 +225,7 @@ async function avisarPrimerApuntado(
     await enviarPushAMuchos(ids, {
       title: `${yo?.nombre ?? "Un socio"} va a un torneo`,
       body: `${torneo.nombre}, ${formatearRangoFechas(torneo.fecha_inicio, torneo.fecha_fin)}${torneo.lugar ? ` en ${torneo.lugar}` : ""}. ¿Te apuntas?`,
-      url: `/club/torneos/${tournamentId}`,
+      url: `/club/torneos/facv/${tournamentId}`,
     });
   } catch {
     // Silencio a propósito: ver comentario de arriba.
@@ -243,8 +243,8 @@ async function nombreTorneo(tournamentId: string): Promise<string> {
 }
 
 function refrescar(tournamentId: string): void {
-  revalidatePath("/club/torneos");
-  revalidatePath(`/club/torneos/${tournamentId}`);
+  revalidatePath("/club/torneos/facv");
+  revalidatePath(`/club/torneos/facv/${tournamentId}`);
   revalidatePath("/");
 }
 
@@ -443,7 +443,7 @@ export async function crearTorneoManual(datos: {
   });
   if (error) return { error: error.message };
 
-  revalidatePath("/club/torneos");
+  revalidatePath("/club/torneos/facv");
   revalidatePath("/club/admin/torneos");
   revalidatePath("/club");
   return {};

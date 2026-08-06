@@ -35,7 +35,7 @@ export function FormularioTorneoInterno() {
               setError(r.error);
               return;
             }
-            router.push(`/club/interno/${r.id}`);
+            router.push(`/club/torneos/interno/${r.id}`);
           });
         }}
       >

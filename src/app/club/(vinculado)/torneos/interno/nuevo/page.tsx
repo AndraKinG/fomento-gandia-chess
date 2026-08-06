@@ -8,14 +8,14 @@ export default async function NuevoTorneoInternoPage() {
   const sesion = await sesionActual();
   // La RLS ya impide escribir a quien no es junta; esto evita enseñar un
   // formulario que al guardar no iba a funcionar.
-  if (!sesion?.esJunta) redirect("/club/interno");
+  if (!sesion?.esJunta) redirect("/club/torneos/interno");
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera
         titulo="Nuevo torneo interno"
         subtitulo="Después se inscriben los jugadores"
-        volverA="/club/interno" medida="formulario"
+        volverA="/club/torneos/interno" medida="formulario"
       />
       <Contenedor medida="formulario">
         <FormularioTorneoInterno />

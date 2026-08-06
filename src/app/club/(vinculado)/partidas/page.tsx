@@ -10,6 +10,7 @@ import { textoResultado, type Resultado } from "@/lib/partidas/validar";
 import { Buscador } from "./Buscador";
 import { Exportar } from "./Exportar";
 import { Contenedor, REJILLA } from "@/components/ui/Contenedor";
+import { Pestana, Pestanas } from "@/components/ui/Pestanas";
 
 const MARCA: Record<Resultado, string> = { "1": "✓", "0.5": "=", "0": "✗" };
 const COLOR_MARCA: Record<Resultado, string> = {
@@ -61,14 +62,14 @@ export default async function PartidasPage({
         subtitulo={soloMias ? undefined : "Todas las que ha subido el club"} medida="panel"
       />
       <Contenedor medida="panel" className="space-y-4">
-        <div className="flex gap-2">
+        <Pestanas>
           <Pestana href="/club/partidas" activa={!soloMias}>
             Todas
           </Pestana>
           <Pestana href="/club/partidas?mias=1" activa={soloMias}>
             Mías
           </Pestana>
-        </div>
+        </Pestanas>
 
         <Buscador valor={busqueda} soloMias={soloMias} />
 
@@ -174,29 +175,5 @@ export default async function PartidasPage({
         </ul>
       </Contenedor>
     </main>
-  );
-}
-
-function Pestana({
-  href,
-  activa,
-  children,
-}: {
-  href: string;
-  activa: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      aria-current={activa ? "page" : undefined}
-      className={`flex-1 rounded-xl px-4 py-2 text-center text-sm font-semibold transition duration-100 ${
-        activa
-          ? "bg-acento-fuerte text-sobre-acento"
-          : "border border-borde bg-tarjeta text-tinta-suave hover:bg-tarjeta-suave"
-      }`}
-    >
-      {children}
-    </Link>
   );
 }

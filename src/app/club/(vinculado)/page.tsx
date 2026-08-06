@@ -85,7 +85,8 @@ function Titulo({ children, enlace }: { children: React.ReactNode; enlace?: stri
  *
  * QUÉ NO CUENTA: el ranking de ELO del club. Calcularlo obliga a recorrer todas
  * las partidas de todos los torneos internos (`leerRanking`), y eso son cuatro
- * consultas más en la pantalla más visitada de la app. Está a un toque, en Club.
+ * consultas más en la pantalla más visitada de la app. Está a un toque, en Torneos
+ * → Del club.
  *
  * LAS CONSULTAS VAN EN DOS TANDAS, no en fila. Esta pantalla necesitaba diez
  * viajes a Supabase uno detrás de otro, y no pintaba nada hasta el último. Ahora
@@ -161,7 +162,7 @@ export default async function Home() {
           .lt("fecha_hora", dentroVentanaISO)
       : Promise.resolve({ data: [] as { id: string }[] }),
     // Torneos internos vivos. Los terminados no se cuelan aquí: para eso está la
-    // sección Club. Se piden tres y se elige en código el que se enseña, porque
+    // sección. Se piden tres y se elige en código el que se enseña, porque
     // el criterio es "en juego antes que abierto a inscripción" y ordenar por la
     // columna `estado` solo lo cumpliría por casualidad alfabética.
     supabase
@@ -394,13 +395,13 @@ export default async function Home() {
 
             {(torneosProximos ?? []).length > 0 && (
               <section className="space-y-2">
-                <Titulo enlace="/club/torneos">Próximos torneos</Titulo>
+                <Titulo enlace="/club/torneos/facv">Próximos torneos</Titulo>
                 <ul className="space-y-2">
                   {(torneosProximos ?? []).map((t) => {
                     const estado = asistenciaPorTorneo.get(t.id);
                     return (
                       <li key={t.id}>
-                        <Link href={`/club/torneos/${t.id}`} className="block">
+                        <Link href={`/club/torneos/facv/${t.id}`} className="block">
                           <Tarjeta
                             compacta
                             className="flex items-center justify-between gap-3 transition hover:border-borde-acento"
@@ -433,9 +434,9 @@ export default async function Home() {
 
           <div className="space-y-4">
             <section className="space-y-2">
-              <Titulo enlace="/club/interno">Club</Titulo>
+              <Titulo enlace="/club/torneos/interno">Torneos del club</Titulo>
               {internoVivo ? (
-                <Link href={`/club/interno/${internoVivo.id}`} className="block">
+                <Link href={`/club/torneos/interno/${internoVivo.id}`} className="block">
                   <Tarjeta
                     destacada={internoVivo.estado === "en_curso"}
                     className="transition hover:border-borde-acento"
@@ -469,7 +470,7 @@ export default async function Home() {
                     Ahora mismo no hay ningún torneo del club en marcha.
                   </p>
                   <Link
-                    href="/club/interno/ranking"
+                    href="/club/torneos/interno/ranking"
                     className="mt-2 inline-block text-sm text-acento-texto underline"
                   >
                     Ver el ranking de ELO del club
