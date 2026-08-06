@@ -12,6 +12,7 @@ import {
   fetchConLimite,
   LIMITE_PAGINA_GRANDE_MS,
 } from "@/lib/import/red";
+import { buscarFicha, indicePorNombre } from "@/lib/import/cruzar-nombres";
 
 type Sufijo = "A" | "B" | "C";
 
@@ -33,25 +34,18 @@ export type ResumenSyncActas = {
   vinculados: number;
   /** Encuentros del acta que no tienen jornada en la app todavía. */
   omitidos: number;
+  /**
+   * Nombres del acta que no han cruzado con ninguna ficha del club, sin repetir.
+   *
+   * SE REPORTAN en vez de dejarlos en un contador: son casos que solo puede resolver
+   * una persona —un mote en vez del nombre ("Ximo" por "Joaquim"), un nombre de pila
+   * de más en la ficha, o alguien que jugó y ya no es socio— y verlos es lo que
+   * permite corregir la ficha. Un "212 de 248" a secas no dice a quién le falta.
+   */
+  nombresSinFicha: string[];
   avisos: string[];
   error?: string;
 };
-
-/**
- * Cruza el nombre de un jugador del acta con las fichas del club.
- *
- * El acta escribe los nombres al estilo FIDE ("Apellidos, Nombre") y sin tildes, y
- * las fichas del club vienen del orden de fuerza de la FACV, que usa el mismo estilo
- * — así que la mayoría cuadran comparando el nombre normalizado. Cuando no cuadra se
- * deja sin ficha: el tablero se enseña igual con el nombre del acta, y es mejor eso
- * que atribuir una partida al socio equivocado.
- */
-function fichaPorNombre(
-  nombre: string,
-  fichas: Map<string, string>
-): string | null {
-  return fichas.get(normalizaNombre(nombre)) ?? null;
-}
 
 /**
  * Descarga las actas por tableros de chess-results y las guarda en `match_boards`.
@@ -79,6 +73,7 @@ export async function sincronizarActasCore(): Promise<ResumenSyncActas> {
     tableros: 0,
     vinculados: 0,
     omitidos: 0,
+    nombresSinFicha: [],
     avisos: [],
   };
 
@@ -118,10 +113,13 @@ export async function sincronizarActasCore(): Promise<ResumenSyncActas> {
       (jornadas ?? []).map((m) => [`${m.team_id}/${m.ronda}`, m])
     );
 
-    // Fichas del club, para cruzar los nombres del acta.
+    // Fichas del club, para cruzar los nombres del acta. El cruce va por conjunto
+    // de palabras y no por cadena: `players.nombre` tiene los dos formatos mezclados
+    // ("Apellidos, Nombre" y "Nombre Apellidos") y el acta usa siempre el primero, así
+    // que comparar cadenas enlazaba CERO de 248 tableros sin dar ningún error.
     const { data: players } = await admin.from("players").select("id, nombre");
-    const fichas = new Map(
-      (players ?? []).map((p) => [normalizaNombre(p.nombre), p.id as string])
+    const indiceFichas = indicePorNombre(
+      (players ?? []).map((p) => ({ id: p.id as string, nombre: p.nombre as string }))
     );
 
     const calendario = await fetchConLimite(URL_CALENDARIO, {
@@ -167,6 +165,7 @@ export async function sincronizarActasCore(): Promise<ResumenSyncActas> {
     let tableros = 0;
     let vinculados = 0;
     let omitidos = 0;
+    const sinFicha = new Set<string>();
 
     for (const encuentro of paginas.flat()) {
       const localEsNuestro = normalizaNombre(encuentro.local).includes(baseNorm);
@@ -193,8 +192,9 @@ export async function sincronizarActasCore(): Promise<ResumenSyncActas> {
 
       const filas = encuentro.tableros.map((t) => {
         const nuestroNombre = localEsNuestro ? t.localNombre : t.visitanteNombre;
-        const ficha = fichaPorNombre(nuestroNombre, fichas);
+        const ficha = buscarFicha(nuestroNombre, indiceFichas);
         if (ficha) vinculados++;
+        else sinFicha.add(nuestroNombre);
         // El resultado del acta viene desde el lado del LOCAL: si nosotros somos el
         // visitante hay que darle la vuelta. Sin esto, media temporada saldría con
         // los resultados invertidos.
@@ -239,6 +239,7 @@ export async function sincronizarActasCore(): Promise<ResumenSyncActas> {
       tableros,
       vinculados,
       omitidos,
+      nombresSinFicha: [...sinFicha].sort(),
       avisos,
     };
   } catch {

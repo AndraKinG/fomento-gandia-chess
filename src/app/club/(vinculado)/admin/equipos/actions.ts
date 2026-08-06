@@ -160,7 +160,7 @@ export async function sincronizarResultadosFACV(): Promise<ResultadoSyncResultad
 export async function sincronizarActas(): Promise<ResumenSyncActas> {
   if (!(await esAdmin())) {
     return {
-      jornadas: 0, tableros: 0, vinculados: 0, omitidos: 0, avisos: [],
+      jornadas: 0, tableros: 0, vinculados: 0, omitidos: 0, nombresSinFicha: [], avisos: [],
       error: "Solo el admin puede hacer esto",
     };
   }

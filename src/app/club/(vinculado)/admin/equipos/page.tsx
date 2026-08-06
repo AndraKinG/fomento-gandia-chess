@@ -150,13 +150,19 @@ export default async function EquiposPage({
     const resultado = await sincronizarActas();
     const avisosMsg =
       resultado.avisos.length > 0 ? ` — avisos: ${resultado.avisos.join("; ")}` : "";
+    // Los nombres que no cruzan se enseñan uno a uno: es lo único que permite ir a
+    // corregir la ficha, y un contador no dice a quién le falta.
+    const sinFichaMsg =
+      resultado.nombresSinFicha.length > 0
+        ? ` — sin ficha del club (revisa el nombre en la ficha): ${resultado.nombresSinFicha.join("; ")}`
+        : "";
     const params = new URLSearchParams({
       msg:
         resultado.error ??
         `Actas sincronizadas: ${resultado.jornadas} jornadas, ${resultado.tableros} tableros, ` +
           `${resultado.vinculados} cruzados con fichas del club` +
           (resultado.omitidos > 0 ? ` (${resultado.omitidos} encuentros sin jornada creada)` : "") +
-          avisosMsg,
+          sinFichaMsg + avisosMsg,
       tipo: resultado.error ? "error" : "ok",
     });
     redirect(`/club/admin/equipos?${params.toString()}`);
