@@ -48,8 +48,9 @@ create table if not exists public.club_rounds (
   id uuid primary key default gen_random_uuid(),
   tournament_id uuid not null references public.club_tournaments(id) on delete cascade,
   numero int not null check (numero > 0),
-  -- Quién descansa esta ronda (número impar de jugadores). Puntúa 1 por
-  -- incomparecencia ajena, como es costumbre.
+  -- Quién descansa esta ronda (número impar de jugadores). Puntúa medio punto,
+  -- como unas tablas: regla del club. Los puntos NO se guardan aquí, los calcula
+  -- `src/lib/club/clasificacion.ts`, así que cambiar la regla no exige migración.
   descansa_id uuid references public.players(id) on delete set null,
   created_at timestamptz not null default now(),
   unique (tournament_id, numero)

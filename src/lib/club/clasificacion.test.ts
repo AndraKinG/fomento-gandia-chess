@@ -50,12 +50,14 @@ describe("clasificar", () => {
     expect(tabla.every((f) => f.puntos === 0 && f.jugadas === 0)).toBe(true);
   });
 
-  it("un descanso puntúa como victoria pero NO cuenta como partida jugada", () => {
+  it("un descanso puntúa como tablas y NO cuenta como partida jugada", () => {
     const rondas: RondaJugada[] = [
       { numero: 1, descansa: "dani", emparejamientos: [] },
     ];
     const dani = clasificar(rondas, inscritos).find((f) => f.ficha === "dani")!;
-    expect(dani.puntos).toBe(1);
+    // Medio punto, no uno: regla del club. Ni se perjudica a quien descansa ni se
+    // le regala una victoria que no ha jugado.
+    expect(dani.puntos).toBe(0.5);
     expect(dani.descansos).toBe(1);
     expect(dani.jugadas).toBe(0); // no mueve su ELO ni su porcentaje
   });
@@ -218,10 +220,10 @@ describe("estadoParaEmparejar", () => {
     expect(ana.haDescansado).toBe(false);
   });
 
-  it("marca a quien ha descansado y le cuenta el punto", () => {
+  it("marca a quien ha descansado y le cuenta el medio punto", () => {
     const cris = estadoParaEmparejar(rondas, inscritos).find((e) => e.ficha === "cris")!;
     expect(cris.haDescansado).toBe(true);
-    expect(cris.puntos).toBe(1); // 0 de la ronda 1 + 1 del descanso
+    expect(cris.puntos).toBe(0.5); // 0 de la ronda 1 + 0.5 del descanso
   });
 
   it("quien no ha jugado nada arranca vacío pero aparece", () => {

@@ -37,13 +37,16 @@ export type FilaClasificacion = {
 };
 
 /**
- * Un descanso puntúa como victoria.
+ * Un descanso puntúa como TABLAS: medio punto.
  *
- * Es la costumbre en los torneos suizos: quien se queda sin rival por ser impares
- * no debe salir perjudicado en la clasificación. No cuenta como partida jugada,
- * así que tampoco mueve su ELO ni su porcentaje.
+ * Regla del club, decidida por el propietario. Hay torneos que dan el punto
+ * entero por incomparecencia ajena, pero aquí no: quien se queda sin rival por
+ * ser impares no sale perjudicado, pero tampoco se le regala una victoria que no
+ * ha jugado.
+ *
+ * No cuenta como partida jugada, así que no mueve su ELO ni su porcentaje.
  */
-export const PUNTOS_POR_DESCANSO = 1;
+export const PUNTOS_POR_DESCANSO = 0.5;
 
 function puntosDe(resultado: Resultado): number {
   return resultado === "1" ? 1 : resultado === "0.5" ? 0.5 : 0;

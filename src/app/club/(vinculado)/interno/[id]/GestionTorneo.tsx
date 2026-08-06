@@ -206,7 +206,7 @@ export function GestionTorneo({
           ))}
           {r.descansaNombre && (
             <p className="px-1 text-xs text-tinta-suave">
-              Descansa {r.descansaNombre} (suma 1 punto)
+              Descansa {r.descansaNombre} (suma medio punto)
             </p>
           )}
         </section>
