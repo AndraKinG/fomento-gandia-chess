@@ -68,6 +68,26 @@ export default async function PerfilPage() {
             </Link>
           </p>
         )}
+        {/* Puerta a la administración SOLO en móvil: Admin salió de la barra
+            inferior porque siete pestañas no caben en un teléfono, y en escritorio
+            ya está en la barra lateral. Sin esto, en el móvil no habría forma de
+            llegar. */}
+        {sesion?.esAdmin && (
+          <Link href="/club/admin" className="block lg:hidden">
+            <Tarjeta className="flex items-center justify-between gap-3 transition hover:border-borde-acento">
+              <div>
+                <p className="font-semibold text-tinta">Administración</p>
+                <p className="text-sm text-tinta-suave">
+                  Equipos, rangos, torneos, ELO y acceso al club
+                </p>
+              </div>
+              <span aria-hidden className="text-lg text-tinta-suave">
+                →
+              </span>
+            </Tarjeta>
+          </Link>
+        )}
+
         {sesion?.esJunta && (
           <Link href="/club/solicitudes" className="block">
             <Tarjeta

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { sesionActual } from "@/lib/auth/sesion";
+import { nombreDePila, sesionActual } from "@/lib/auth/sesion";
 import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 import { calcularMarcador, marcadorPreferido } from "@/lib/marcador";
 import { Cabecera } from "@/components/ui/Cabecera";
@@ -47,17 +47,26 @@ function formatearDia(fechaISO: string | null): string {
   return formatearFechaMadrid(fechaISO, { day: "2-digit", month: "short" });
 }
 
-/** Título de sección de la home. Un `h2` de verdad, no un párrafo en mayúsculas:
- *  es lo que deja saltar de bloque en bloque con un lector de pantalla. */
+/**
+ * Título de sección de la home. Un `h2` de verdad, no un párrafo en mayúsculas:
+ * es lo que deja saltar de bloque en bloque con un lector de pantalla.
+ *
+ * El "Ver todo" va PEGADO al título y no empujado al borde derecho. Con el ancho
+ * de escritorio, `justify-between` lo mandaba a 700 px del título y dejaba de
+ * leerse como parte de él.
+ */
 function Titulo({ children, enlace }: { children: React.ReactNode; enlace?: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 px-1">
+    <div className="flex items-baseline gap-3 px-1">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-tinta-suave">
         {children}
       </h2>
       {enlace && (
-        <Link href={enlace} className="shrink-0 text-xs text-acento-texto underline">
-          Ver todo
+        <Link
+          href={enlace}
+          className="shrink-0 text-xs text-acento-texto hover:underline"
+        >
+          Ver todo →
         </Link>
       )}
     </div>
@@ -91,6 +100,7 @@ export default async function Home() {
   // que antes eran dos consultas propias de esta pantalla.
   const sesion = await sesionActual();
   const playerId = sesion?.playerId ?? null;
+  const nombre = nombreDePila(sesion?.nombre ?? null);
 
   const ahora = new Date();
   const ahoraISO = ahora.toISOString();
@@ -282,9 +292,13 @@ export default async function Home() {
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
+      {/* Saludo por el nombre de pila, no por el correo: el club ya está escrito
+          en la barra lateral y en el escudo, y un correo como saludo queda frío.
+          Si todavía no hay ficha vinculada no hay nombre, y entonces el título
+          vuelve a ser el del club. */}
       <Cabecera
-        titulo="Fomento de Gandia"
-        subtitulo={`Hola, ${sesion?.email ?? ""}`}
+        titulo={nombre ? `Hola, ${nombre}` : "Fomento de Gandia"}
+        subtitulo="Esto es lo que pasa en el club"
         medida="panel"
       />
       <Contenedor medida="panel" className="space-y-4">
@@ -308,11 +322,13 @@ export default async function Home() {
           </Banner>
         )}
 
-        {/* Dos columnas en escritorio: a la izquierda lo del Interclubs y los
-            torneos de fuera, que es lo que más ocupa; a la derecha lo del club y
-            el repositorio. En móvil se apilan en este mismo orden. */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="space-y-4 lg:col-span-2">
+        {/* Dos columnas IGUALES en escritorio. Con 2/1 la derecha se quedaba con
+            una tarjeta suelta y un hueco enorme debajo, porque fuera de temporada
+            no hay torneo interno ni partidas nuevas que contar. A mitades el peso
+            se reparte y el hueco no se acumula en un solo lado. En móvil se apilan
+            en este mismo orden. */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="space-y-4">
             <section className="space-y-2">
               <Titulo enlace="/club/equipos">Interclubs</Titulo>
               {proxima ? (
@@ -338,11 +354,15 @@ export default async function Home() {
                   />
                 </Link>
               ) : (
-                <EstadoVacio
-                  icono="♟"
-                  titulo="Aún no hay jornadas"
-                  detalle="Cuando arranque el interclubs verás aquí tu próxima jornada"
-                />
+                // Dentro de una tarjeta: suelto se quedaba flotando en medio de la
+                // columna, sin nada que dijera dónde empieza y acaba el bloque.
+                <Tarjeta>
+                  <EstadoVacio
+                    icono="♟"
+                    titulo="Aún no hay jornadas"
+                    detalle="Cuando arranque el interclubs verás aquí tu próxima jornada"
+                  />
+                </Tarjeta>
               )}
 
               {jugada && (

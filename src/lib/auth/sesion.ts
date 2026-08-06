@@ -1,6 +1,8 @@
 import { cache } from "react";
 import { createServerSupabase } from "@/lib/supabase/server";
 
+export { nombreDePila } from "@/lib/auth/nombre";
+
 /** Roles que se conceden a dedo. `jugador` no está: se deduce de tener ficha. */
 export type Rol = "junta" | "admin";
 
@@ -14,7 +16,13 @@ export type Sesion = {
   esJunta: boolean;
   /** null = cuenta creada pero sin ficha del club aprobada todavía. */
   playerId: string | null;
+  /** Nombre de la ficha, null si no tiene. Sale del mismo `select` que el rango,
+   *  así que no cuesta ninguna consulta más: es para poder saludar por el nombre
+   *  en vez de por el correo, que como saludo queda frío y además es un dato que
+   *  no hace falta repetir en cada pantalla. */
+  nombre: string | null;
 };
+
 
 /**
  * Sesión, perfil y rangos del usuario actual, o null si no hay sesión.
@@ -40,7 +48,11 @@ export const sesionActual = cache(async (): Promise<Sesion | null> => {
   if (!user) return null;
 
   const [{ data: profile }, { data: filasRol }] = await Promise.all([
-    supabase.from("profiles").select("is_admin, player_id").eq("id", user.id).single(),
+    supabase
+      .from("profiles")
+      .select("is_admin, player_id, players(nombre)")
+      .eq("id", user.id)
+      .single(),
     // Si `member_roles` no existiera (migración 0011 sin aplicar), esto devuelve
     // error y `filasRol` queda null: se sigue con la columna vieja en vez de
     // dejar a todo el mundo fuera de la administración.
@@ -58,5 +70,7 @@ export const sesionActual = cache(async (): Promise<Sesion | null> => {
     // Por acumulación: el admin puede todo lo que puede la junta.
     esJunta: roles.has("junta") || esAdmin,
     playerId: profile?.player_id ?? null,
+    nombre:
+      (profile?.players as unknown as { nombre: string } | null)?.nombre ?? null,
   };
 });

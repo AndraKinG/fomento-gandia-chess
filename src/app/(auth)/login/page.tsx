@@ -14,7 +14,9 @@ export default async function LoginPage({
     <main className="flex min-h-dvh flex-col items-center justify-center bg-fondo p-6">
       <div className="flex w-full max-w-sm flex-col gap-6">
         <div className="flex flex-col items-center gap-2 text-center">
-          <span className="bg-degradado-club bg-clip-text text-6xl leading-none text-transparent">
+          {/* Color plano, no degradado recortado al texto: `bg-clip-text` recortaba el
+              degradado a la caja del span y salia un CUADRADO azul en vez del caballo. */}
+          <span aria-hidden className="text-6xl leading-none text-acento-texto">
             ♞
           </span>
           <h1 className="text-2xl font-bold text-tinta">Fomento de Gandia</h1>

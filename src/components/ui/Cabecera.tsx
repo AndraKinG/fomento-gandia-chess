@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ANCHOS, type Medida } from "@/components/ui/Contenedor";
+import { Caballo } from "@/components/ui/Iconos";
 
 /**
  * Cabecera de pantalla: franja azul con el título.
@@ -21,18 +22,20 @@ export function Cabecera({
   medida?: Medida;
 }) {
   return (
-    <header className="bg-degradado-club px-4 pb-5 pt-6 text-sobre-acento sm:px-6">
+    <header className="bg-degradado-club px-4 pb-4 pt-5 text-sobre-acento sm:px-6">
       <div className={`mx-auto flex w-full ${ANCHOS[medida]} items-center gap-3`}>
         {volverA && (
-          <Link href={volverA} aria-label="Volver" className="text-2xl text-sobre-acento">
+          <Link
+            href={volverA}
+            aria-label="Volver"
+            className="-ml-1 shrink-0 rounded-lg px-1 text-2xl leading-none text-sobre-acento transition hover:bg-white/15"
+          >
             ←
           </Link>
         )}
         {/* En escritorio el caballo ya está en la barra lateral: repetirlo aquí
             es ruido. */}
-        <span aria-hidden className="text-2xl lg:hidden">
-          ♞
-        </span>
+        <Caballo className="shrink-0 text-2xl lg:hidden" />
         <div className="min-w-0">
           <h1 className="truncate text-xl font-bold leading-tight sm:text-2xl">{titulo}</h1>
           {subtitulo && <p className="truncate text-sm opacity-90">{subtitulo}</p>}

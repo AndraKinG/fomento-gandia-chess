@@ -2,35 +2,72 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  Caballo,
+  IconoAdmin,
+  IconoClub,
+  IconoInicio,
+  IconoInterclubs,
+  IconoPartidas,
+  IconoPerfil,
+  IconoTorneos,
+} from "@/components/ui/Iconos";
 
 /** Inicio de la zona de socios. Es prefijo de todas las demás secciones, así que
  *  solo cuenta como activo con coincidencia exacta: si no, en /club/equipos se
  *  marcarían como activas Inicio y Interclubs a la vez. */
 const INICIO = "/club";
 
+type Seccion = {
+  href: string;
+  label: string;
+  Icono: (p: { className?: string }) => React.ReactElement;
+  rutas: string[];
+  /** false = fuera de la barra inferior del móvil. Siete pestañas no caben en un
+   *  teléfono: las etiquetas se cortan y los toques se pisan. */
+  enMovil?: boolean;
+};
+
 /**
- * Secciones de la zona de socios: Inicio · Interclubs · Club · Torneos ·
- * Partidas · Perfil · Admin.
+ * Secciones de la zona de socios.
  *
  * `rutas` lista los prefijos que pertenecen a la sección, porque una sección
  * abarca varias pantallas: Interclubs cubre equipos, disponibilidad y jornadas, y
  * todas ellas tienen que dejar su entrada marcada.
  */
-const SECCIONES = [
-  { href: INICIO, label: "Inicio", icon: "🏠", rutas: [] as string[] },
+const SECCIONES: Seccion[] = [
+  { href: INICIO, label: "Inicio", Icono: IconoInicio, rutas: [] },
   {
     href: "/club/equipos",
     label: "Interclubs",
-    icon: "♟",
+    Icono: IconoInterclubs,
     rutas: ["/club/equipos", "/club/disponibilidad", "/club/jornadas"],
   },
-  { href: "/club/interno", label: "Club", icon: "♛", rutas: ["/club/interno"] },
-  { href: "/club/torneos", label: "Torneos", icon: "🏆", rutas: ["/club/torneos"] },
-  { href: "/club/partidas", label: "Partidas", icon: "♜", rutas: ["/club/partidas"] },
-  { href: "/club/perfil", label: "Perfil", icon: "👤", rutas: ["/club/perfil"] },
+  { href: "/club/interno", label: "Club", Icono: IconoClub, rutas: ["/club/interno"] },
+  { href: "/club/torneos", label: "Torneos", Icono: IconoTorneos, rutas: ["/club/torneos"] },
+  {
+    href: "/club/partidas",
+    label: "Partidas",
+    Icono: IconoPartidas,
+    rutas: ["/club/partidas"],
+  },
+  {
+    href: "/club/perfil",
+    label: "Perfil",
+    Icono: IconoPerfil,
+    rutas: ["/club/perfil", "/club/solicitudes"],
+  },
 ];
 
-const ADMIN = { href: "/club/admin", label: "Admin", icon: "⚙️", rutas: ["/club/admin"] };
+/** Admin no entra en la barra del móvil: son nueve pantallas de gestión que se
+ *  usan sentado delante del ordenador, y en el teléfono se llega desde Perfil. */
+const ADMIN: Seccion = {
+  href: "/club/admin",
+  label: "Admin",
+  Icono: IconoAdmin,
+  rutas: ["/club/admin"],
+  enMovil: false,
+};
 
 /** Único trozo de este fichero con nombre en inglés: React exige que un hook
  *  empiece por `use` para poder comprobar sus reglas. */
@@ -62,37 +99,33 @@ export function NavLateral({ esAdmin, email }: { esAdmin: boolean; email: string
   return (
     <aside className="hidden lg:flex lg:w-60 lg:shrink-0 lg:flex-col lg:border-r lg:border-borde lg:bg-tarjeta">
       <div className="sticky top-0 flex h-dvh flex-col">
-        <Link href={INICIO} className="flex items-center gap-2 px-5 py-5">
-          <span aria-hidden className="bg-degradado-club bg-clip-text text-3xl leading-none text-transparent">
-            ♞
-          </span>
+        <Link href={INICIO} className="flex items-center gap-2.5 px-5 py-5">
+          <Caballo className="shrink-0 text-3xl text-acento-texto" />
           <span className="text-sm font-bold leading-tight text-tinta">
             Fomento
             <span className="block font-normal text-tinta-suave">de Gandia</span>
           </span>
         </Link>
 
-        <nav aria-label="Navegación principal" className="flex-1 space-y-1 px-3">
-          {secciones.map((i) => (
+        <nav aria-label="Navegación principal" className="flex-1 space-y-0.5 px-3">
+          {secciones.map(({ href, label, Icono, activo }) => (
             <Link
-              key={i.href}
-              href={i.href}
-              aria-current={i.activo ? "page" : undefined}
+              key={href}
+              href={href}
+              aria-current={activo ? "page" : undefined}
               className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition duration-100 ${
-                i.activo
+                activo
                   ? "bg-acento-fuerte font-semibold text-sobre-acento"
                   : "text-tinta hover:bg-tarjeta-suave"
               }`}
             >
-              <span aria-hidden className="text-lg">
-                {i.icon}
-              </span>
-              {i.label}
+              <Icono className="h-5 w-5 shrink-0" />
+              {label}
             </Link>
           ))}
         </nav>
 
-        <p className="truncate px-5 py-4 text-xs text-tinta-suave" title={email}>
+        <p className="truncate border-t border-borde px-5 py-3.5 text-xs text-tinta-suave" title={email}>
           {email}
         </p>
       </div>
@@ -106,26 +139,26 @@ export function NavLateral({ esAdmin, email }: { esAdmin: boolean; email: string
  * Se oculta a partir de `lg`, donde manda la lateral.
  */
 export function NavInferior({ esAdmin }: { esAdmin: boolean }) {
-  const secciones = useSecciones(esAdmin);
+  const secciones = useSecciones(esAdmin).filter((i) => i.enMovil !== false);
 
   return (
     <nav
       aria-label="Navegación principal"
-      className="fixed inset-x-0 bottom-0 z-10 flex justify-around border-t border-borde bg-tarjeta p-2 lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-10 flex border-t border-borde bg-tarjeta pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
-      {secciones.map((i) => (
+      {secciones.map(({ href, label, Icono, activo }) => (
         <Link
-          key={i.href}
-          href={i.href}
-          aria-current={i.activo ? "page" : undefined}
-          className={`flex min-w-0 flex-col items-center px-1.5 text-[11px] ${
-            i.activo ? "font-bold text-acento-texto" : "text-tinta-suave"
+          key={href}
+          href={href}
+          aria-current={activo ? "page" : undefined}
+          // `basis-0 grow` reparte el ancho a partes iguales sin que la etiqueta
+          // más larga se lleve más sitio que las demás.
+          className={`flex min-w-0 basis-0 grow flex-col items-center gap-0.5 px-0.5 pb-2 pt-2 text-[10px] ${
+            activo ? "font-bold text-acento-texto" : "text-tinta-suave"
           }`}
         >
-          <span aria-hidden className="text-lg">
-            {i.icon}
-          </span>
-          <span className="truncate">{i.label}</span>
+          <Icono className="h-5 w-5 shrink-0" />
+          <span className="w-full truncate text-center">{label}</span>
         </Link>
       ))}
     </nav>
