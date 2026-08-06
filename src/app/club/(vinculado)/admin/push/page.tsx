@@ -1,21 +1,22 @@
 import { enviarPushPrueba } from "./actions";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
-import { Boton } from "@/components/ui/Boton";
+import { Contenedor } from "@/components/ui/Contenedor";
+import { BotonAccion } from "@/components/ui/BotonAccion";
 
 export default function PushAdminPage() {
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera titulo="Notificaciones" volverA="/club/admin" />
-      <div className="mx-auto max-w-md p-4">
+      <Contenedor medida="lectura">
         <Tarjeta>
           <form action={enviarPushPrueba}>
-            <Boton variante="degradado" className="w-full text-sm">
+            <BotonAccion trabajando="Enviando…" className="w-full text-sm">
               Enviarme una notificación de prueba
-            </Boton>
+            </BotonAccion>
           </form>
         </Tarjeta>
-      </div>
+      </Contenedor>
     </main>
   );
 }

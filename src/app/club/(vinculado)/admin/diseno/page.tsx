@@ -7,6 +7,7 @@ import { ChipTablero } from "@/components/ui/ChipTablero";
 import { TarjetaJornada } from "@/components/ui/TarjetaJornada";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { DemoDisponibilidad } from "./DemoDisponibilidad";
+import { Contenedor } from "@/components/ui/Contenedor";
 
 function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
@@ -21,7 +22,7 @@ export default function DisenoPage() {
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera titulo="Biblioteca de componentes" subtitulo="Showcase gandiblue" volverA="/club/admin" />
-      <div className="mx-auto max-w-md space-y-8 p-4">
+      <Contenedor medida="lectura" className="space-y-8">
         <div className="flex justify-end">
           <ThemeToggle />
         </div>
@@ -83,7 +84,7 @@ export default function DisenoPage() {
             <ChipTablero tablero={3} color="negras" />
           </div>
         </Seccion>
-      </div>
+      </Contenedor>
     </main>
   );
 }

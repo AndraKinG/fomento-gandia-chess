@@ -7,6 +7,7 @@ import { hoyISO } from "@/lib/torneos/fechas";
 import { FormularioPartida } from "../FormularioPartida";
 import { cargarOpciones } from "../opciones";
 import { inicialDesdeEmparejamiento } from "./desdeEmparejamiento";
+import { Contenedor } from "@/components/ui/Contenedor";
 
 export default async function NuevaPartidaPage({
   searchParams,
@@ -36,7 +37,7 @@ export default async function NuevaPartidaPage({
         }
         volverA="/club/partidas"
       />
-      <div className="mx-auto max-w-md space-y-4 p-4 sm:max-w-2xl">
+      <Contenedor medida="lectura" className="space-y-4">
         {desdeTorneo && (
           <Banner tipo="ok">
             Rellenado con los datos del torneo: rival, color, resultado y ronda. Solo
@@ -74,7 +75,7 @@ export default async function NuevaPartidaPage({
             }
           }
         />
-      </div>
+      </Contenedor>
     </main>
   );
 }

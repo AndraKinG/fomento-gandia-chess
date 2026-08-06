@@ -4,6 +4,7 @@ import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Banner } from "@/components/ui/Banner";
 import { BotonAccion } from "@/components/ui/BotonAccion";
+import { Contenedor } from "@/components/ui/Contenedor";
 
 export default async function EloAdminPage({
   searchParams,
@@ -68,8 +69,8 @@ export default async function EloAdminPage({
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Actualización de ELO" volverA="/club/admin" />
-      <div className="mx-auto max-w-md space-y-4 p-4">
+      <Cabecera titulo="Actualización de ELO" volverA="/club/admin" medida="panel" />
+      <Contenedor medida="panel" className="space-y-4">
         {msg ? <Banner tipo={tipo === "ok" ? "ok" : "error"}>{msg}</Banner> : null}
         <form action={refrescarFide}>
           <BotonAccion
@@ -101,7 +102,7 @@ export default async function EloAdminPage({
             </BotonAccion>
           </form>
         </Tarjeta>
-      </div>
+      </Contenedor>
     </main>
   );
 }

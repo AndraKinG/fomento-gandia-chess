@@ -5,6 +5,7 @@ import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { SelectorDisponibilidad } from "./SelectorDisponibilidad";
+import { Contenedor } from "@/components/ui/Contenedor";
 
 type Valor = "disponible" | "no_disponible" | "duda";
 
@@ -27,8 +28,8 @@ export default async function DisponibilidadPage() {
   if (!profile?.player_id) {
     return (
       <main className="min-h-dvh bg-fondo pb-10">
-        <Cabecera titulo="Disponibilidad" volverA="/club/equipos" />
-        <div className="mx-auto max-w-md p-4">
+        <Cabecera titulo="Disponibilidad" volverA="/club/equipos" medida="panel" />
+        <Contenedor medida="panel">
           <EstadoVacio
             titulo="Sin ficha vinculada todavía"
             detalle="Vincúlate a tu ficha del club para marcar tu disponibilidad"
@@ -38,7 +39,7 @@ export default async function DisponibilidadPage() {
               Vincular mi ficha
             </Link>
           </p>
-        </div>
+        </Contenedor>
       </main>
     );
   }
@@ -56,11 +57,11 @@ export default async function DisponibilidadPage() {
   if (propias.length === 0) {
     return (
       <main className="min-h-dvh bg-fondo pb-10">
-        <Cabecera titulo="Disponibilidad" volverA="/club/equipos" />
-        <div className="mx-auto max-w-md p-4">
+        <Cabecera titulo="Disponibilidad" volverA="/club/equipos" medida="panel" />
+        <Contenedor medida="panel">
           <EstadoVacio icono="📅" titulo="No hay jornadas próximas"
             detalle="Cuando se programe la siguiente jornada, podrás marcar aquí tu disponibilidad" />
-        </div>
+        </Contenedor>
       </main>
     );
   }
@@ -93,8 +94,8 @@ export default async function DisponibilidadPage() {
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Disponibilidad" subtitulo="Marca si puedes jugar cada jornada" volverA="/club/equipos" />
-      <div className="mx-auto max-w-md space-y-4 p-4">
+      <Cabecera titulo="Disponibilidad" subtitulo="Marca si puedes jugar cada jornada" volverA="/club/equipos" medida="panel" />
+      <Contenedor medida="panel" className="space-y-4">
         {[...grupos.entries()].map(([fecha, grupo]) => {
           // El grupo solo cuenta como "respondido" si TODAS sus jornadas
           // (A/B/C del mismo día) tienen fila de disponibilidad y, además,
@@ -116,7 +117,7 @@ export default async function DisponibilidadPage() {
             </Tarjeta>
           );
         })}
-      </div>
+      </Contenedor>
     </main>
   );
 }

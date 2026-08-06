@@ -7,6 +7,7 @@ import { Banner } from "@/components/ui/Banner";
 import { clasificar } from "@/lib/club/clasificacion";
 import { leerTorneo } from "../datos";
 import { GestionTorneo, type RondaVista, type SocioVista } from "./GestionTorneo";
+import { Contenedor } from "@/components/ui/Contenedor";
 
 export default async function TorneoInternoPage({
   params,
@@ -69,9 +70,9 @@ export default async function TorneoInternoPage({
         subtitulo={`${torneo.sistema === "liguilla" ? "Liguilla" : "Suizo"}${
           torneo.rondasTotales ? ` · ${torneo.rondasTotales} rondas` : ""
         }`}
-        volverA="/club/interno"
+        volverA="/club/interno" medida="panel"
       />
-      <div className="mx-auto max-w-md space-y-4 p-4 sm:max-w-2xl">
+      <Contenedor medida="panel" className="space-y-4">
         {torneo.estado === "terminado" && (
           <Banner tipo="ok">
             Torneo terminado.
@@ -137,7 +138,7 @@ export default async function TorneoInternoPage({
           socios={socios}
           esJunta={Boolean(sesion?.esJunta)}
         />
-      </div>
+      </Contenedor>
     </main>
   );
 }

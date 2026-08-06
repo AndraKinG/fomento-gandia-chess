@@ -5,6 +5,7 @@ import { Tarjeta } from "@/components/ui/Tarjeta";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { PARTIDAS_PROVISIONALES } from "@/lib/club/elo";
 import { leerRanking } from "../datos";
+import { Contenedor } from "@/components/ui/Contenedor";
 
 export default async function RankingPage() {
   const supabase = await createServerSupabase();
@@ -16,9 +17,9 @@ export default async function RankingPage() {
       <Cabecera
         titulo="Ranking del club"
         subtitulo="ELO interno, solo con torneos del club"
-        volverA="/club/interno"
+        volverA="/club/interno" medida="panel"
       />
-      <div className="mx-auto max-w-md space-y-4 p-4 sm:max-w-2xl">
+      <Contenedor medida="panel" className="space-y-4">
         {ranking.length === 0 && (
           <EstadoVacio
             icono="📈"
@@ -101,7 +102,7 @@ export default async function RankingPage() {
             </Tarjeta>
           </>
         )}
-      </div>
+      </Contenedor>
     </main>
   );
 }

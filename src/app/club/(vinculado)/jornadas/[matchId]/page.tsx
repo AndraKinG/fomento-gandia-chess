@@ -11,6 +11,7 @@ import { Banner } from "@/components/ui/Banner";
 import { ChipTablero } from "@/components/ui/ChipTablero";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { ResultadosEditor, type BoardParaEditar } from "./ResultadosEditor";
+import { Contenedor } from "@/components/ui/Contenedor";
 
 type BoardFila = {
   id: string;
@@ -114,9 +115,9 @@ export default async function JornadaPage({
       <Cabecera
         titulo={`R${match.ronda} · ${match.es_local ? "vs" : "@"} ${match.rival}`}
         subtitulo={`${equipoNombre} · ${fecha}`}
-        volverA={`/club/equipos/${match.team_id}`}
+        volverA={`/club/equipos/${match.team_id}`} medida="panel"
       />
-      <div className="mx-auto max-w-md space-y-4 p-4">
+      <Contenedor medida="panel" className="space-y-4">
         <Tarjeta className="flex flex-col gap-1">
           <p className="text-sm text-tinta-suave">
             {match.es_local ? "En casa" : "Fuera"}
@@ -168,7 +169,7 @@ export default async function JornadaPage({
         {boards.length > 0 && puedeGestionar && (
           <ResultadosEditor matchId={matchId} boards={boardsParaEditor} totalTableros={boards.length} />
         )}
-      </div>
+      </Contenedor>
     </main>
   );
 }

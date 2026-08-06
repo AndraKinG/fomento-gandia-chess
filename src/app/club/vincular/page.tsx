@@ -7,6 +7,7 @@ import { ChipElo } from "@/components/ui/ChipElo";
 import { Banner } from "@/components/ui/Banner";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { solicitarVinculo } from "./actions";
+import { Contenedor } from "@/components/ui/Contenedor";
 
 export default async function VincularPage({
   searchParams,
@@ -52,7 +53,7 @@ export default async function VincularPage({
     return (
       <main className="min-h-dvh bg-fondo pb-10">
         <Cabecera titulo="Solicitud enviada" />
-        <div className="mx-auto max-w-md space-y-4 p-4">
+        <Contenedor medida="lectura" className="space-y-4">
           <Banner tipo="ok">
             Has dicho que eres <b className="font-semibold">{ficha?.nombre}</b>.
           </Banner>
@@ -60,7 +61,7 @@ export default async function VincularPage({
             titulo="Pendiente de confirmación"
             detalle="El administrador del club tiene que confirmar que eres tú. En cuanto lo haga tendrás acceso a la app."
           />
-        </div>
+        </Contenedor>
       </main>
     );
   }
@@ -105,7 +106,7 @@ export default async function VincularPage({
         titulo="¿Quién eres?"
         subtitulo="Busca tu nombre en la lista del club"
       />
-      <div className="mx-auto max-w-md space-y-4 p-4 sm:max-w-2xl">
+      <Contenedor medida="lectura" className="space-y-4">
         <p className="text-sm text-tinta-suave">
           Elige tu ficha. El admin del club confirmará que eres tú antes de
           darte acceso.
@@ -160,7 +161,7 @@ export default async function VincularPage({
             </p>
           </Tarjeta>
         )}
-      </div>
+      </Contenedor>
     </main>
   );
 }

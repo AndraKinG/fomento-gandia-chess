@@ -8,6 +8,7 @@ import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Boton } from "@/components/ui/Boton";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
+import { Contenedor } from "@/components/ui/Contenedor";
 
 type Estado = "pendiente" | "jugado";
 const ESTILO_ESTADO: Record<Estado, string> = {
@@ -122,8 +123,8 @@ export default async function EquipoDetallePage({
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo={equipo.nombre} subtitulo={equipo.categoria} volverA="/club/equipos" />
-      <div className="mx-auto max-w-md space-y-4 p-4">
+      <Cabecera titulo={equipo.nombre} subtitulo={equipo.categoria} volverA="/club/equipos" medida="panel" />
+      <Contenedor medida="panel" className="space-y-4">
         <Tarjeta className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
             <ChipMargen margenElo={equipo.margen_elo} />
@@ -218,7 +219,7 @@ export default async function EquipoDetallePage({
             </div>
           </section>
         )}
-      </div>
+      </Contenedor>
     </main>
   );
 }

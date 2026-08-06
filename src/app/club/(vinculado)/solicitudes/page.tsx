@@ -4,6 +4,7 @@ import { sesionActual } from "@/lib/auth/sesion";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 import { ListaSolicitudes, type SolicitudVista } from "./ListaSolicitudes";
+import { Contenedor } from "@/components/ui/Contenedor";
 
 /**
  * Solicitudes de ingreso al club.
@@ -55,11 +56,11 @@ export default async function SolicitudesPage() {
             ? `${pendientes.length} sin resolver`
             : "Quien quiere entrar en el club"
         }
-        volverA="/club"
+        volverA="/club" medida="panel"
       />
-      <div className="mx-auto max-w-md p-4 sm:max-w-2xl">
+      <Contenedor medida="panel">
         <ListaSolicitudes pendientes={pendientes} resueltas={resueltas} />
-      </div>
+      </Contenedor>
     </main>
   );
 }

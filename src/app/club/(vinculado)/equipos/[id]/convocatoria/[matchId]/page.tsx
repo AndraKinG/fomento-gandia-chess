@@ -7,6 +7,7 @@ import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 import { Cabecera } from "@/components/ui/Cabecera";
 import type { TableroPropuesto } from "@/lib/validador";
 import { EditorConvocatoria } from "./EditorConvocatoria";
+import { Contenedor } from "@/components/ui/Contenedor";
 
 type Estado = "disponible" | "no_disponible" | "duda";
 
@@ -72,9 +73,9 @@ export default async function ConvocatoriaPage({
       <Cabecera
         titulo="Convocatoria"
         subtitulo={`${match.equipoNombre} · ${match.esLocal ? "vs" : "@"} ${match.rival} · ${fecha}`}
-        volverA={`/club/equipos/${id}`}
+        volverA={`/club/equipos/${id}`} medida="panel"
       />
-      <div className="mx-auto max-w-md p-4">
+      <Contenedor medida="panel">
         <EditorConvocatoria
           matchId={matchId}
           orden={orden}
@@ -86,7 +87,7 @@ export default async function ConvocatoriaPage({
           estadoInicial={estadoInicial}
           disponibilidad={disponibilidad}
         />
-      </div>
+      </Contenedor>
     </main>
   );
 }

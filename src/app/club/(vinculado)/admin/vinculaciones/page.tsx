@@ -3,6 +3,8 @@ import { aprobarVinculo, rechazarVinculo } from "./actions";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
+import { Contenedor } from "@/components/ui/Contenedor";
+import { BotonAccion } from "@/components/ui/BotonAccion";
 
 export default async function VinculacionesPage() {
   const supabase = await createServerSupabase();
@@ -14,8 +16,8 @@ export default async function VinculacionesPage() {
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Vinculaciones pendientes" volverA="/club/admin" />
-      <div className="mx-auto max-w-md space-y-3 p-4">
+      <Cabecera titulo="Vinculaciones pendientes" volverA="/club/admin" medida="panel" />
+      <Contenedor medida="panel" className="space-y-3">
         {(pendientes ?? []).map((r) => {
           const email = (r.profiles as unknown as { email: string }).email;
           const nombre = (r.players as unknown as { nombre: string }).nombre;
@@ -26,15 +28,25 @@ export default async function VinculacionesPage() {
                 <b className="font-semibold">{nombre}</b>
               </p>
               <div className="mt-3 flex gap-2">
+                {/* Un formulario por botón, así que cada `BotonAccion` ve solo su
+                    propio envío: al aprobar no se deshabilita el de rechazar. */}
                 <form action={aprobarVinculo.bind(null, r.id)}>
-                  <button className="rounded-xl bg-acento-fuerte px-3 py-1.5 text-sm font-medium text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]">
+                  <BotonAccion
+                    variante="solido"
+                    trabajando="Aprobando…"
+                    className="px-3 py-1.5 text-sm font-medium"
+                  >
                     Aprobar
-                  </button>
+                  </BotonAccion>
                 </form>
                 <form action={rechazarVinculo.bind(null, r.id)}>
-                  <button className="rounded-xl border border-borde bg-tarjeta px-3 py-1.5 text-sm text-tinta-suave transition duration-100 hover:bg-tarjeta-suave active:scale-[0.97]">
+                  <BotonAccion
+                    variante="secundario"
+                    trabajando="Rechazando…"
+                    className="px-3 py-1.5 text-sm font-medium"
+                  >
                     Rechazar
-                  </button>
+                  </BotonAccion>
                 </form>
               </div>
             </Tarjeta>
@@ -43,7 +55,7 @@ export default async function VinculacionesPage() {
         {(pendientes ?? []).length === 0 && (
           <EstadoVacio titulo="No hay solicitudes pendientes" />
         )}
-      </div>
+      </Contenedor>
     </main>
   );
 }

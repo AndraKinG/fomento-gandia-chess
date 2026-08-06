@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { sesionActual } from "@/lib/auth/sesion";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { FormularioTorneoInterno } from "./FormularioTorneoInterno";
+import { Contenedor } from "@/components/ui/Contenedor";
 
 export default async function NuevoTorneoInternoPage() {
   const sesion = await sesionActual();
@@ -14,11 +15,11 @@ export default async function NuevoTorneoInternoPage() {
       <Cabecera
         titulo="Nuevo torneo interno"
         subtitulo="Después se inscriben los jugadores"
-        volverA="/club/interno"
+        volverA="/club/interno" medida="formulario"
       />
-      <div className="mx-auto max-w-md p-4 sm:max-w-2xl">
+      <Contenedor medida="formulario">
         <FormularioTorneoInterno />
-      </div>
+      </Contenedor>
     </main>
   );
 }

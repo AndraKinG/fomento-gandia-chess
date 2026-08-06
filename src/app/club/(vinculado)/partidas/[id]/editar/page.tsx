@@ -4,6 +4,7 @@ import { sesionActual } from "@/lib/auth/sesion";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { FormularioPartida } from "../../FormularioPartida";
 import { cargarOpciones } from "../../opciones";
+import { Contenedor } from "@/components/ui/Contenedor";
 
 export default async function EditarPartidaPage({
   params,
@@ -34,9 +35,9 @@ export default async function EditarPartidaPage({
       <Cabecera
         titulo="Editar partida"
         subtitulo={p.rival_nombre}
-        volverA={`/club/partidas/${id}`}
+        volverA={`/club/partidas/${id}`} medida="formulario"
       />
-      <div className="mx-auto max-w-md p-4 sm:max-w-2xl">
+      <Contenedor medida="formulario">
         <FormularioPartida
           torneos={torneos}
           socios={socios}
@@ -57,7 +58,7 @@ export default async function EditarPartidaPage({
             pgn: p.pgn ?? "",
           }}
         />
-      </div>
+      </Contenedor>
     </main>
   );
 }

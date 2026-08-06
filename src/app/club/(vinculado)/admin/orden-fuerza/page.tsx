@@ -4,8 +4,9 @@ import { importarOrdenFuerza, sincronizarOrdenFuerzaFACV } from "./actions";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Banner } from "@/components/ui/Banner";
 import { ChipElo } from "@/components/ui/ChipElo";
-import { Boton } from "@/components/ui/Boton";
 import { FilaJugadorOF } from "@/components/ui/FilaJugadorOF";
+import { Contenedor } from "@/components/ui/Contenedor";
+import { BotonAccion } from "@/components/ui/BotonAccion";
 
 const SEPARADOR_AVISOS = "||";
 
@@ -56,8 +57,8 @@ export default async function OrdenFuerzaPage({
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Orden de fuerza" volverA="/club/admin" />
-      <div className="mx-auto max-w-md space-y-4 p-4">
+      <Cabecera titulo="Orden de fuerza" volverA="/club/admin" medida="panel" />
+      <Contenedor medida="panel" className="space-y-4">
         {msg ? <Banner tipo={tipo === "ok" ? "ok" : "error"}>{msg}</Banner> : null}
         {listaAvisos.length > 0 ? (
           <Banner tipo="aviso">
@@ -69,9 +70,11 @@ export default async function OrdenFuerzaPage({
           </Banner>
         ) : null}
         <form action={accionSincronizar}>
-          <Boton variante="degradado" className="w-full">
+          {/* Esto descarga y parsea una página de la FACV: los segundos que tarda
+              tienen que verse, o parece que el botón no ha hecho nada. */}
+          <BotonAccion trabajando="Consultando la web de la FACV…" className="w-full">
             Sincronizar con la FACV
-          </Boton>
+          </BotonAccion>
         </form>
         {orden && orden.length > 0 ? (
           <ol className="space-y-2">
@@ -114,12 +117,12 @@ export default async function OrdenFuerzaPage({
             <textarea name="texto" required rows={12}
               placeholder={"1; Apellidos, Nombre; fide_id; feda_id\n2; ..."}
               className="rounded-xl border border-borde bg-tarjeta p-3 font-mono text-xs text-tinta" />
-            <button className="rounded-xl bg-acento-fuerte p-3 font-semibold text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]">
+            <BotonAccion variante="solido" trabajando="Importando…">
               Importar
-            </button>
+            </BotonAccion>
           </form>
         </details>
-      </div>
+      </Contenedor>
     </main>
   );
 }

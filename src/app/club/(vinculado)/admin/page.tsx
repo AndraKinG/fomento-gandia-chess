@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
+import { Contenedor, Rejilla } from "@/components/ui/Contenedor";
 
 const ENLACES = [
   {
@@ -62,25 +63,28 @@ const ENLACES = [
 export default function AdminPage() {
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Administración" />
-      <nav
-        aria-label="Secciones de administración"
-        className="mx-auto flex max-w-md flex-col gap-3 p-4"
-      >
-        {ENLACES.map((enlace) => (
-          <Link key={enlace.href} href={enlace.href}>
-            <Tarjeta className="flex items-center gap-3 transition hover:border-borde-acento">
-              <span aria-hidden className="text-2xl">
-                {enlace.icono}
-              </span>
-              <div>
-                <p className="font-semibold text-tinta">{enlace.titulo}</p>
-                <p className="text-sm text-tinta-suave">{enlace.detalle}</p>
-              </div>
-            </Tarjeta>
-          </Link>
-        ))}
-      </nav>
+      <Cabecera titulo="Administración" medida="panel" />
+      <Contenedor medida="panel">
+        <nav aria-label="Secciones de administración">
+          {/* Nueve opciones en una sola columna obligan a recorrer la pantalla de
+              arriba abajo; en tres columnas se ven todas de un vistazo. */}
+          <Rejilla columnas={3}>
+            {ENLACES.map((enlace) => (
+              <Link key={enlace.href} href={enlace.href}>
+                <Tarjeta className="flex h-full items-center gap-3 transition hover:border-borde-acento">
+                  <span aria-hidden className="text-2xl">
+                    {enlace.icono}
+                  </span>
+                  <div>
+                    <p className="font-semibold text-tinta">{enlace.titulo}</p>
+                    <p className="text-sm text-tinta-suave">{enlace.detalle}</p>
+                  </div>
+                </Tarjeta>
+              </Link>
+            ))}
+          </Rejilla>
+        </nav>
+      </Contenedor>
     </main>
   );
 }

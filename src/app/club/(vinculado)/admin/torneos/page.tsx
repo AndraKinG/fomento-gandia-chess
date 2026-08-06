@@ -3,6 +3,7 @@ import { Cabecera } from "@/components/ui/Cabecera";
 import { formatearRangoFechas, hoyISO } from "@/lib/torneos/fechas";
 import { resumenTransporte, type Estado } from "@/lib/torneos/coches";
 import { PanelTorneos, type TorneoAdmin } from "./PanelTorneos";
+import { Contenedor } from "@/components/ui/Contenedor";
 
 type Asistencia = "voy" | "no_voy" | "duda";
 
@@ -81,11 +82,11 @@ export default async function AdminTorneosPage() {
       <Cabecera
         titulo="Torneos"
         subtitulo="Calendario, a cuáles vamos y transporte"
-        volverA="/club/admin"
+        volverA="/club/admin" medida="panel"
       />
-      <div className="mx-auto max-w-md p-4 sm:max-w-2xl">
+      <Contenedor medida="panel">
         <PanelTorneos torneos={vista} />
-      </div>
+      </Contenedor>
     </main>
   );
 }

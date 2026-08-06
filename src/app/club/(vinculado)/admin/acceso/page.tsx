@@ -5,6 +5,8 @@ import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Banner } from "@/components/ui/Banner";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { cambiarEstadoCodigo, regenerarCodigo } from "./actions";
+import { Contenedor } from "@/components/ui/Contenedor";
+import { BotonAccion } from "@/components/ui/BotonAccion";
 
 export default async function AccesoPage() {
   // Con el cliente de USUARIO, no el de servicio: la policy "access_codes solo
@@ -29,7 +31,7 @@ export default async function AccesoPage() {
         subtitulo="Código para que los socios se registren"
         volverA="/club/admin"
       />
-      <div className="mx-auto max-w-md space-y-4 p-4">
+      <Contenedor medida="lectura" className="space-y-4">
         {activo ? (
           <Tarjeta destacada>
             <p className="text-xs uppercase tracking-wide text-tinta-suave">
@@ -43,9 +45,13 @@ export default async function AccesoPage() {
               con este código.
             </p>
             <form action={cambiarEstadoCodigo.bind(null, activo.id, false)} className="mt-3">
-              <button className="rounded-xl border border-borde bg-tarjeta px-3 py-1.5 text-sm text-tinta-suave transition duration-100 hover:bg-tarjeta-suave active:scale-[0.97]">
+              <BotonAccion
+                variante="secundario"
+                trabajando="Cerrando…"
+                className="px-3 py-1.5 text-sm font-medium"
+              >
                 Cerrar el registro
-              </button>
+              </BotonAccion>
             </form>
           </Tarjeta>
         ) : (
@@ -69,9 +75,13 @@ export default async function AccesoPage() {
             <b className="font-semibold">Vinculaciones</b>.
           </p>
           <form action={regenerarCodigo} className="mt-3">
-            <button className="rounded-xl bg-acento-fuerte px-4 py-2 text-sm font-semibold text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]">
+            <BotonAccion
+              variante="solido"
+              trabajando="Generando…"
+              className="px-4 py-2 text-sm"
+            >
               Generar código nuevo
-            </button>
+            </BotonAccion>
           </form>
           <p className="mt-2 text-xs text-tinta-suave">
             El anterior deja de valer al instante. No afecta a quien ya tenga
@@ -98,7 +108,7 @@ export default async function AccesoPage() {
             ))}
           </div>
         )}
-      </div>
+      </Contenedor>
     </main>
   );
 }

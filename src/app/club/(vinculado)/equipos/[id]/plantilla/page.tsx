@@ -5,6 +5,7 @@ import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { Boton } from "@/components/ui/Boton";
+import { Contenedor } from "@/components/ui/Contenedor";
 
 type Estado = "disponible" | "no_disponible" | "duda";
 const ICONOS: Record<Estado, string> = { disponible: "✅", no_disponible: "❌", duda: "🤔" };
@@ -56,8 +57,8 @@ export default async function PlantillaPage({
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Plantilla" subtitulo={equipo.nombre} volverA={`/club/equipos/${id}`} />
-      <div className="mx-auto max-w-md space-y-4 p-4">
+      <Cabecera titulo="Plantilla" subtitulo={equipo.nombre} volverA={`/club/equipos/${id}`} medida="panel" />
+      <Contenedor medida="panel" className="space-y-4">
         {propiasJornadas.length === 0 || propioOrden.length === 0 ? (
           <EstadoVacio
             titulo="Nada que mostrar todavía"
@@ -137,7 +138,7 @@ export default async function PlantillaPage({
             );
           })
         )}
-      </div>
+      </Contenedor>
     </main>
   );
 }

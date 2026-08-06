@@ -2,6 +2,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { sesionActual } from "@/lib/auth/sesion";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { ListaRoles, type SocioConRoles } from "./ListaRoles";
+import { Contenedor } from "@/components/ui/Contenedor";
 
 export default async function AdminRolesPage() {
   // El layout de /club/admin ya ha comprobado que quien llega es admin, y la
@@ -60,11 +61,11 @@ export default async function AdminRolesPage() {
       <Cabecera
         titulo="Rangos"
         subtitulo="Quién puede qué en el club"
-        volverA="/club/admin"
+        volverA="/club/admin" medida="panel"
       />
-      <div className="mx-auto max-w-md p-4 sm:max-w-2xl">
+      <Contenedor medida="panel">
         <ListaRoles socios={socios} />
-      </div>
+      </Contenedor>
     </main>
   );
 }

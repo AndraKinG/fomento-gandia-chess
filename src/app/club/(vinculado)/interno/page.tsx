@@ -6,6 +6,7 @@ import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Boton } from "@/components/ui/Boton";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { formatearRangoFechas } from "@/lib/torneos/fechas";
+import { Contenedor, REJILLA } from "@/components/ui/Contenedor";
 
 const ETIQUETA_ESTADO: Record<string, string> = {
   inscripcion: "Inscripción abierta",
@@ -37,8 +38,8 @@ export default async function InternoPage() {
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Club" subtitulo="Torneos internos y ranking propio" />
-      <div className="mx-auto max-w-md space-y-4 p-4 sm:max-w-2xl">
+      <Cabecera titulo="Club" subtitulo="Torneos internos y ranking propio" medida="panel" />
+      <Contenedor medida="panel" className="space-y-4">
         <Boton variante="degradado" href="/club/interno/ranking" className="w-full">
           Ranking de ELO del club
         </Boton>
@@ -61,7 +62,7 @@ export default async function InternoPage() {
           />
         )}
 
-        <ul className="space-y-2">
+        <ul className={REJILLA[2]}>
           {(torneos ?? []).map((t) => (
             <li key={t.id}>
               <Link href={`/club/interno/${t.id}`} className="block">
@@ -97,7 +98,7 @@ export default async function InternoPage() {
             </li>
           ))}
         </ul>
-      </div>
+      </Contenedor>
     </main>
   );
 }

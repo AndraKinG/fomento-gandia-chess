@@ -12,6 +12,8 @@ import { EstadoVacio } from "@/components/ui/EstadoVacio";
 // autenticación, y un "../" de más se rompe en cuanto se mueve una carpeta —
 // que es justo lo que pasó al bajar la app a /club.
 import { logout } from "@/app/(auth)/actions";
+import { Contenedor } from "@/components/ui/Contenedor";
+import { BotonAccion } from "@/components/ui/BotonAccion";
 
 export default async function PerfilPage() {
   const supabase = await createServerSupabase();
@@ -40,7 +42,7 @@ export default async function PerfilPage() {
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera titulo="Mi perfil" subtitulo={profile?.email} />
-      <div className="mx-auto max-w-md space-y-4 p-4">
+      <Contenedor medida="lectura" className="space-y-4">
         {p ? (
           <Tarjeta destacada>
             <p className="text-lg font-semibold text-tinta">{p.nombre}</p>
@@ -90,11 +92,15 @@ export default async function PerfilPage() {
         <ThemeToggle />
         <ActivarNotificaciones />
         <form action={logout}>
-          <button className="w-full rounded-xl border border-borde bg-tarjeta p-3 text-sm text-tinta-suave transition duration-100 hover:bg-tarjeta-suave active:scale-[0.97]">
+          <BotonAccion
+            variante="secundario"
+            trabajando="Cerrando sesión…"
+            className="w-full text-sm font-normal"
+          >
             Cerrar sesión
-          </button>
+          </BotonAccion>
         </form>
-      </div>
+      </Contenedor>
     </main>
   );
 }

@@ -9,6 +9,7 @@ import { formatearRangoFechas } from "@/lib/torneos/fechas";
 import { textoResultado, type Resultado } from "@/lib/partidas/validar";
 import { Buscador } from "./Buscador";
 import { Exportar } from "./Exportar";
+import { Contenedor, REJILLA } from "@/components/ui/Contenedor";
 
 const MARCA: Record<Resultado, string> = { "1": "✓", "0.5": "=", "0": "✗" };
 const COLOR_MARCA: Record<Resultado, string> = {
@@ -57,9 +58,9 @@ export default async function PartidasPage({
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera
         titulo={titulo}
-        subtitulo={soloMias ? undefined : "Todas las que ha subido el club"}
+        subtitulo={soloMias ? undefined : "Todas las que ha subido el club"} medida="panel"
       />
-      <div className="mx-auto max-w-md space-y-4 p-4 sm:max-w-2xl">
+      <Contenedor medida="panel" className="space-y-4">
         <div className="flex gap-2">
           <Pestana href="/club/partidas" activa={!soloMias}>
             Todas
@@ -114,7 +115,7 @@ export default async function PartidasPage({
           />
         )}
 
-        <ul className="space-y-2">
+        <ul className={REJILLA[2]}>
           {(partidas ?? []).map((p) => {
             const resultado = p.resultado as Resultado;
             const duenio =
@@ -171,7 +172,7 @@ export default async function PartidasPage({
             );
           })}
         </ul>
-      </div>
+      </Contenedor>
     </main>
   );
 }

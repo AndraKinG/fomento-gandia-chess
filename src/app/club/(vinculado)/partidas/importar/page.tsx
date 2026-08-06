@@ -3,6 +3,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { sesionActual } from "@/lib/auth/sesion";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Importador } from "./Importador";
+import { Contenedor } from "@/components/ui/Contenedor";
 
 export default async function ImportarPage() {
   const sesion = await sesionActual();
@@ -20,11 +21,11 @@ export default async function ImportarPage() {
       <Cabecera
         titulo="Importar partidas"
         subtitulo="Desde Lichess, Chess.com o cualquier PGN"
-        volverA="/club/partidas"
+        volverA="/club/partidas" medida="formulario"
       />
-      <div className="mx-auto max-w-md p-4 sm:max-w-2xl">
+      <Contenedor medida="formulario">
         <Importador miNombre={ficha?.nombre ?? ""} />
-      </div>
+      </Contenedor>
     </main>
   );
 }

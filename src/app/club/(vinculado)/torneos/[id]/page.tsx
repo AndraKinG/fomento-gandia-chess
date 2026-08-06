@@ -8,6 +8,7 @@ import { estaEnCurso, formatearRangoFechas, haTerminado } from "@/lib/torneos/fe
 import { plazasLibres, resumenTransporte, type Estado } from "@/lib/torneos/coches";
 import { SelectorAsistencia } from "../SelectorAsistencia";
 import { BloqueCoches, type CocheVista } from "../BloqueCoches";
+import { Contenedor } from "@/components/ui/Contenedor";
 
 type Asistencia = "voy" | "no_voy" | "duda";
 
@@ -104,7 +105,7 @@ export default async function TorneoPage({
         subtitulo={formatearRangoFechas(torneo.fecha_inicio, torneo.fecha_fin)}
         volverA="/club/torneos"
       />
-      <div className="mx-auto max-w-md space-y-4 p-4">
+      <Contenedor medida="lectura" className="space-y-4">
         {enCurso && <Banner tipo="ok">Se está jugando ahora mismo.</Banner>}
         {terminado && <Banner tipo="aviso">Este torneo ya ha terminado.</Banner>}
 
@@ -211,7 +212,7 @@ export default async function TorneoPage({
             voyEnAlgunCoche={!!miAsiento || conduzco}
           />
         )}
-      </div>
+      </Contenedor>
     </main>
   );
 }

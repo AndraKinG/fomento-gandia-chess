@@ -6,6 +6,7 @@ import { Tarjeta } from "@/components/ui/Tarjeta";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { formatearRangoFechas, hoyISO } from "@/lib/torneos/fechas";
 import { CrearTorneo } from "./CrearTorneo";
+import { Contenedor, REJILLA } from "@/components/ui/Contenedor";
 
 type Asistencia = "voy" | "no_voy" | "duda";
 
@@ -33,12 +34,6 @@ export default async function TorneosPage({
   // Se calcula de las asistencias en vez de escribir una marca al apuntarse: una
   // marca guardada se queda a true cuando el último que iba se borra, y la lista
   // acabaría llena de torneos a los que ya no va nadie.
-  const { data: conGente } = await supabase
-    .from("tournament_attendance")
-    .select("tournament_id, estado")
-    .in("estado", ["voy", "duda"]);
-  const idsConGente = new Set((conGente ?? []).map((a) => a.tournament_id));
-
   let consulta = supabase
     .from("tournaments")
     .select("id, nombre, fecha_inicio, fecha_fin, lugar, hora, ritmo, de_interes");
@@ -47,7 +42,16 @@ export default async function TorneosPage({
     ? consulta.lt("fecha_fin", hoy).order("fecha_inicio", { ascending: false }).limit(50)
     : consulta.gte("fecha_fin", hoy).order("fecha_inicio");
 
-  const { data: todosLosTorneos } = await consulta;
+  // Las dos en paralelo: ninguna necesita el resultado de la otra, y en fila la
+  // pantalla esperaba la suma de las dos para no pintar nada.
+  const [{ data: conGente }, { data: todosLosTorneos }] = await Promise.all([
+    supabase
+      .from("tournament_attendance")
+      .select("tournament_id, estado")
+      .in("estado", ["voy", "duda"]),
+    consulta,
+  ]);
+  const idsConGente = new Set((conGente ?? []).map((a) => a.tournament_id));
 
   const torneos =
     verTodos || verPasados
@@ -84,9 +88,9 @@ export default async function TorneosPage({
       <Cabecera
         titulo={titulo}
         subtitulo={verPasados ? undefined : "A los que vamos como club"}
-        volverA={verTodos || verPasados ? "/club/torneos" : undefined}
+        volverA={verTodos || verPasados ? "/club/torneos" : undefined} medida="panel"
       />
-      <div className="mx-auto max-w-md space-y-3 p-4 sm:max-w-2xl">
+      <Contenedor medida="panel" className="space-y-3">
         {torneos.length === 0 && (
           <EstadoVacio
             icono="🏆"
@@ -99,14 +103,14 @@ export default async function TorneosPage({
           />
         )}
 
-        <ul className="space-y-3">
+        <ul className={REJILLA[2]}>
           {torneos.map((t) => {
             const estado = miEstado.get(t.id);
             const van = cuantosVan.get(t.id) ?? 0;
             return (
               <li key={t.id}>
-                <Link href={`/club/torneos/${t.id}`} className="block">
-                  <Tarjeta className="transition hover:border-borde-acento">
+                <Link href={`/club/torneos/${t.id}`} className="block h-full">
+                  <Tarjeta className="h-full transition hover:border-borde-acento">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="font-semibold text-tinta">{t.nombre}</p>
@@ -162,7 +166,7 @@ export default async function TorneosPage({
             </Link>
           )}
         </div>
-      </div>
+      </Contenedor>
     </main>
   );
 }

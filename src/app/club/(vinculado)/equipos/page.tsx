@@ -4,6 +4,7 @@ import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
+import { Contenedor, Rejilla } from "@/components/ui/Contenedor";
 
 type Jornada = {
   id: string;
@@ -45,13 +46,13 @@ export default async function EquiposPage() {
   if (!season) {
     return (
       <main className="min-h-dvh bg-fondo pb-10">
-        <Cabecera titulo="Interclubs" subtitulo="Liga por equipos de la FACV" />
-        <div className="mx-auto max-w-md p-4">
+        <Cabecera titulo="Interclubs" subtitulo="Liga por equipos de la FACV" medida="panel" />
+        <Contenedor medida="panel">
           <EstadoVacio
             titulo="Los equipos llegan con el interclubs"
             detalle="Aquí verás calendario, clasificación y convocatorias de los equipos A, B y C"
           />
-        </div>
+        </Contenedor>
       </main>
     );
   }
@@ -80,8 +81,8 @@ export default async function EquiposPage() {
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Interclubs" subtitulo={season.nombre} />
-      <div className="mx-auto max-w-md space-y-8 p-4">
+      <Cabecera titulo="Interclubs" subtitulo={season.nombre} medida="panel" />
+      <Contenedor medida="panel" className="space-y-8">
         {/* Esta pantalla es la entrada de la sección Interclubs, así que tiene
             que dar acceso a la disponibilidad: antes solo se llegaba desde la
             home y quedaba escondida. */}
@@ -108,46 +109,48 @@ export default async function EquiposPage() {
             detalle="El club aún no ha dado de alta ningún equipo para esta temporada"
           />
         ) : (
-          (equipos ?? []).map((eq) => {
-            const capitanes = (eq.team_captains ?? []) as unknown as Capitan[];
-            const resumen = resumenJornadas(jornadasPorEquipo.get(eq.id) ?? []);
-            return (
-              <Link key={eq.id} href={`/club/equipos/${eq.id}`}>
-                <Tarjeta className="flex flex-col gap-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-semibold text-tinta">{eq.nombre}</p>
-                      <p className="text-sm text-tinta-suave">{eq.categoria}</p>
+          <Rejilla>
+            {(equipos ?? []).map((eq) => {
+              const capitanes = (eq.team_captains ?? []) as unknown as Capitan[];
+              const resumen = resumenJornadas(jornadasPorEquipo.get(eq.id) ?? []);
+              return (
+                <Link key={eq.id} href={`/club/equipos/${eq.id}`} className="h-full">
+                  <Tarjeta className="flex h-full flex-col gap-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-tinta">{eq.nombre}</p>
+                        <p className="text-sm text-tinta-suave">{eq.categoria}</p>
+                      </div>
+                      <ChipMargen margenElo={eq.margen_elo} />
                     </div>
-                    <ChipMargen margenElo={eq.margen_elo} />
-                  </div>
 
-                  <p className="text-sm text-tinta-suave">
-                    {capitanes.length === 0
-                      ? "Sin capitán asignado"
-                      : `Capitán: ${capitanes.map((c) => c.players?.nombre ?? "—").join(", ")}`}
-                  </p>
+                    <p className="text-sm text-tinta-suave">
+                      {capitanes.length === 0
+                        ? "Sin capitán asignado"
+                        : `Capitán: ${capitanes.map((c) => c.players?.nombre ?? "—").join(", ")}`}
+                    </p>
 
-                  {resumen.length > 0 && (
-                    <ul className="flex flex-col gap-1.5 border-t border-borde pt-2">
-                      {resumen.map((j) => (
-                        <li key={j.id} className="flex items-center justify-between text-sm">
-                          <span className="text-tinta">
-                            R{j.ronda} · {j.es_local ? "vs" : "@"} {j.rival}
-                          </span>
-                          <span className="text-xs text-tinta-suave">
-                            {formatearFechaMadrid(j.fecha_hora, { day: "2-digit", month: "2-digit", year: "numeric" })}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </Tarjeta>
-              </Link>
-            );
-          })
+                    {resumen.length > 0 && (
+                      <ul className="flex flex-col gap-1.5 border-t border-borde pt-2">
+                        {resumen.map((j) => (
+                          <li key={j.id} className="flex items-center justify-between text-sm">
+                            <span className="text-tinta">
+                              R{j.ronda} · {j.es_local ? "vs" : "@"} {j.rival}
+                            </span>
+                            <span className="text-xs text-tinta-suave">
+                              {formatearFechaMadrid(j.fecha_hora, { day: "2-digit", month: "2-digit", year: "numeric" })}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </Tarjeta>
+                </Link>
+              );
+            })}
+          </Rejilla>
         )}
-      </div>
+      </Contenedor>
     </main>
   );
 }

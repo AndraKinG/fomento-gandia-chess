@@ -9,6 +9,7 @@ import { formatearRangoFechas } from "@/lib/torneos/fechas";
 import { textoResultado, type Resultado } from "@/lib/partidas/validar";
 import { AccionesPartida } from "./AccionesPartida";
 import { VisorPartida } from "@/components/ajedrez/VisorPartida";
+import { Contenedor } from "@/components/ui/Contenedor";
 
 export default async function PartidaPage({
   params,
@@ -44,7 +45,7 @@ export default async function PartidaPage({
         subtitulo={formatearRangoFechas(p.fecha, p.fecha)}
         volverA="/club/partidas"
       />
-      <div className="mx-auto max-w-md space-y-4 p-4 sm:max-w-2xl">
+      <Contenedor medida="lectura" className="space-y-4">
         <Tarjeta destacada>
           {/* El emparejamiento se muestra por colores, que es como se lee una
               partida, y no por "dueño y rival": quien la consulta quiere saber
@@ -136,7 +137,7 @@ export default async function PartidaPage({
             </Link>
           </p>
         )}
-      </div>
+      </Contenedor>
     </main>
   );
 }

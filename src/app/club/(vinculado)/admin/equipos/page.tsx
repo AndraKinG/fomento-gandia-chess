@@ -14,6 +14,7 @@ import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Banner } from "@/components/ui/Banner";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
+import { Contenedor } from "@/components/ui/Contenedor";
 
 const CAMPO =
   "rounded-xl border border-borde bg-tarjeta p-3 text-tinta placeholder:text-tinta-suave";
@@ -54,15 +55,15 @@ export default async function EquiposPage({
   if (!season) {
     return (
       <main className="min-h-dvh bg-fondo pb-10">
-        <Cabecera titulo="Equipos y capitanes" volverA="/club/admin" />
-        <div className="mx-auto max-w-md p-4">
+        <Cabecera titulo="Equipos y capitanes" volverA="/club/admin" medida="panel" />
+        <Contenedor medida="panel">
           {msg ? <Banner tipo={tipo === "ok" ? "ok" : "error"}>{msg}</Banner> : null}
           <EstadoVacio
             icono="🛡️"
             titulo="No hay temporada activa"
             detalle='Crea una temporada sincronizando el "Orden de fuerza" antes de dar de alta equipos.'
           />
-        </div>
+        </Contenedor>
       </main>
     );
   }
@@ -144,8 +145,8 @@ export default async function EquiposPage({
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Equipos y capitanes" subtitulo={season.nombre} volverA="/club/admin" />
-      <div className="mx-auto max-w-md space-y-4 p-4">
+      <Cabecera titulo="Equipos y capitanes" subtitulo={season.nombre} volverA="/club/admin" medida="panel" />
+      <Contenedor medida="panel" className="space-y-4">
         {msg ? <Banner tipo={tipo === "ok" ? "ok" : "error"}>{msg}</Banner> : null}
 
         <Tarjeta>
@@ -358,7 +359,7 @@ export default async function EquiposPage({
             );
           })
         )}
-      </div>
+      </Contenedor>
     </main>
   );
 }
