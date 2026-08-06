@@ -16,6 +16,46 @@ type Jornada = {
 
 type Capitan = { player_id: string; players: { nombre: string } | null };
 
+/** Tarjeta de acceso a una pantalla de la sección. */
+function Acceso({
+  href,
+  titulo,
+  detalle,
+}: {
+  href: string;
+  titulo: string;
+  detalle: string;
+}) {
+  return (
+    <Link href={href} className="block h-full">
+      <Tarjeta
+        compacta
+        className="flex h-full items-center justify-between gap-3 transition hover:border-borde-acento"
+      >
+        <div className="min-w-0">
+          <p className="font-semibold text-tinta">{titulo}</p>
+          <p className="text-sm text-tinta-suave">{detalle}</p>
+        </div>
+        <span aria-hidden className="shrink-0 text-lg text-tinta-suave">
+          →
+        </span>
+      </Tarjeta>
+    </Link>
+  );
+}
+
+/**
+ * Subtítulo de la cabecera a partir del nombre de la temporada.
+ *
+ * La temporada activa se llama "Interclubs 2026", así que poner el nombre tal cual
+ * bajo el título dejaba "Interclubs / Interclubs 2026". Se quita el prefijo cuando
+ * lo trae y se queda solo el año.
+ */
+function subtituloTemporada(nombre: string): string {
+  const sinPrefijo = nombre.replace(/^interclubs\s*/i, "").trim();
+  return sinPrefijo ? `Temporada ${sinPrefijo}` : nombre;
+}
+
 function ChipMargen({ margenElo }: { margenElo: number | null }) {
   const texto = margenElo ? `≥${margenElo} ELO` : "Orden estricto";
   return (
@@ -81,27 +121,23 @@ export default async function EquiposPage() {
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Interclubs" subtitulo={season.nombre} medida="panel" />
-      <Contenedor medida="panel" className="space-y-8">
-        {/* Esta pantalla es la entrada de la sección Interclubs, así que tiene
-            que dar acceso a la disponibilidad: antes solo se llegaba desde la
-            home y quedaba escondida. */}
-        <Link href="/club/disponibilidad" className="block">
-          <Tarjeta
-            compacta
-            className="flex items-center justify-between gap-3 transition hover:border-borde-acento"
-          >
-            <div>
-              <p className="font-semibold text-tinta">Mi disponibilidad</p>
-              <p className="text-sm text-tinta-suave">
-                Marca si puedes jugar cada jornada
-              </p>
-            </div>
-            <span aria-hidden className="text-lg text-tinta-suave">
-              →
-            </span>
-          </Tarjeta>
-        </Link>
+      <Cabecera titulo="Interclubs" subtitulo={subtituloTemporada(season.nombre)} medida="panel" />
+      <Contenedor medida="panel" className="space-y-6">
+        {/* Los dos accesos de la sección, en rejilla. Antes "Mi disponibilidad"
+            ocupaba el ancho entero y su flecha acababa a 1600 px del texto, que
+            deja de leerse como parte de la tarjeta. */}
+        <Rejilla>
+          <Acceso
+            href="/club/disponibilidad"
+            titulo="Mi disponibilidad"
+            detalle="Marca si puedes jugar cada jornada"
+          />
+          <Acceso
+            href="/club/orden-fuerza"
+            titulo="Ranking oficial"
+            detalle="ELO de la FACV y orden de fuerza del club"
+          />
+        </Rejilla>
 
         {(equipos ?? []).length === 0 ? (
           <EstadoVacio
@@ -109,7 +145,9 @@ export default async function EquiposPage() {
             detalle="El club aún no ha dado de alta ningún equipo para esta temporada"
           />
         ) : (
-          <Rejilla>
+          // Tres columnas en pantalla ancha: son tres equipos y así caben en una
+          // fila en vez de dejar el tercero solo debajo con un hueco al lado.
+          <Rejilla columnas={3}>
             {(equipos ?? []).map((eq) => {
               const capitanes = (eq.team_captains ?? []) as unknown as Capitan[];
               const resumen = resumenJornadas(jornadasPorEquipo.get(eq.id) ?? []);

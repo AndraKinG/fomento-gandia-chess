@@ -40,7 +40,12 @@ const SECCIONES: Seccion[] = [
     href: "/club/equipos",
     label: "Interclubs",
     Icono: IconoInterclubs,
-    rutas: ["/club/equipos", "/club/disponibilidad", "/club/jornadas"],
+    rutas: [
+      "/club/equipos",
+      "/club/disponibilidad",
+      "/club/jornadas",
+      "/club/orden-fuerza",
+    ],
   },
   // Una sola entrada para los dos tipos de torneo, con pestañas dentro: para el
   // socio los dos son "torneos", y separarlos en dos secciones dejaba siete

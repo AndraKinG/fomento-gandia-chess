@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { sesionActual } from "@/lib/auth/sesion";
 import { Cabecera } from "@/components/ui/Cabecera";
@@ -98,6 +99,19 @@ export default async function RankingPage() {
                 Solo cuentan las partidas de torneos internos. Las del repositorio no
                 afectan al ranking: cada uno sube las que quiere y no habría forma de
                 comprobarlas.
+              </p>
+              {/* Los dos rankings se confunden con facilidad, así que cada uno dice
+                  dónde está el otro. */}
+              <p className="mt-2 text-xs text-tinta-suave">
+                El ranking <b className="font-semibold">oficial</b> —ELO de la FACV y
+                orden de fuerza, que es el que manda en las convocatorias— está en{" "}
+                <Link
+                  href="/club/orden-fuerza"
+                  className="font-semibold text-acento-texto underline"
+                >
+                  Interclubs → Ranking oficial
+                </Link>
+                .
               </p>
             </Tarjeta>
           </>
