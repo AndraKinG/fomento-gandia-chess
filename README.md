@@ -181,8 +181,8 @@ de prueba (migración `0008_limpieza_datos_prueba.sql`). Si vuelves a sembrar
 cuentas de prueba, usa el mismo dominio `@fomentogandia.test` para que sean
 fáciles de localizar y bórralas antes de dar acceso real a los socios.
 
-Sí quedan en `players` cuatro fichas que no son socias del club, restos de
-probar los sincronizadores de ELO: "Carlsen, Magnus" y "Nakamura, Hikaru"
-(FIDE), "Aalbersberg Kroon, Pedro" y "Aalders, Hendricus" (FEDA). Están fuera
-del orden de fuerza, así que no entran en convocatorias ni en el cálculo de
-fuerza, pero aparecen en cualquier listado que lea `players` sin filtrar.
+Las cuatro fichas que quedaban de probar los sincronizadores de ELO ("Carlsen",
+"Nakamura", "Aalbersberg" y "Aalders") **también están borradas** (migración
+`0016_limpieza_fichas_no_socias.sql`), junto con un torneo de prueba creado a
+mano. A partir de ahí, `players` y el orden de fuerza de la temporada activa
+contienen exactamente lo mismo: los 46 socios reales.
