@@ -125,22 +125,47 @@ export default async function EquipoDetallePage({
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera titulo={equipo.nombre} subtitulo={equipo.categoria} volverA="/club/equipos" medida="panel" />
       <Contenedor medida="panel" className="space-y-4">
-        <Tarjeta className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-2">
+        {/* Los datos del equipo a la izquierda y la acción a la derecha, no el chip
+            pegado al botón: antes el chip del margen y el botón de plantilla compartían
+            fila y parecían la misma cosa, con "Sin capitán asignado" suelto debajo. */}
+        <Tarjeta className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 space-y-1">
+            <p className="text-sm text-tinta">
+              {capitanes.length === 0 ? (
+                <span className="text-tinta-suave">Sin capitán asignado</span>
+              ) : (
+                <>
+                  <span className="text-tinta-suave">
+                    {capitanes.length === 1 ? "Capitán: " : "Capitanes: "}
+                  </span>
+                  <span className="font-medium">
+                    {capitanes.map((c) => c.players?.nombre ?? "—").join(", ")}
+                  </span>
+                </>
+              )}
+            </p>
             <ChipMargen margenElo={equipo.margen_elo} />
-            {puedeGestionar && (
-              <Boton variante="secundario" href={`/club/equipos/${id}/plantilla`} className="text-sm">
-                Plantilla y disponibilidad
-              </Boton>
-            )}
           </div>
-          <p className="text-sm text-tinta-suave">
-            {capitanes.length === 0
-              ? "Sin capitán asignado"
-              : `Capitán: ${capitanes.map((c) => c.players?.nombre ?? "—").join(", ")}`}
-          </p>
+          {puedeGestionar && (
+            <Boton
+              variante="secundario"
+              href={`/club/equipos/${id}/plantilla`}
+              className="shrink-0 text-sm"
+            >
+              Plantilla y disponibilidad
+            </Boton>
+          )}
         </Tarjeta>
 
+        {/* Calendario y clasificación en paralelo desde `lg`: la clasificación es una
+            tabla estrecha de tres columnas y apilada dejaba media pantalla vacía a su
+            derecha. El calendario se lleva dos tercios porque sus filas son las que
+            necesitan ancho. */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <section className="space-y-2 lg:col-span-2">
+        <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
+          Calendario
+        </h2>
         {(jornadas ?? []).length === 0 ? (
           <EstadoVacio
             icono="📅"
@@ -158,31 +183,46 @@ export default async function EquipoDetallePage({
                 });
                 return (
                   <li key={j.id}>
+                    {/* DOS FILAS EN MÓVIL Y UNA EN ESCRITORIO. Antes eran seis cosas
+                        seguidas en una sola fila —ronda, rival, marcador, fecha, chip de
+                        convocatoria y chip de estado— y en un teléfono el nombre del
+                        rival se quedaba en tres letras para hacerles sitio. Ahora la
+                        segunda línea baja en móvil y sube a la derecha desde `sm`. */}
                     <Link
                       href={`/club/jornadas/${j.id}`}
-                      className="flex items-center gap-2 px-3 py-2.5 hover:bg-tarjeta-suave"
+                      className="flex flex-col gap-1 px-3 py-2.5 transition hover:bg-tarjeta-suave sm:flex-row sm:items-center sm:gap-3"
                     >
-                      <span className="shrink-0 rounded-full bg-tarjeta-suave px-2 py-0.5 text-xs font-semibold text-acento-texto ring-1 ring-borde-acento">
-                        R{j.ronda}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-sm text-tinta">
-                        {j.es_local ? "vs" : "@"} {j.rival}
-                      </span>
-                      {marcador && (
-                        <span className="shrink-0 text-sm font-semibold text-tinta">
-                          {marcador.texto}
-                          {marcador.parcial && "*"}
+                      <span className="flex min-w-0 flex-1 items-center gap-2">
+                        <span className="shrink-0 rounded-full bg-tarjeta-suave px-2 py-0.5 text-xs font-semibold text-acento-texto ring-1 ring-borde-acento">
+                          R{j.ronda}
                         </span>
-                      )}
-                      <span className="shrink-0 text-right text-xs text-tinta-suave">
-                        {formatearFechaCorta(j.fecha_hora)}
-                      </span>
-                      {conConvocatoria.has(j.id) && (
-                        <span className="shrink-0 rounded-full bg-acento-fuerte px-2 py-0.5 text-xs font-semibold text-sobre-acento">
-                          Conv.
+                        <span className="min-w-0 truncate text-sm text-tinta">
+                          {j.es_local ? "vs" : "@"} {j.rival}
                         </span>
-                      )}
-                      <ChipEstado estado={j.estado as Estado} />
+                      </span>
+                      <span className="flex shrink-0 items-center gap-3 pl-1 sm:pl-0">
+                        {/* El marcador con ancho fijo para que todos queden en columna:
+                            en una lista de once jornadas, cifras que bailan de sitio
+                            obligan a buscar cada una. */}
+                        <span className="w-16 text-right text-sm font-semibold tabular-nums text-tinta">
+                          {marcador ? `${marcador.texto}${marcador.parcial ? "*" : ""}` : ""}
+                        </span>
+                        <span className="w-16 text-right text-xs text-tinta-suave">
+                          {formatearFechaCorta(j.fecha_hora)}
+                        </span>
+                        {/* La convocatoria del capitán es un dato secundario, así que va
+                            en tono suave: en azul sólido pesaba más que el estado de la
+                            jornada, que es lo que de verdad importa de la fila. */}
+                        {conConvocatoria.has(j.id) && (
+                          <span
+                            title="El capitán publicó la convocatoria en la app"
+                            className="shrink-0 rounded-full bg-tarjeta-suave px-2 py-0.5 text-xs font-medium text-tinta-suave ring-1 ring-borde"
+                          >
+                            Conv.
+                          </span>
+                        )}
+                        <ChipEstado estado={j.estado as Estado} />
+                      </span>
                     </Link>
                   </li>
                 );
@@ -190,10 +230,13 @@ export default async function EquipoDetallePage({
             </ul>
           </div>
         )}
+        </section>
 
         {(standings ?? []).length > 0 && (
           <section className="space-y-2">
-            <h2 className="font-semibold text-tinta">Clasificación</h2>
+            <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
+              Clasificación
+            </h2>
             <div className="overflow-hidden rounded-2xl border border-borde bg-tarjeta">
               <table className="w-full text-sm">
                 <thead>
@@ -219,6 +262,7 @@ export default async function EquipoDetallePage({
             </div>
           </section>
         )}
+        </div>
       </Contenedor>
     </main>
   );
