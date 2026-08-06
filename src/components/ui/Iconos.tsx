@@ -101,25 +101,3 @@ export function IconoAdmin({ className }: Props) {
     </svg>
   );
 }
-
-/**
- * Caballo del escudo del club.
- *
- * ES EL CARÁCTER `♞` A PROPÓSITO, no un dibujo. En la barra lateral salía un
- * CUADRADO AZUL porque llevaba un degradado recortado al texto
- * (`bg-degradado-club bg-clip-text text-transparent`): el navegador recortaba el
- * degradado a la caja del `span`, no a la silueta de la pieza. El glifo en sí se
- * pinta perfectamente —en la cabecera del móvil siempre se ha visto bien—, así que
- * el arreglo es quitar el recorte y darle un color plano, no redibujar un caballo,
- * que es la pieza más difícil de dibujar a mano y la que más se nota si sale mal.
- *
- * Lleva `leading-none` porque un glifo de texto arrastra la altura de línea de la
- * fuente y sin eso descuadra la fila en la que esté.
- */
-export function Caballo({ className }: Props) {
-  return (
-    <span aria-hidden className={`inline-block text-center leading-none ${className ?? ""}`}>
-      ♞
-    </span>
-  );
-}

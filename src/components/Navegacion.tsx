@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Escudo } from "@/components/ui/Escudo";
 import {
-  Caballo,
   IconoAdmin,
   IconoClub,
   IconoInicio,
@@ -100,7 +100,7 @@ export function NavLateral({ esAdmin, email }: { esAdmin: boolean; email: string
     <aside className="hidden lg:flex lg:w-60 lg:shrink-0 lg:flex-col lg:border-r lg:border-borde lg:bg-tarjeta">
       <div className="sticky top-0 flex h-dvh flex-col">
         <Link href={INICIO} className="flex items-center gap-2.5 px-5 py-5">
-          <Caballo className="shrink-0 text-3xl text-acento-texto" />
+          <Escudo lado={34} className="shrink-0" />
           <span className="text-sm font-bold leading-tight text-tinta">
             Fomento
             <span className="block font-normal text-tinta-suave">de Gandia</span>

@@ -16,6 +16,14 @@ export const metadata: Metadata = {
   title: "Fomento de Gandia · Ajedrez",
   description: "Club de ajedrez Fomento de Gandia",
   manifest: "/manifest.json",
+  // Los tres los genera `scripts/generar-iconos.mjs` desde el escudo del club.
+  // `apple-touch-icon` va aparte y opaco porque iOS no admite transparencia ahí:
+  // compondría el escudo sobre negro. El favicon es la MARCA REDUCIDA, no el
+  // escudo completo: a 32 px el aro con el nombre del club no se lee.
+  icons: {
+    icon: [{ url: "/favicon.png", sizes: "32x32", type: "image/png" }],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
   // La zona de socios no tiene sentido en buscadores. La web pública sí querrá
   // indexarse cuando tenga contenido de verdad: entonces se sobrescribe este
   // `robots` en el metadata de la propia página pública.

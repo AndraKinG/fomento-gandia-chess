@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Escudo } from "@/components/ui/Escudo";
 
 /**
  * Web pública del club. Esqueleto: existe para que la zona de socios pueda vivir
@@ -12,7 +13,7 @@ import Link from "next/link";
  *   - dirección del local y cómo llegar
  *   - días y horas de juego
  *   - contacto (email o teléfono) para quien quiera venir a probar
- *   - una foto del club o el escudo, cuando exista
+ *   - una foto del club (el escudo ya está: `public/escudo.png`)
  *   - cuota de socio, si se quiere publicar
  * El formulario de solicitud de ingreso llegará con el modelo de rangos, que
  * necesita el rol "junta" para validar las peticiones.
@@ -37,9 +38,9 @@ export default function PaginaPublica() {
     <main className="flex-1 bg-fondo">
       <header className="bg-degradado-club px-6 py-16 text-sobre-acento">
         <div className="mx-auto max-w-3xl">
-          <span aria-hidden className="text-6xl leading-none">
-            ♞
-          </span>
+          {/* Escudo completo y grande: esta es la carta de presentación del club y
+              es el único sitio donde el aro con el nombre se lee de verdad. */}
+          <Escudo version="completo" lado={128} priority />
           <h1 className="mt-4 text-4xl font-bold sm:text-5xl">Fomento de Gandia</h1>
           <p className="mt-3 text-lg opacity-90">Club de ajedrez · Gandia</p>
           <div className="mt-8 flex flex-wrap gap-3">

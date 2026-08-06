@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ANCHOS, type Medida } from "@/components/ui/Contenedor";
-import { Caballo } from "@/components/ui/Iconos";
+import { Escudo } from "@/components/ui/Escudo";
 
 /**
  * Cabecera de pantalla: franja azul con el título.
@@ -33,9 +33,9 @@ export function Cabecera({
             ←
           </Link>
         )}
-        {/* En escritorio el caballo ya está en la barra lateral: repetirlo aquí
+        {/* En escritorio el escudo ya está en la barra lateral: repetirlo aquí
             es ruido. */}
-        <Caballo className="shrink-0 text-2xl lg:hidden" />
+        <Escudo lado={30} className="shrink-0 lg:hidden" />
         <div className="min-w-0">
           <h1 className="truncate text-xl font-bold leading-tight sm:text-2xl">{titulo}</h1>
           {subtitulo && <p className="truncate text-sm opacity-90">{subtitulo}</p>}

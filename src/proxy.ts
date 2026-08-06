@@ -48,8 +48,17 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+/**
+ * Se excluyen los ficheros estáticos y los crons.
+ *
+ * Los iconos van por extensión (`.png`, `.svg`, `.ico`) y no uno a uno: son seis
+ * ficheros que además se regeneran con `scripts/generar-iconos.mjs`, y una lista
+ * nominal se queda desactualizada en cuanto se añade uno. Cada petición que llega
+ * aquí gasta una llamada a `getUser()` contra Supabase, así que dejar pasar los
+ * iconos es gastar por nada.
+ */
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|icon.svg|robots.txt|api/cron|api/push).*)",
+    "/((?!_next/static|_next/image|manifest.json|sw.js|robots.txt|api/cron|api/push|.*\\.(?:png|svg|ico|webmanifest)$).*)",
   ],
 };
