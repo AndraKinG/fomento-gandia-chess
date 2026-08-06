@@ -1,0 +1,140 @@
+import { redirect } from "next/navigation";
+import { createServerSupabase } from "@/lib/supabase/server";
+import { sesionActual } from "@/lib/auth/sesion";
+import { Cabecera } from "@/components/ui/Cabecera";
+import { Tarjeta } from "@/components/ui/Tarjeta";
+import { Banner } from "@/components/ui/Banner";
+import { clasificar } from "@/lib/club/clasificacion";
+import { leerTorneo } from "../datos";
+import { GestionTorneo, type RondaVista, type SocioVista } from "./GestionTorneo";
+
+export default async function TorneoInternoPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const supabase = await createServerSupabase();
+  const sesion = await sesionActual();
+
+  const torneo = await leerTorneo(supabase, id);
+  if (!torneo) redirect("/club/interno");
+
+  // Todos los jugadores activos, para la lista de inscripción.
+  const { data: jugadores } = await supabase
+    .from("players")
+    .select("id, nombre")
+    .eq("activo", true)
+    .order("nombre");
+
+  const nombrePorFicha = new Map<string, string>(
+    (jugadores ?? []).map((j) => [j.id, j.nombre])
+  );
+  for (const i of torneo.inscritos) nombrePorFicha.set(i.ficha, i.nombre);
+
+  const inscritoPorFicha = new Map(torneo.inscritos.map((i) => [i.ficha, i]));
+  const socios: SocioVista[] = (jugadores ?? []).map((j) => ({
+    ficha: j.id,
+    nombre: j.nombre,
+    inscrito: inscritoPorFicha.has(j.id),
+    elo: inscritoPorFicha.get(j.id)?.eloInicial ?? 0,
+  }));
+
+  const rondas: RondaVista[] = torneo.rondas.map((r) => ({
+    numero: r.numero,
+    descansaNombre: r.descansa ? (nombrePorFicha.get(r.descansa) ?? "Socio") : null,
+    pares: r.emparejamientos.map((e, i) => ({
+      id: r.pares[i]?.id ?? `${r.id}-${i}`,
+      mesa: r.pares[i]?.mesa ?? i + 1,
+      blancasNombre: nombrePorFicha.get(e.blancas) ?? "Socio",
+      negrasNombre: nombrePorFicha.get(e.negras) ?? "Socio",
+      resultado: e.resultado,
+    })),
+  }));
+
+  // La clasificación se calcula con el MISMO módulo que usa el emparejador, para
+  // que la tabla y los cruces no puedan discrepar sobre quién va primero.
+  const tabla = clasificar(torneo.rondas, torneo.inscritos);
+  const hayPartidas = torneo.rondas.some((r) =>
+    r.emparejamientos.some((e) => e.resultado !== null)
+  );
+
+  return (
+    <main className="min-h-dvh bg-fondo pb-10">
+      <Cabecera
+        titulo={torneo.nombre}
+        subtitulo={`${torneo.sistema === "liguilla" ? "Liguilla" : "Suizo"}${
+          torneo.rondasTotales ? ` · ${torneo.rondasTotales} rondas` : ""
+        }`}
+        volverA="/club/interno"
+      />
+      <div className="mx-auto max-w-md space-y-4 p-4 sm:max-w-2xl">
+        {torneo.estado === "terminado" && (
+          <Banner tipo="ok">
+            Torneo terminado.
+            {hayPartidas && tabla.length > 0
+              ? ` Gana ${nombrePorFicha.get(tabla[0].ficha) ?? "el primero de la tabla"}.`
+              : ""}
+          </Banner>
+        )}
+        {torneo.notas && (
+          <Tarjeta compacta>
+            <p className="whitespace-pre-line text-sm text-tinta">{torneo.notas}</p>
+          </Tarjeta>
+        )}
+
+        {hayPartidas && (
+          <section className="space-y-2">
+            <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
+              Clasificación
+            </h2>
+            <Tarjeta compacta>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-tinta-suave">
+                    <th className="pb-1 pr-2 font-medium">#</th>
+                    <th className="pb-1 pr-2 font-medium">Jugador</th>
+                    <th className="pb-1 pr-2 text-right font-medium">Pts</th>
+                    <th className="pb-1 text-right font-medium" title="Buchholz">
+                      Bu
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tabla.map((f, i) => (
+                    <tr key={f.ficha} className="border-t border-borde">
+                      <td className="py-1.5 pr-2 text-tinta-suave">{i + 1}</td>
+                      <td className="py-1.5 pr-2 text-tinta">
+                        {nombrePorFicha.get(f.ficha) ?? "Socio"}
+                      </td>
+                      <td className="py-1.5 pr-2 text-right font-semibold text-tinta">
+                        {f.puntos % 1 === 0 ? f.puntos : f.puntos.toFixed(1)}
+                      </td>
+                      <td className="py-1.5 text-right text-tinta-suave">
+                        {f.buchholz % 1 === 0 ? f.buchholz : f.buchholz.toFixed(1)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="mt-2 text-xs text-tinta-suave">
+                Desempate: Buchholz (suma de los puntos de tus rivales) y luego
+                victorias.
+              </p>
+            </Tarjeta>
+          </section>
+        )}
+
+        <GestionTorneo
+          tournamentId={torneo.id}
+          estado={torneo.estado}
+          sistema={torneo.sistema}
+          rondas={rondas}
+          rondasTotales={torneo.rondasTotales}
+          socios={socios}
+          esJunta={Boolean(sesion?.esJunta)}
+        />
+      </div>
+    </main>
+  );
+}

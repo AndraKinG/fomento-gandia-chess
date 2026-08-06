@@ -10,12 +10,7 @@ const INICIO = "/club";
 
 /**
  * Secciones de la zona de socios, según la estructura acordada con el
- * propietario: Inicio · Interclubs · Club · Torneos · Perfil · Admin.
- *
- * **Falta "Club"** (torneos locales con ELO propio y repositorio de partidas) y
- * no está por decisión, no por olvido: no tiene ni una pantalla todavía —llega
- * con las Fases 3 y 4— y una pestaña que no lleva a ningún sitio es peor que no
- * tenerla. Se añade aquí en cuanto haya algo detrás.
+ * propietario: Inicio · Interclubs · Club · Torneos · Partidas · Perfil · Admin.
  *
  * `rutas` lista los prefijos que pertenecen a la sección, porque una sección
  * abarca varias rutas: Interclubs cubre equipos, disponibilidad y jornadas, y
@@ -29,6 +24,7 @@ const SECCIONES = [
     icon: "♟",
     rutas: ["/club/equipos", "/club/disponibilidad", "/club/jornadas"],
   },
+  { href: "/club/interno", label: "Club", icon: "♛", rutas: ["/club/interno"] },
   { href: "/club/torneos", label: "Torneos", icon: "🏆", rutas: ["/club/torneos"] },
   { href: "/club/partidas", label: "Partidas", icon: "♜", rutas: ["/club/partidas"] },
   { href: "/club/perfil", label: "Perfil", icon: "👤", rutas: ["/club/perfil"] },
