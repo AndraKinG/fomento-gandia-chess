@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseOrdenFuerzaFACV, URL_OF_CLUB } from "@/lib/import/facv-orden-fuerza";
+import { fetchConLimite } from "@/lib/import/red";
 
 /**
  * Lógica interna (sin gate de autorización) que descarga la página pública
@@ -18,7 +19,7 @@ export async function sincronizarOrdenFuerzaFACVCore(): Promise<{
   error?: string;
 }> {
   try {
-    const pagina = await fetch(URL_OF_CLUB, {
+    const pagina = await fetchConLimite(URL_OF_CLUB, {
       headers: { "user-agent": "Mozilla/5.0" },
     });
     if (!pagina.ok) {

@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizaNombre, offsetMadrid, parseCalendarioFACV, URL_CALENDARIO } from "@/lib/import/facv-calendario";
+import { fetchConLimite, LIMITE_PAGINA_GRANDE_MS } from "@/lib/import/red";
 
 type Sufijo = "A" | "B" | "C";
 
@@ -71,7 +72,7 @@ export async function sincronizarCalendarioFACVCore(): Promise<{
     const equipoA = equipos.find((e) => sufijoEquipo(e.nombre) === "A");
     const nombreBase = equipoA?.nombre ?? equipos[0].nombre.replace(/ [BC]$/i, "");
 
-    const pagina = await fetch(URL_CALENDARIO, { headers: { "user-agent": "Mozilla/5.0" } });
+    const pagina = await fetchConLimite(URL_CALENDARIO, { limiteMs: LIMITE_PAGINA_GRANDE_MS });
     if (!pagina.ok) {
       return {
         creadas: 0,

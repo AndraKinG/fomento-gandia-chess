@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { obtenerUrlUltimaListaFeda, parseListaFeda } from "@/lib/import/feda";
+import { fetchConLimite, LIMITE_FICHERO_MS } from "@/lib/import/red";
 
 const URL_PAGINA_ELO_FEDA = "https://feda.org/feda2k16/elo-feda/";
 
@@ -17,7 +18,7 @@ export async function actualizarEloFedaCore(): Promise<{
   error?: string;
 }> {
   try {
-    const pagina = await fetch(URL_PAGINA_ELO_FEDA, {
+    const pagina = await fetchConLimite(URL_PAGINA_ELO_FEDA, {
       headers: { "user-agent": "FomentoGandiaClubApp/1.0" },
     });
     if (!pagina.ok) {
@@ -28,7 +29,7 @@ export async function actualizarEloFedaCore(): Promise<{
     }
     const url = obtenerUrlUltimaListaFeda(await pagina.text());
     if (!url) return { actualizados: 0, error: "No se encontró la lista FEDA" };
-    const fichero = await fetch(url);
+    const fichero = await fetchConLimite(url, { limiteMs: LIMITE_FICHERO_MS });
     if (!fichero.ok) {
       return {
         actualizados: 0,

@@ -4,6 +4,7 @@ import {
   parseCalendarioTorneosFACV,
   URL_CALENDARIO_TORNEOS,
 } from "@/lib/import/facv-calendario-torneos";
+import { fetchConLimite, LIMITE_PAGINA_GRANDE_MS } from "@/lib/import/red";
 
 export type ResumenSyncTorneos = {
   creados: number;
@@ -40,7 +41,8 @@ export async function sincronizarTorneosFACVCore(): Promise<ResumenSyncTorneos> 
   try {
     const admin = createAdminClient();
 
-    const pagina = await fetch(URL_CALENDARIO_TORNEOS, {
+    const pagina = await fetchConLimite(URL_CALENDARIO_TORNEOS, {
+      limiteMs: LIMITE_PAGINA_GRANDE_MS,
       headers: { "user-agent": "Mozilla/5.0" },
     });
     if (!pagina.ok) {

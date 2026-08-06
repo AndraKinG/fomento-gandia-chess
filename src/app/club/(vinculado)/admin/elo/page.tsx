@@ -3,7 +3,7 @@ import { aplicarListaFeda, actualizarEloFeda, actualizarEloFide } from "./action
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Banner } from "@/components/ui/Banner";
-import { Boton } from "@/components/ui/Boton";
+import { BotonAccion } from "@/components/ui/BotonAccion";
 
 export default async function EloAdminPage({
   searchParams,
@@ -72,14 +72,17 @@ export default async function EloAdminPage({
       <div className="mx-auto max-w-md space-y-4 p-4">
         {msg ? <Banner tipo={tipo === "ok" ? "ok" : "error"}>{msg}</Banner> : null}
         <form action={refrescarFide}>
-          <Boton variante="degradado" className="w-full text-sm">
+          <BotonAccion
+            className="w-full text-sm"
+            trabajando="Consultando 48 perfiles en fide.com…"
+          >
             Actualizar FIDE ahora (perfiles fide.com)
-          </Boton>
+          </BotonAccion>
         </form>
         <form action={refrescarFeda}>
-          <Boton variante="degradado" className="w-full text-sm">
+          <BotonAccion className="w-full text-sm" trabajando="Descargando la lista de FEDA…">
             Actualizar FEDA ahora (descarga lista oficial)
-          </Boton>
+          </BotonAccion>
         </form>
         <Banner tipo="aviso">
           Ojo: la lista automática de feda.org puede estar desactualizada
@@ -93,9 +96,9 @@ export default async function EloAdminPage({
             </label>
             <input type="file" name="fichero" accept=".xlsx" required
               className="rounded-xl border border-borde bg-tarjeta p-2 text-sm text-tinta" />
-            <button className="rounded-xl border border-borde bg-tarjeta p-2 text-sm text-tinta transition duration-100 hover:bg-tarjeta-suave active:scale-[0.97]">
+            <BotonAccion variante="secundario" className="text-sm" trabajando="Aplicando…">
               Aplicar fichero
-            </button>
+            </BotonAccion>
           </form>
         </Tarjeta>
       </div>

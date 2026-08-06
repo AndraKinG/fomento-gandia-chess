@@ -6,6 +6,7 @@ import {
   parseResultadosFACV,
 } from "@/lib/import/facv-resultados";
 import { calcularMarcador, formatearPunto } from "@/lib/marcador";
+import { fetchConLimite, LIMITE_PAGINA_GRANDE_MS } from "@/lib/import/red";
 
 type Sufijo = "A" | "B" | "C";
 
@@ -161,7 +162,7 @@ export async function sincronizarResultadosFACVCore(): Promise<ResultadoSyncResu
     const equipoA = equipos.find((e) => sufijoEquipo(e.nombre) === "A");
     const nombreBase = equipoA?.nombre ?? equipos[0].nombre.replace(/ [BC]$/i, "");
 
-    const pagina = await fetch(URL_CALENDARIO, { headers: { "user-agent": "Mozilla/5.0" } });
+    const pagina = await fetchConLimite(URL_CALENDARIO, { limiteMs: LIMITE_PAGINA_GRANDE_MS });
     if (!pagina.ok) {
       return { ...vacio, error: `No se pudo descargar el calendario (HTTP ${pagina.status})` };
     }
@@ -324,7 +325,7 @@ export async function sincronizarResultadosFACVCore(): Promise<ResultadoSyncResu
 
       let paginaClasif: Response;
       try {
-        paginaClasif = await fetch(enlace.url, { headers: { "user-agent": "Mozilla/5.0" } });
+        paginaClasif = await fetchConLimite(enlace.url);
       } catch {
         avisos.push(`${equipo.nombre}: no se pudo descargar la clasificación de chess-results`);
         continue;
