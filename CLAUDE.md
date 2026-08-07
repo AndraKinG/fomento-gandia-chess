@@ -1,4 +1,4 @@
-﻿@AGENTS.md
+@AGENTS.md
 
 # Chess Club Manager â€” Fomento de Gandia Â· GuÃ­a de trabajo
 
