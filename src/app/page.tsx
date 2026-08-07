@@ -7,16 +7,17 @@ import { Escudo } from "@/components/ui/Escudo";
  * bajo /club desde ya (mover eso más tarde rompería accesos directos de la PWA y
  * enlaces de notificaciones ya enviadas).
  *
- * PENDIENTE DE DATOS DEL PROPIETARIO. Aquí solo hay hechos verificables desde el
- * propio proyecto (nombre, ciudad, equipos y categorías reales de la temporada).
- * Falta rellenar, y NO se ha inventado nada:
- *   - dirección del local y cómo llegar
+ * Datos públicos verificados:
+ *   - dirección del local: HECHO (2026-08-07) — sede oficial del listado de sedes
+ *     del Interclubs 2026 de la FACV (listado_sedes.php?id=1428), con su enlace de
+ *     Google Maps tal cual lo publica la federación.
+ *   - descripción del club: del blog oficial (ajedrezgandia.blogspot.com).
+ * PENDIENTE DE DATOS DEL PROPIETARIO (está esperando confirmación del club):
  *   - días y horas de juego
- *   - contacto (email o teléfono) para quien quiera venir a probar
+ *   - contacto (email o teléfono) — hay candidatos (el de la FACV es de un socio)
+ *     pero el propietario quiere confirmar cuál publicar
  *   - una foto del club (el escudo ya está: `public/escudo.png`)
  *   - cuota de socio, si se quiere publicar
- * El formulario de solicitud de ingreso llegará con el modelo de rangos, que
- * necesita el rol "junta" para validar las peticiones.
  */
 
 export const metadata: Metadata = {
@@ -78,6 +79,30 @@ export default function PaginaPublica() {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="mx-auto max-w-3xl px-6 pb-12">
+        <h2 className="text-2xl font-bold text-tinta">Dónde jugamos</h2>
+        <div className="mt-4 rounded-2xl border border-borde bg-tarjeta p-5 shadow-sm">
+          <p className="font-semibold text-tinta">
+            Poliesportiu Municipal de Gandia (Sala de Aeróbic)
+          </p>
+          <p className="mt-1 text-sm text-tinta-suave">
+            Avinguda dels Esports, 17 · 46701 Gandia (València)
+          </p>
+          <p className="mt-3 text-sm text-tinta-suave">
+            Disponemos de material de juego, relojes de competición y una
+            biblioteca con libros y revistas especializadas.
+          </p>
+          <a
+            href="https://maps.app.goo.gl/MY2pZb8xebRW6M5BA"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-flex rounded-xl border border-borde-acento bg-tarjeta-suave px-4 py-2 text-sm font-semibold text-acento-texto transition duration-100 hover:brightness-95 active:scale-[0.97]"
+          >
+            📍 Cómo llegar (Google Maps)
+          </a>
+        </div>
       </section>
 
       <section id="unirse" className="mx-auto max-w-3xl px-6 pb-16">
