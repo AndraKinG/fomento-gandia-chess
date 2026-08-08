@@ -5,6 +5,8 @@ import { Tarjeta } from "@/components/ui/Tarjeta";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { Contenedor } from "@/components/ui/Contenedor";
 import { Pestana, Pestanas } from "@/components/ui/Pestanas";
+import { SelectorTemporada } from "@/components/ui/SelectorTemporada";
+import { conTemporada, elegirTemporada, leerTemporadas } from "@/lib/temporadas";
 import {
   estadisticasClub,
   etiquetaNumero,
@@ -59,19 +61,16 @@ function Estadistica({ valor, etiqueta }: { valor: string; etiqueta: string }) {
 export default async function OrdenFuerzaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ por?: string }>;
+  searchParams: Promise<{ por?: string; temporada?: string }>;
 }) {
-  const { por } = await searchParams;
+  const { por, temporada: temporadaPedida } = await searchParams;
   const criterio: Criterio = por === "elo" ? "elo" : "orden";
 
   const supabase = await createServerSupabase();
   const sesion = await sesionActual();
 
-  const { data: season } = await supabase
-    .from("seasons")
-    .select("id, nombre")
-    .eq("activa", true)
-    .maybeSingle();
+  const temporadas = await leerTemporadas(supabase);
+  const season = elegirTemporada(temporadas, temporadaPedida);
 
   const { data: orden } = season
     ? await supabase
@@ -116,7 +115,7 @@ export default async function OrdenFuerzaPage({
         // es la forma más rápida de que nadie sepa cuál está mirando.
         titulo="Ranking oficial"
         subtitulo="ELO de la FACV y orden de fuerza"
-        volverA="/club/equipos"
+        volverA={conTemporada("/club/equipos", season)}
         medida="panel"
       />
       <Contenedor medida="panel" className="space-y-4">
@@ -148,14 +147,25 @@ export default async function OrdenFuerzaPage({
               )}
             </Tarjeta>
 
-            <Pestanas>
-              <Pestana href="/club/orden-fuerza" activa={criterio === "orden"}>
-                Orden de fuerza
-              </Pestana>
-              <Pestana href="/club/orden-fuerza?por=elo" activa={criterio === "elo"}>
-                Por ELO
-              </Pestana>
-            </Pestanas>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Pestanas>
+                <Pestana
+                  href={conTemporada("/club/orden-fuerza", season)}
+                  activa={criterio === "orden"}
+                >
+                  Orden de fuerza
+                </Pestana>
+                <Pestana
+                  href={conTemporada("/club/orden-fuerza?por=elo", season)}
+                  activa={criterio === "elo"}
+                >
+                  Por ELO
+                </Pestana>
+              </Pestanas>
+              {/* `season` no puede ser null aquí —si no hubiera temporada no habría
+                  filas y estaríamos en el estado vacío—, pero el tipo no lo sabe. */}
+              {season && <SelectorTemporada temporadas={temporadas} actual={season} />}
+            </div>
 
             <Tarjeta compacta>
               {/* Tabla y no una tarjeta por jugador: son 46 filas y en un monitor

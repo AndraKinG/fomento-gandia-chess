@@ -5,6 +5,8 @@ import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { Contenedor, Rejilla } from "@/components/ui/Contenedor";
+import { SelectorTemporada } from "@/components/ui/SelectorTemporada";
+import { conTemporada, elegirTemporada, leerTemporadas } from "@/lib/temporadas";
 
 type Jornada = {
   id: string;
@@ -78,10 +80,15 @@ function resumenJornadas(jornadas: Jornada[]): Jornada[] {
     .slice(0, 2);
 }
 
-export default async function EquiposPage() {
+export default async function EquiposPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ temporada?: string }>;
+}) {
+  const { temporada: temporadaPedida } = await searchParams;
   const supabase = await createServerSupabase();
-  const { data: season } = await supabase
-    .from("seasons").select("id, nombre").eq("activa", true).maybeSingle();
+  const temporadas = await leerTemporadas(supabase);
+  const season = elegirTemporada(temporadas, temporadaPedida);
 
   if (!season) {
     return (
@@ -123,17 +130,32 @@ export default async function EquiposPage() {
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera titulo="Interclubs" subtitulo={subtituloTemporada(season.nombre)} medida="panel" />
       <Contenedor medida="panel" className="space-y-6">
+        {temporadas.length > 1 && (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <SelectorTemporada temporadas={temporadas} actual={season} />
+            {!season.activa && (
+              <p className="text-sm text-tinta-suave">
+                Estás viendo una temporada terminada.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Los dos accesos de la sección, en rejilla. Antes "Mi disponibilidad"
             ocupaba el ancho entero y su flecha acababa a 1600 px del texto, que
             deja de leerse como parte de la tarjeta. */}
         <Rejilla>
+          {/* La disponibilidad es sobre jornadas que vienen, así que en una temporada
+              terminada no pinta nada. */}
+          {season.activa && (
+            <Acceso
+              href="/club/disponibilidad"
+              titulo="Mi disponibilidad"
+              detalle="Marca si puedes jugar cada jornada"
+            />
+          )}
           <Acceso
-            href="/club/disponibilidad"
-            titulo="Mi disponibilidad"
-            detalle="Marca si puedes jugar cada jornada"
-          />
-          <Acceso
-            href="/club/orden-fuerza"
+            href={conTemporada("/club/orden-fuerza", season)}
             titulo="Ranking oficial"
             detalle="ELO de la FACV y orden de fuerza"
           />
@@ -152,7 +174,11 @@ export default async function EquiposPage() {
               const capitanes = (eq.team_captains ?? []) as unknown as Capitan[];
               const resumen = resumenJornadas(jornadasPorEquipo.get(eq.id) ?? []);
               return (
-                <Link key={eq.id} href={`/club/equipos/${eq.id}`} className="h-full">
+                <Link
+                  key={eq.id}
+                  href={conTemporada(`/club/equipos/${eq.id}`, season)}
+                  className="h-full"
+                >
                   <Tarjeta className="flex h-full flex-col gap-3">
                     <div className="flex items-start justify-between gap-2">
                       <div>

@@ -9,6 +9,7 @@ import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Boton } from "@/components/ui/Boton";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { Contenedor } from "@/components/ui/Contenedor";
+import { conTemporada, elegirTemporada, leerTemporadas } from "@/lib/temporadas";
 
 type Estado = "pendiente" | "jugado";
 const ESTILO_ESTADO: Record<Estado, string> = {
@@ -41,16 +42,30 @@ function formatearFechaCorta(fechaHoraISO: string | null): string {
 
 export default async function EquipoDetallePage({
   params,
-}: { params: Promise<{ id: string }> }) {
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ temporada?: string }>;
+}) {
   const { id } = await params;
+  const { temporada: temporadaPedida } = await searchParams;
   const supabase = await createServerSupabase();
 
+  // El equipo YA lleva su temporada: esta pantalla no elige nada, solo necesita saber
+  // a cuál volver. Si el equipo es de una temporada pasada, la flecha de volver tiene
+  // que llevar a esa y no a la actual, o se pierde de dónde venías.
   const { data: equipo } = await supabase
     .from("teams")
-    .select("id, nombre, categoria, margen_elo, team_captains(player_id, players(nombre))")
+    .select("id, nombre, categoria, margen_elo, season_id, team_captains(player_id, players(nombre))")
     .eq("id", id)
     .maybeSingle();
   if (!equipo) redirect("/club/equipos");
+
+  const temporadas = await leerTemporadas(supabase);
+  const temporadaDelEquipo =
+    temporadas.find((t) => t.id === equipo.season_id) ??
+    elegirTemporada(temporadas, temporadaPedida);
+  const volverA = conTemporada("/club/equipos", temporadaDelEquipo);
 
   const [{ data: esCapitan }, admin, { data: jornadas }, { data: standings }] = await Promise.all([
     supabase.rpc("es_capitan_de", { equipo: id }),
@@ -142,7 +157,16 @@ export default async function EquipoDetallePage({
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo={equipo.nombre} subtitulo={equipo.categoria} volverA="/club/equipos" medida="panel" />
+      <Cabecera
+        titulo={equipo.nombre}
+        subtitulo={
+          temporadaDelEquipo && !temporadaDelEquipo.activa
+            ? `${equipo.categoria} · ${temporadaDelEquipo.nombre}`
+            : equipo.categoria
+        }
+        volverA={volverA}
+        medida="panel"
+      />
       <Contenedor medida="panel" className="space-y-4">
         {/* Los datos del equipo a la izquierda y la acción a la derecha, no el chip
             pegado al botón: antes el chip del margen y el botón de plantilla compartían
