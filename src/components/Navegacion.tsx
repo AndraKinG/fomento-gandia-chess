@@ -78,11 +78,15 @@ const SECCIONES: Seccion[] = [
     Icono: IconoPartidas,
     rutas: ["/club/partidas"],
   },
+  // Perfil NO va en la barra de abajo: vive arriba a la derecha, fijo, en
+  // `AccesoPerfil`. Es de las que menos se tocan y liberar ese hueco deja que las
+  // cinco que sí se usan a diario quepan sin apretarse en un teléfono.
   {
     href: "/club/perfil",
     label: "Perfil",
     Icono: IconoPerfil,
     rutas: ["/club/perfil", "/club/solicitudes"],
+    enMovil: false,
   },
 ];
 
@@ -157,6 +161,35 @@ export function NavLateral({ esAdmin, email }: { esAdmin: boolean; email: string
         </p>
       </div>
     </aside>
+  );
+}
+
+/**
+ * Acceso al perfil: arriba a la derecha y fijo, SOLO en móvil.
+ *
+ * Está aquí y no en la barra de abajo por sitio: siete pestañas no caben en un
+ * teléfono y Perfil es de las que menos se tocan, así que sube a la esquina —donde
+ * lo pone todo el mundo— y libera un hueco abajo para lo que se usa a diario.
+ *
+ * En escritorio no existe: allí la barra lateral tiene sitio de sobra y ya lo lleva.
+ */
+export function AccesoPerfil({ nombre }: { nombre: string | null }) {
+  const pathname = usePathname();
+  const activo = pathname.startsWith("/club/perfil");
+  return (
+    <Link
+      href="/club/perfil"
+      aria-label="Tu perfil"
+      aria-current={activo ? "page" : undefined}
+      title={nombre ?? "Tu perfil"}
+      className={`fixed right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border shadow-sm backdrop-blur lg:hidden ${
+        activo
+          ? "border-borde-acento bg-acento-fuerte text-sobre-acento"
+          : "border-borde bg-tarjeta/90 text-tinta"
+      }`}
+    >
+      <IconoPerfil className="h-5 w-5" />
+    </Link>
   );
 }
 

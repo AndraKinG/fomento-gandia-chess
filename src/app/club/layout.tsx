@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { PushSubscriber } from "@/components/PushSubscriber";
-import { NavLateral, NavInferior } from "@/components/Navegacion";
+import { AccesoPerfil, NavLateral, NavInferior } from "@/components/Navegacion";
 import { sesionActual } from "@/lib/auth/sesion";
 import { Asistente } from "@/components/asistente/Asistente";
 
@@ -41,6 +41,7 @@ export default async function ClubLayout({
         {children}
       </div>
       {conNavegacion && <NavInferior esAdmin={sesion.esAdmin} />}
+      {conNavegacion && <AccesoPerfil nombre={sesion.nombre} />}
       {/* El asistente va en el layout y no en cada pantalla: la gracia es poder
           preguntar sin salir de donde estás. Solo para quien ya tiene ficha: sin
           ella no hay nada del club que consultar y la pantalla de vincular tiene

@@ -26,6 +26,19 @@ import {
  * EL RELOJ DE AQUÍ ES DECORADO: cuenta hacia atrás para que se vea correr, pero
  * arranca siempre de los números que manda el servidor y se corrige con cada
  * jugada. El que manda es el de la base.
+ *
+ * POR QUÉ LA JUGADA SE PINTA ANTES DE MANDARLA. La primera versión esperaba a que
+ * el servidor contestara para mover la pieza, y con una acción de servidor por
+ * jugada eso son cientos de milisegundos en los que el tablero está congelado. En
+ * una partida a 3+2 eso no es jugable. Ahora la jugada se valida aquí con las mismas
+ * reglas, se pinta al momento y se manda en paralelo; si el servidor la rechaza —no
+ * era tu turno, se te acabó el tiempo—, se vuelve atrás y se dice por qué. El
+ * servidor sigue siendo el que manda: esto solo adelanta el dibujo.
+ *
+ * Y EL TIEMPO REAL LLEVA RED DE SEGURIDAD. `postgres_changes` puede perderse un
+ * aviso —reconexión, pestaña dormida, RLS que tarda en aplicarse—, y perderse un
+ * aviso aquí significa quedarte mirando un tablero que ya no es el de la partida. Se
+ * recarga la fila cada dos segundos mientras la partida está viva.
  */
 
 export type Partida = {
@@ -131,6 +144,48 @@ export function Mesa({
     };
   }, [p.id]);
 
+  // RED DE SEGURIDAD del tiempo real: se recarga la fila cada dos segundos mientras
+  // la partida está viva. Si el aviso llegó, esto no cambia nada; si se perdió,
+  // evita quedarte mirando un tablero que ya no es el de la partida —que es lo que
+  // obligaba a recargar a mano.
+  useEffect(() => {
+    if (p.resultado !== null) return;
+    const supabase = createClient();
+    const t = setInterval(async () => {
+      const { data } = await supabase
+        .from("live_games")
+        .select(
+          "jugadas, turno, blancas_ms, negras_ms, ultima_jugada_en, resultado, motivo, tablas_ofrecidas_por"
+        )
+        .eq("id", p.id)
+        .maybeSingle();
+      if (!data) return;
+      setP((antes) => {
+        // Si no ha cambiado nada, se devuelve el mismo objeto: cambiarlo repintaría
+        // el tablero entero dos veces por segundo para nada.
+        if (
+          antes.jugadas.length === (data.jugadas ?? []).length &&
+          antes.resultado === data.resultado &&
+          antes.tablasOfrecidasPor === data.tablas_ofrecidas_por
+        ) {
+          return antes;
+        }
+        return {
+          ...antes,
+          jugadas: data.jugadas ?? [],
+          turno: data.turno,
+          blancasMs: data.blancas_ms,
+          negrasMs: data.negras_ms,
+          ultimaJugadaEn: data.ultima_jugada_en,
+          resultado: data.resultado,
+          motivo: data.motivo,
+          tablasOfrecidasPor: data.tablas_ofrecidas_por,
+        };
+      });
+    }, 2000);
+    return () => clearInterval(t);
+  }, [p.id, p.resultado]);
+
   // La cuenta atrás. Cada décima porque en los últimos segundos se ven décimas; en
   // cuanto la partida acaba se para, que si no sigue restando sobre un resultado.
   useEffect(() => {
@@ -176,12 +231,36 @@ export function Mesa({
 
   async function enviar(desde: string, hasta: string) {
     setElegida(null);
+    setError(null);
     // Coronación: si la jugada admite corona, se pide dama. Elegir pieza es un caso
     // raro en partida rápida y un diálogo aquí cuesta segundos de reloj.
     const posibles = juego.moves({ square: desde as never, verbose: true });
     const corona = posibles.some((m) => m.to === hasta && m.promotion) ? "q" : undefined;
+
+    // Se comprueba aquí con las mismas reglas antes de pintarla: si es ilegal, ni
+    // se manda. Legal o no lo dice `chess.js`, igual que en el servidor.
+    const prueba = new Chess(juego.fen());
+    let san: string;
+    try {
+      san = prueba.move({ from: desde, to: hasta, promotion: corona }).san;
+    } catch {
+      return;
+    }
+
+    // Se guarda la posición de antes para poder volver si el servidor dice que no.
+    const antes = p;
+    setP((estado) => ({
+      ...estado,
+      jugadas: [...estado.jugadas, san],
+      turno: estado.turno === "w" ? "b" : "w",
+    }));
+
     const r = await mover(p.id, { desde, hasta, corona });
-    if (r.error) setError(r.error);
+    if (r.error) {
+      // El servidor manda: se deshace lo pintado y se dice por qué.
+      setP(antes);
+      setError(r.error);
+    }
   }
 
   function tocar(casilla: string) {
@@ -265,20 +344,21 @@ export function Mesa({
 
         {enJuego && miColor !== null && (
           <div className="flex flex-wrap gap-2">
-            <Boton
-              variante="secundario"
-              className="px-3 py-1.5 text-sm"
-              onClick={() => void ofrecerTablas(p.id)}
-            >
-              {p.tablasOfrecidasPor === yo ? "Retirar tablas" : "Ofrecer tablas"}
-            </Boton>
-            <Boton
-              variante="secundario"
-              className="px-3 py-1.5 text-sm"
-              onClick={() => void abandonar(p.id)}
-            >
-              Abandonar
-            </Boton>
+            {/* DOBLE TOQUE en lo que no tiene vuelta atrás. Abandonar es un dedo
+                mal puesto y la partida perdida, y en un móvil con el reloj corriendo
+                pasa. Retirar la oferta de tablas no hace falta confirmarlo: eso sí
+                se deshace. */}
+            <Confirmar
+              etiqueta={p.tablasOfrecidasPor === yo ? "Retirar tablas" : "Ofrecer tablas"}
+              seguro={p.tablasOfrecidasPor === yo ? "Retirar tablas" : "¿Seguro? Ofrecer"}
+              directo={p.tablasOfrecidasPor === yo}
+              onConfirmar={() => void ofrecerTablas(p.id)}
+            />
+            <Confirmar
+              etiqueta="Abandonar"
+              seguro="¿Seguro? Abandonar"
+              onConfirmar={() => void abandonar(p.id)}
+            />
             {/* Solo cuando de verdad se le ha acabado al rival: el servidor lo
                 vuelve a comprobar, pero enseñar el botón antes de tiempo confunde. */}
             {!meToca && msArriba <= 0 && (
@@ -355,6 +435,50 @@ export function Mesa({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Botón que pide un segundo toque antes de hacer nada.
+ *
+ * El aviso se cae solo a los cuatro segundos: si te has arrepentido, dejarlo puesto
+ * es una trampa esperando al siguiente dedo.
+ */
+function Confirmar({
+  etiqueta,
+  seguro,
+  directo = false,
+  onConfirmar,
+}: {
+  etiqueta: string;
+  seguro: string;
+  /** true para hacerlo al primer toque, sin preguntar. */
+  directo?: boolean;
+  onConfirmar: () => void;
+}) {
+  const [armado, setArmado] = useState(false);
+
+  useEffect(() => {
+    if (!armado) return;
+    const t = setTimeout(() => setArmado(false), 4000);
+    return () => clearTimeout(t);
+  }, [armado]);
+
+  return (
+    <Boton
+      variante={armado ? "solido" : "secundario"}
+      className="px-3 py-1.5 text-sm"
+      onClick={() => {
+        if (directo || armado) {
+          setArmado(false);
+          onConfirmar();
+          return;
+        }
+        setArmado(true);
+      }}
+    >
+      {armado ? seguro : etiqueta}
+    </Boton>
   );
 }
 

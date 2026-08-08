@@ -161,6 +161,15 @@ async function cerrarEnElTorneo(
   revalidatePath("/club/torneos/interno/ranking");
 }
 
+/**
+ * Refresca las pantallas de servidor.
+ *
+ * NO SE LLAMA AL MOVER, y es deliberado: `revalidatePath` obliga a Next a rehacer la
+ * página entera en el servidor, y hacerlo en cada jugada añadía cientos de
+ * milisegundos a cada movimiento de una partida a 3+2. La mesa se entera por tiempo
+ * real, que para eso está. Solo se refresca cuando la partida CAMBIA DE ESTADO
+ * —empieza o termina—, que es lo que ven las listas.
+ */
 function refrescar(id: string): void {
   revalidatePath("/club/jugar");
   revalidatePath(`/club/jugar/${id}`);
@@ -341,8 +350,8 @@ export async function mover(partidaId: string, jugada: Jugada): Promise<Respuest
       { ...mia.fila, jugadas: r.estado.jugadas },
       r.estado.resultado
     );
+    refrescar(partidaId);
   }
-  refrescar(partidaId);
   return {};
 }
 
