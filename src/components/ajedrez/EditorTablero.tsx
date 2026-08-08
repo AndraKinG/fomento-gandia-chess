@@ -111,6 +111,22 @@ export function EditorTablero({
     }
   }
 
+  /**
+   * Se ha soltado una pieza en otra casilla.
+   *
+   * Repite la comprobación de coronación de `onToque` en vez de reutilizarla: el
+   * arrastre no pasa por la selección, y sin esto un peón que llega a la última fila
+   * se comería el diálogo de "¿a qué corona?" y coronaría siempre en dama.
+   */
+  function onSoltar(desde: string, hasta: string) {
+    const posibles = juego.moves({ square: desde as never, verbose: true });
+    if (posibles.some((m) => m.to === hasta && m.promotion)) {
+      setPromocion({ from: desde, to: hasta });
+      return;
+    }
+    mover(desde, hasta);
+  }
+
   function onToque(casilla: string) {
     if (promocion) return;
 
@@ -160,6 +176,7 @@ export function EditorTablero({
         ultimoMovimiento={ultimo ? { from: ultimo.from, to: ultimo.to } : null}
         enJaque={reyEnJaque}
         onToque={onToque}
+        onSoltar={onSoltar}
         deshabilitado={juego.isGameOver() || promocion !== null}
       />
 
