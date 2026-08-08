@@ -15,6 +15,9 @@ const URL_PAGINA_ELO_FEDA = "https://feda.org/feda2k16/elo-feda/";
  */
 export async function actualizarEloFedaCore(): Promise<{
   actualizados: number;
+  sinFicha?: number;
+  /** Nombre del fichero aplicado, para poder decir de qué mes es la lista. */
+  lista?: string;
   error?: string;
 }> {
   try {
@@ -36,7 +39,8 @@ export async function actualizarEloFedaCore(): Promise<{
         error: `No se pudo descargar la lista FEDA (HTTP ${fichero.status})`,
       };
     }
-    return aplicarListaFedaCore(await fichero.arrayBuffer());
+    const resultado = await aplicarListaFedaCore(await fichero.arrayBuffer());
+    return { ...resultado, lista: url.split("/").pop() };
   } catch {
     return { actualizados: 0, error: "Error al procesar la lista FEDA" };
   }
@@ -52,28 +56,43 @@ export async function actualizarEloFedaCore(): Promise<{
  */
 export async function aplicarListaFedaCore(
   buffer: ArrayBuffer
-): Promise<{ actualizados: number; error?: string }> {
+): Promise<{ actualizados: number; sinFicha: number; error?: string }> {
   try {
-    const mapa = parseListaFeda(buffer);
-    if (mapa.size === 0) {
+    const lista = parseListaFeda(buffer);
+    if (lista.porFeda.size === 0) {
       return {
         actualizados: 0,
+        sinFicha: 0,
         error: "El fichero no contiene columnas reconocibles (Id. FEDA / Elo)",
       };
     }
     const admin = createAdminClient();
+    // Se piden TODAS las fichas, no solo las que tienen `feda_id`: ninguna del club lo
+    // tiene, y el cruce de verdad es por `fide_id`.
     const { data: players } = await admin
-      .from("players").select("id, feda_id").not("feda_id", "is", null);
+      .from("players")
+      .select("id, fide_id, feda_id");
+
     let actualizados = 0;
+    let sinFicha = 0;
     for (const p of players ?? []) {
-      const elo = mapa.get(p.feda_id!);
-      if (elo !== undefined) {
-        await admin.from("players").update({ elo_feda: elo }).eq("id", p.id);
-        actualizados++;
+      // Por id FEDA si lo tiene, y si no por id FIDE.
+      const fila =
+        (p.feda_id ? lista.porFeda.get(p.feda_id) : undefined) ??
+        (p.fide_id ? lista.porFide.get(p.fide_id) : undefined);
+      if (!fila) {
+        sinFicha++;
+        continue;
       }
+      // Se aprovecha para guardar el `feda_id` que faltaba: a partir de la próxima vez
+      // el cruce ya no depende de que la lista traiga el id FIDE.
+      const cambios: { elo_feda: number; feda_id?: string } = { elo_feda: fila.elo };
+      if (!p.feda_id) cambios.feda_id = fila.fedaId;
+      await admin.from("players").update(cambios).eq("id", p.id);
+      actualizados++;
     }
-    return { actualizados };
+    return { actualizados, sinFicha };
   } catch {
-    return { actualizados: 0, error: "Error al procesar la lista FEDA" };
+    return { actualizados: 0, sinFicha: 0, error: "Error al procesar la lista FEDA" };
   }
 }

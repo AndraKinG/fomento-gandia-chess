@@ -12,6 +12,8 @@ import { actualizarEloFideCore } from "@/lib/import/fide-apply";
  */
 export async function actualizarEloFeda(): Promise<{
   actualizados: number;
+  sinFicha?: number;
+  lista?: string;
   error?: string;
 }> {
   if (!(await esAdmin())) {
@@ -43,7 +45,7 @@ export async function actualizarEloFide(): Promise<{
  */
 export async function aplicarListaFeda(
   buffer: ArrayBuffer
-): Promise<{ actualizados: number; error?: string }> {
+): Promise<{ actualizados: number; sinFicha?: number; error?: string }> {
   if (!(await esAdmin())) {
     return { actualizados: 0, error: "Solo el admin puede hacer esto" };
   }

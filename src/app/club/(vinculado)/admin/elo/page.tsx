@@ -46,10 +46,12 @@ export default async function EloAdminPage({
   async function refrescarFeda() {
     "use server";
     const resultado = await actualizarEloFeda();
+    const total = resultado.actualizados + (resultado.sinFicha ?? 0);
     const params = new URLSearchParams({
       msg:
         resultado.error ??
-        `ELO FEDA actualizado: ${resultado.actualizados} jugadores`,
+        `ELO FEDA actualizado: ${resultado.actualizados} de ${total} fichas` +
+          (resultado.lista ? ` (lista ${resultado.lista})` : ""),
       tipo: resultado.error ? "error" : "ok",
     });
     redirect(`/club/admin/elo?${params.toString()}`);
