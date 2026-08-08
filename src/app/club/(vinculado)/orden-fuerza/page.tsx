@@ -119,6 +119,26 @@ export default async function OrdenFuerzaPage({
         medida="panel"
       />
       <Contenedor medida="panel" className="space-y-4">
+        {/* Fuera del bloque de "hay filas": una temporada sin orden de fuerza no tiene
+            nada que enseñar, y si el selector viviera dentro te quedabas sin poder
+            cambiar desde esta pantalla. */}
+        {season && temporadas.length > 1 && (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <SelectorTemporada
+              temporadas={temporadas}
+              actual={season}
+              ruta="/club/orden-fuerza"
+              // La ordenación elegida se mantiene al cambiar de temporada.
+              extra={criterio === "elo" ? { por: "elo" } : {}}
+            />
+            {!season.activa && (
+              <p className="text-sm text-tinta-suave">
+                Estás viendo una temporada terminada.
+              </p>
+            )}
+          </div>
+        )}
+
         {filas.length === 0 ? (
           <EstadoVacio
             icono="📋"
@@ -147,25 +167,20 @@ export default async function OrdenFuerzaPage({
               )}
             </Tarjeta>
 
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <Pestanas>
-                <Pestana
-                  href={conTemporada("/club/orden-fuerza", season)}
-                  activa={criterio === "orden"}
-                >
-                  Orden de fuerza
-                </Pestana>
-                <Pestana
-                  href={conTemporada("/club/orden-fuerza?por=elo", season)}
-                  activa={criterio === "elo"}
-                >
-                  Por ELO
-                </Pestana>
-              </Pestanas>
-              {/* `season` no puede ser null aquí —si no hubiera temporada no habría
-                  filas y estaríamos en el estado vacío—, pero el tipo no lo sabe. */}
-              {season && <SelectorTemporada temporadas={temporadas} actual={season} />}
-            </div>
+            <Pestanas>
+              <Pestana
+                href={conTemporada("/club/orden-fuerza", season)}
+                activa={criterio === "orden"}
+              >
+                Orden de fuerza
+              </Pestana>
+              <Pestana
+                href={conTemporada("/club/orden-fuerza?por=elo", season)}
+                activa={criterio === "elo"}
+              >
+                Por ELO
+              </Pestana>
+            </Pestanas>
 
             <Tarjeta compacta>
               {/* Tabla y no una tarjeta por jugador: son 46 filas y en un monitor

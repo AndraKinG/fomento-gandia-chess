@@ -132,7 +132,7 @@ export default async function EquiposPage({
       <Contenedor medida="panel" className="space-y-6">
         {temporadas.length > 1 && (
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <SelectorTemporada temporadas={temporadas} actual={season} />
+            <SelectorTemporada temporadas={temporadas} actual={season} ruta="/club/equipos" />
             {!season.activa && (
               <p className="text-sm text-tinta-suave">
                 Estás viendo una temporada terminada.
