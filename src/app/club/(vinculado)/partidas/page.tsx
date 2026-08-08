@@ -12,7 +12,9 @@ import { Exportar } from "./Exportar";
 import { Contenedor, REJILLA } from "@/components/ui/Contenedor";
 import { Pestana, Pestanas } from "@/components/ui/Pestanas";
 
-const MARCA: Record<Resultado, string> = { "1": "✓", "0.5": "=", "0": "✗" };
+// "½" y no "=": es como se escriben las tablas en el resto de la app (el acta, el
+// marcador de una jornada y la clasificación de los torneos internos).
+const MARCA: Record<Resultado, string> = { "1": "✓", "0.5": "½", "0": "✗" };
 const COLOR_MARCA: Record<Resultado, string> = {
   "1": "text-green-700 dark:text-green-400",
   "0.5": "text-tinta-suave",
@@ -130,12 +132,20 @@ export default async function PartidasPage({
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm text-tinta">
-                          <span className="font-semibold">{duenio}</span>
-                          <span className="text-tinta-suave"> vs </span>
-                          <span className="font-semibold">{p.rival_nombre}</span>
+                        {/* El ELO del rival FUERA del texto que se recorta: metido
+                            dentro, en un móvil se cortaba a mitad —"Sanz Wawer, Daniel
+                            (208…"— y un ELO a medias es peor que ninguno. Ahora se
+                            recortan los nombres y la cifra se ve siempre. */}
+                        <p className="flex items-baseline gap-1 text-sm text-tinta">
+                          <span className="min-w-0 truncate">
+                            <span className="font-semibold">{duenio}</span>
+                            <span className="text-tinta-suave"> vs </span>
+                            <span className="font-semibold">{p.rival_nombre}</span>
+                          </span>
                           {p.rival_elo ? (
-                            <span className="text-tinta-suave"> ({p.rival_elo})</span>
+                            <span className="shrink-0 tabular-nums text-tinta-suave">
+                              ({p.rival_elo})
+                            </span>
                           ) : null}
                         </p>
                         <p className="mt-0.5 text-xs text-tinta-suave">
