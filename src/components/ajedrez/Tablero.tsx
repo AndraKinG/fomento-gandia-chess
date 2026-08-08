@@ -21,21 +21,31 @@ export type Filas = (Pieza | null)[][];
 
 const COLUMNAS = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 
+const FILAS_NUM = ["8", "7", "6", "5", "4", "3", "2", "1"] as const;
+
 /**
- * Se usa el glifo NEGRO para las dos colores y se distinguen por CSS.
+ * Ruta del SVG de una pieza.
  *
- * Los glifos blancos de Unicode (♔♕♖) son de contorno y en muchas tipografías de
- * móvil salen finos, descoloridos o directamente distintos de sus parejas negras.
- * Con el sólido para ambos y relleno claro + borde oscuro para las blancas, el
- * tablero se ve igual en todas partes.
+ * ANTES ERAN CARACTERES UNICODE (♞) y por eso el tablero se veía mal: el dibujo lo
+ * ponía la fuente del sistema, así que cambiaba de un aparato a otro, en Windows
+ * salía plano y las blancas había que fingirlas con el glifo negro y una sombra.
+ * Ahora son SVG de verdad, que es lo que hacen Lichess y Chess.com.
+ *
+ * El nombre sale directo de lo que devuelve `chess.js` (`color` + `type`), así que
+ * cambiar de juego de piezas es cambiar los ficheros de `public/piezas/` — ver el
+ * LICENCIA.md de esa carpeta.
  */
-const GLIFO: Record<string, string> = {
-  k: "♚",
-  q: "♛",
-  r: "♜",
-  b: "♝",
-  n: "♞",
-  p: "♟",
+function rutaPieza(pieza: Pieza): string {
+  return `/piezas/${pieza.color}${pieza.type.toUpperCase()}.svg`;
+}
+
+const NOMBRE_PIEZA: Record<string, string> = {
+  k: "rey",
+  q: "dama",
+  r: "torre",
+  b: "alfil",
+  n: "caballo",
+  p: "peón",
 };
 
 /** Casilla algebraica a partir de los índices de `chess.board()`. */
@@ -89,10 +99,10 @@ export function Tablero({
               key={casilla}
               type="button"
               role="gridcell"
-              aria-label={`${casilla}${pieza ? `, ${pieza.color === "w" ? "blancas" : "negras"} ${pieza.type}` : ", vacía"}`}
+              aria-label={`${casilla}${pieza ? `, ${NOMBRE_PIEZA[pieza.type] ?? pieza.type} ${pieza.color === "w" ? "blanco" : "negro"}` : ", vacía"}`}
               disabled={deshabilitado}
               onClick={() => onToque?.(casilla)}
-              className={`relative flex aspect-square items-center justify-center text-[7vw] leading-none sm:text-4xl ${
+              className={`relative flex aspect-square items-center justify-center ${
                 // Colores del tablero fijos y no del tema: un tablero necesita su
                 // propio contraste entre casillas, y heredar los tokens de fondo
                 // lo haría ilegible en modo oscuro.
@@ -103,19 +113,42 @@ export function Tablero({
                 deshabilitado ? "cursor-default" : "cursor-pointer"
               }`}
             >
-              {pieza && (
+              {/* Coordenadas en los bordes, como en cualquier tablero: en la primera
+                  columna la fila, y en la última fila la columna. Van dentro de la
+                  casilla y en el color de la contraria para que se lean sin robar
+                  sitio a la pieza. */}
+              {j === 0 && (
                 <span
                   aria-hidden
-                  className={
-                    pieza.color === "w"
-                      ? // Relleno claro con borde oscuro: se lee sobre las dos
-                        // casillas sin depender de la tipografía del sistema.
-                        "text-white [text-shadow:0_0_2px_#0f172a,0_0_2px_#0f172a,0_0_2px_#0f172a]"
-                      : "text-[#111c2e]"
-                  }
+                  className={`pointer-events-none absolute left-0.5 top-0 text-[0.55rem] font-semibold leading-tight sm:text-[0.65rem] ${
+                    clara ? "text-[#6b9dc9]" : "text-[#e9f2fb]"
+                  }`}
                 >
-                  {GLIFO[pieza.type]}
+                  {volteado ? FILAS_NUM[7 - i] : FILAS_NUM[i]}
                 </span>
+              )}
+              {i === 7 && (
+                <span
+                  aria-hidden
+                  className={`pointer-events-none absolute bottom-0 right-0.5 text-[0.55rem] font-semibold leading-tight sm:text-[0.65rem] ${
+                    clara ? "text-[#6b9dc9]" : "text-[#e9f2fb]"
+                  }`}
+                >
+                  {volteado ? COLUMNAS[7 - j] : COLUMNAS[j]}
+                </span>
+              )}
+
+              {pieza && (
+                /* `<img>` y no `next/image`: son 12 ficheros SVG de 4 KB servidos
+                   desde `public/`, y el optimizador de Next no toca los SVG. */
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={rutaPieza(pieza)}
+                  alt=""
+                  aria-hidden
+                  draggable={false}
+                  className="pointer-events-none h-[88%] w-[88%] select-none"
+                />
               )}
               {esDestino && (
                 <span

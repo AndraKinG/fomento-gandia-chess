@@ -94,23 +94,29 @@ export default async function TorneosPage({
       />
       <Contenedor medida="panel" className="space-y-3">
         {/* Pestañas y acciones en la MISMA fila desde `sm`. Apiladas eran tres bloques
-            a todo lo ancho antes de llegar al primer torneo. */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <PestanasTorneos activa="facv" />
-          <div className="flex flex-wrap items-center gap-2">
-            {!verTodos && !verPasados && (
-              <Boton variante="secundario" href="/club/torneos/facv?todos=1" className="text-sm">
-                Calendario FACV
-              </Boton>
-            )}
-            {!verPasados && (
-              <Boton variante="secundario" href="/club/torneos/facv?pasados=1" className="text-sm">
-                Pasados
-              </Boton>
-            )}
-            {sesion?.esJunta && !verPasados && <CrearTorneo />}
-          </div>
-        </div>
+            a todo lo ancho antes de llegar al primer torneo.
+
+            LA FILA LA MONTA `CrearTorneo` porque su formulario tiene que salir DEBAJO,
+            no dentro: estando en la misma fila que las pestañas, al abrirlo se comía el
+            ancho y dejaba "De fuera / Del club" partido en dos líneas y descolocado. */}
+        <CrearTorneo
+          puedeCrear={Boolean(sesion?.esJunta) && !verPasados}
+          pestanas={<PestanasTorneos activa="facv" />}
+          acciones={
+            <>
+              {!verTodos && !verPasados && (
+                <Boton variante="secundario" href="/club/torneos/facv?todos=1" className="text-sm">
+                  Calendario FACV
+                </Boton>
+              )}
+              {!verPasados && (
+                <Boton variante="secundario" href="/club/torneos/facv?pasados=1" className="text-sm">
+                  Pasados
+                </Boton>
+              )}
+            </>
+          }
+        />
 
         {torneos.length === 0 && (
           <EstadoVacio
