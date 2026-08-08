@@ -13,9 +13,21 @@ import { DECLARACIONES } from "./herramientas";
  * cualquiera.
  */
 
-/** El modelo. Cambiar aquí si Google jubila esta versión: es lo único que hay que
- *  tocar, y la capa gratuita es por modelo. */
-const MODELO = "gemini-2.5-flash";
+/**
+ * El modelo, y su suplente.
+ *
+ * NINGÚN NOMBRE DE MODELO ES ETERNO: Google retiró `gemini-2.5-flash` para las
+ * cuentas nuevas de un día para otro y dejó muerto al bot del otro proyecto (ver
+ * `docs/referencia/chatbot-ia-garestudio.md`). Por eso hay una variable de entorno
+ * para forzar otro sin tocar código, y el catálogo de los que acepta una clave se
+ * consulta en `https://generativelanguage.googleapis.com/v1beta/models?key=CLAVE`.
+ *
+ * EL SUPLENTE NO ES UN LUJO: el modelo bueno de la capa gratuita da 503 a ratos
+ * cuando está saturado, y el ligero casi nunca. Se reintenta al vuelo dentro de la
+ * misma petición, así que el socio no se entera.
+ */
+const MODELO = process.env.LLM_MODEL ?? "gemini-3.5-flash";
+const SUPLENTE = "gemini-3.1-flash-lite";
 
 const URL = (modelo: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
@@ -23,7 +35,7 @@ const URL = (modelo: string) =>
 /** Vueltas máximas de herramientas. Con cinco herramientas de lectura, dos vueltas
  *  cubren "mi ELO y el del rival"; más que eso es que se ha atascado en un bucle, y
  *  cada vuelta es una llamada más contra la cuota. */
-const VUELTAS = 3;
+const VUELTAS = 4;
 
 export type Turno = { papel: "usuario" | "asistente"; texto: string };
 
@@ -58,8 +70,12 @@ export async function responder({
     parts: [{ text: t.texto }],
   }));
 
-  for (let vuelta = 0; vuelta <= VUELTAS; vuelta++) {
-    const respuesta = await fetch(URL(MODELO), {
+  // Si el modelo bueno satura, el resto de ESTA conversación sigue con el suplente:
+  // cambiar de modelo a mitad de una respuesta es peor que terminarla con el ligero.
+  let modelo = MODELO;
+
+  const pedir = (m: string) =>
+    fetch(URL(m), {
       method: "POST",
       headers: { "content-type": "application/json", "x-goog-api-key": clave },
       body: JSON.stringify({
@@ -75,9 +91,20 @@ export async function responder({
       }),
     });
 
+  for (let vuelta = 0; vuelta <= VUELTAS; vuelta++) {
+    let respuesta = await pedir(modelo);
+    if (
+      !respuesta.ok &&
+      (respuesta.status === 503 || respuesta.status === 429) &&
+      modelo !== SUPLENTE
+    ) {
+      modelo = SUPLENTE;
+      respuesta = await pedir(modelo);
+    }
+
     if (!respuesta.ok) {
       const detalle = await respuesta.text();
-      throw new Error(`Gemini ${respuesta.status}: ${detalle.slice(0, 300)}`);
+      throw new Error(`Gemini ${respuesta.status} (${modelo}): ${detalle.slice(0, 300)}`);
     }
 
     const datos = (await respuesta.json()) as {

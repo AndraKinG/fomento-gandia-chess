@@ -6,6 +6,7 @@ import { instrucciones } from "@/lib/asistente/instrucciones";
 import { ejecutar } from "@/lib/asistente/herramientas";
 import { responder, SinClave } from "@/lib/asistente/gemini";
 import { acabaEnPregunta, leerHistorial } from "@/lib/asistente/peticion";
+import { freno } from "@/lib/asistente/limite";
 
 /**
  * El asistente del club.
@@ -23,6 +24,15 @@ export async function POST(request: Request) {
   const sesion = await sesionActual();
   if (!sesion) {
     return NextResponse.json({ error: "Hace falta iniciar sesión." }, { status: 401 });
+  }
+
+  // El freno va ANTES de leer el cuerpo: si alguien se ha desbocado, no hace falta
+  // ni mirar lo que manda.
+  if (freno.pasado(sesion.userId, Date.now())) {
+    return NextResponse.json(
+      { error: "Vas muy rápido. Dame un par de minutos y seguimos." },
+      { status: 429 }
+    );
   }
 
   let cuerpo: { historial?: unknown };

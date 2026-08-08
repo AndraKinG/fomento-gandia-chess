@@ -19,7 +19,15 @@ import { Banner } from "@/components/ui/Banner";
 type Turno = { papel: "usuario" | "asistente"; texto: string };
 
 const BIENVENIDA =
-  "Pregúntame lo que quieras de ajedrez o del club: tu número de orden, la próxima jornada, cómo va una apertura…";
+  "Pregúntame lo que quieras de ajedrez o del club.";
+
+/** Atajos para el primer mensaje. Una caja de texto en blanco no dice de qué se
+ *  puede hablar, y estos tres lo enseñan con ejemplos en vez de con instrucciones. */
+const ATAJOS = [
+  "¿Cuál es mi número de orden?",
+  "¿Cuándo es la próxima jornada?",
+  "¿Qué torneos hay pronto?",
+];
 
 export function Asistente() {
   const [abierto, setAbierto] = useState(false);
@@ -50,8 +58,8 @@ export function Asistente() {
     return () => window.removeEventListener("keydown", alPulsar);
   }, [abierto]);
 
-  async function enviar() {
-    const pregunta = texto.trim();
+  async function enviar(desdeAtajo?: string) {
+    const pregunta = (desdeAtajo ?? texto).trim();
     if (!pregunta || pensando) return;
     const nuevos: Turno[] = [...turnos, { papel: "usuario", texto: pregunta }];
     setTurnos(nuevos);
@@ -104,7 +112,21 @@ export function Asistente() {
 
           <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
             {turnos.length === 0 && (
-              <p className="text-sm text-tinta-suave">{BIENVENIDA}</p>
+              <div className="space-y-2">
+                <p className="text-sm text-tinta-suave">{BIENVENIDA}</p>
+                <div className="flex flex-col items-start gap-1.5">
+                  {ATAJOS.map((a) => (
+                    <button
+                      key={a}
+                      type="button"
+                      onClick={() => void enviar(a)}
+                      className="rounded-full border border-borde bg-tarjeta-suave px-3 py-1 text-left text-xs text-acento-texto transition duration-100 hover:bg-tarjeta active:scale-[0.97]"
+                    >
+                      {a}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
             {turnos.map((t, i) => (
               <div
