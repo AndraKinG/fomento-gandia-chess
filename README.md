@@ -31,6 +31,7 @@ Copia `.env.example` a `.env.local` y rellena:
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Generar par de claves VAPID (`web-push generate-vapid-keys`) |
 | `VAPID_PRIVATE_KEY` | Idem, la mitad privada (secreta) |
 | `CRON_SECRET` | Cadena aleatoria propia; protege `/api/cron/*` de invocaciones externas |
+| `GEMINI_API_KEY` | Clave de Google AI Studio (https://aistudio.google.com/apikey). Mueve el asistente del club. Sin ella el asistente avisa de que no está configurado y el resto de la app funciona igual |
 
 ### 2. Base de datos
 

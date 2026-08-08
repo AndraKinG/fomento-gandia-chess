@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { PushSubscriber } from "@/components/PushSubscriber";
 import { NavLateral, NavInferior } from "@/components/Navegacion";
 import { sesionActual } from "@/lib/auth/sesion";
+import { Asistente } from "@/components/asistente/Asistente";
 
 /**
  * Zona de socios. Exige sesión y pone el cromo común (navegación y suscripción a
@@ -40,6 +41,11 @@ export default async function ClubLayout({
         {children}
       </div>
       {conNavegacion && <NavInferior esAdmin={sesion.esAdmin} />}
+      {/* El asistente va en el layout y no en cada pantalla: la gracia es poder
+          preguntar sin salir de donde estás. Solo para quien ya tiene ficha: sin
+          ella no hay nada del club que consultar y la pantalla de vincular tiene
+          que quedarse sin distracciones. */}
+      {sesion.playerId != null && <Asistente />}
     </div>
   );
 }
