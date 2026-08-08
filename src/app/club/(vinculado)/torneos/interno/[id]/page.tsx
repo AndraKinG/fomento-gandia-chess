@@ -87,6 +87,22 @@ export default async function TorneoInternoPage({
           </Tarjeta>
         )}
 
+        {/* Rondas y clasificación en paralelo desde `lg`, igual que en el detalle de
+            equipo: la tabla es estrecha, y apilada empujaba las rondas fuera de la
+            vista además de dejar medio monitor vacío a su lado. */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+        <GestionTorneo
+          tournamentId={torneo.id}
+          estado={torneo.estado}
+          sistema={torneo.sistema}
+          rondas={rondas}
+          rondasTotales={torneo.rondasTotales}
+          socios={socios}
+          esJunta={Boolean(sesion?.esJunta)}
+        />
+        </div>
+
         {hayPartidas && (
           <section className="space-y-2">
             <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
@@ -122,22 +138,12 @@ export default async function TorneoInternoPage({
                 </tbody>
               </table>
               <p className="mt-2 text-xs text-tinta-suave">
-                Desempate: Buchholz (suma de los puntos de tus rivales) y luego
-                victorias.
+                Desempate: Buchholz y luego victorias.
               </p>
             </Tarjeta>
           </section>
         )}
-
-        <GestionTorneo
-          tournamentId={torneo.id}
-          estado={torneo.estado}
-          sistema={torneo.sistema}
-          rondas={rondas}
-          rondasTotales={torneo.rondasTotales}
-          socios={socios}
-          esJunta={Boolean(sesion?.esJunta)}
-        />
+        </div>
       </Contenedor>
     </main>
   );

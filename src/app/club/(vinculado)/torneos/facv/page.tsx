@@ -124,7 +124,7 @@ export default async function TorneosPage({
           />
         )}
 
-        <ul className={REJILLA[2]}>
+        <ul className={REJILLA[3]}>
           {torneos.map((t) => {
             const estado = miEstado.get(t.id);
             const van = cuantosVan.get(t.id) ?? 0;

@@ -81,7 +81,7 @@ export default async function InternoPage() {
           />
         )}
 
-        <ul className={REJILLA[2]}>
+        <ul className={REJILLA[3]}>
           {(torneos ?? []).map((t) => (
             <li key={t.id}>
               <Link href={`/club/torneos/interno/${t.id}`} className="block">

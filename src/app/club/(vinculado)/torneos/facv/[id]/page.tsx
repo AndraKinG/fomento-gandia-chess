@@ -104,11 +104,18 @@ export default async function TorneoPage({
         titulo={torneo.nombre}
         subtitulo={formatearRangoFechas(torneo.fecha_inicio, torneo.fecha_fin)}
         volverA="/club/torneos/facv"
+        medida="panel"
       />
-      <Contenedor medida="lectura" className="space-y-4">
+      <Contenedor medida="panel" className="space-y-4">
         {enCurso && <Banner tipo="ok">Se está jugando ahora mismo.</Banner>}
         {terminado && <Banner tipo="aviso">Este torneo ya ha terminado.</Banner>}
 
+        {/* Dos columnas desde `lg`: a la izquierda el torneo y tu respuesta, que no
+            cambian de tamaño; a la derecha quién va y los coches, que es lo que crece
+            según se apunta gente. En una sola columna de 720 px el monitor se quedaba
+            medio vacío y los coches acababan fuera de pantalla. */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="space-y-4">
         <Tarjeta>
           <dl className="space-y-1.5 text-sm">
             {torneo.lugar && (
@@ -159,7 +166,9 @@ export default async function TorneoPage({
             <SelectorAsistencia tournamentId={torneo.id} valorInicial={miAsistencia} />
           </Tarjeta>
         )}
+        </div>
 
+        <div className="space-y-4">
         <section className="space-y-2">
           <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
             Quién va
@@ -212,6 +221,8 @@ export default async function TorneoPage({
             voyEnAlgunCoche={!!miAsiento || conduzco}
           />
         )}
+        </div>
+        </div>
       </Contenedor>
     </main>
   );
