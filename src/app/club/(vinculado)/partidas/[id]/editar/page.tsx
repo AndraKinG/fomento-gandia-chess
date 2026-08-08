@@ -35,9 +35,12 @@ export default async function EditarPartidaPage({
       <Cabecera
         titulo="Editar partida"
         subtitulo={p.rival_nombre}
-        volverA={`/club/partidas/${id}`} medida="formulario"
+        volverA={`/club/partidas/${id}`} medida="panel"
       />
-      <Contenedor medida="formulario">
+      {/* `panel` y no `formulario` porque el tablero manda en esta pantalla. La regla
+          de no ensanchar los campos se mantiene: el formulario ocupa una sola columna
+          estrecha al lado del tablero, no todo el ancho. */}
+      <Contenedor medida="panel">
         <FormularioPartida
           torneos={torneos}
           socios={socios}

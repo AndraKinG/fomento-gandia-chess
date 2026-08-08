@@ -31,13 +31,15 @@ export default async function NuevaPartidaPage({
       <Cabecera
         titulo="Subir una partida"
         subtitulo={
-          desdeTorneo
-            ? `De ${desdeTorneo.nombreTorneo}`
-            : "Los datos son lo importante; el PGN, si lo tienes"
+          desdeTorneo ? `De ${desdeTorneo.nombreTorneo}` : "Las jugadas y los datos"
         }
         volverA="/club/partidas"
+        medida="panel"
       />
-      <Contenedor medida="lectura" className="space-y-4">
+      {/* `panel` y no `lectura` porque el tablero manda en esta pantalla. La regla
+          de no ensanchar los campos se mantiene: el formulario ocupa una sola columna
+          estrecha al lado del tablero, no todo el ancho. */}
+      <Contenedor medida="panel" className="space-y-4">
         {desdeTorneo && (
           <Banner tipo="ok">
             Rellenado con los datos del torneo: rival, color, resultado y ronda. Solo

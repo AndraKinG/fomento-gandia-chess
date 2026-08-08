@@ -110,190 +110,201 @@ export function FormularioPartida({
           });
         }}
       >
-        <div className="grid grid-cols-2 gap-3">
-          <Campo id="fecha" etiqueta="Fecha" tipo="date" requerido valor={v.fecha} />
-          <Campo id="ronda" etiqueta="Ronda (opcional)" tipo="number" valor={v.ronda} />
-        </div>
+        {/* EL TABLERO PRIMERO, antes que la fecha y el rival. Es lo que se viene a
+            hacer aquí; los datos son etiquetas que se rellenan después. En escritorio
+            va a la izquierda y el formulario al lado, así que los campos de texto se
+            quedan en una columna estrecha, que es como mejor se rellenan. */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,32rem)_1fr]">
+          <div>
+            {/* Las jugadas: en el tablero o pegando el PGN. El tablero va primero
+                porque es el caso normal —una partida de tablero no tiene PGN hasta
+                que alguien la escribe— y teclear "1. e4 e5" a mano es pedirle al
+                socio que no la suba. */}
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-medium text-tinta">Las jugadas (opcional)</span>
+              <div className="flex gap-2">
+                <BotonModo
+                  activo={modoPgn === "tablero"}
+                  onClick={() => setModoPgn("tablero")}
+                >
+                  Meterlas en el tablero
+                </BotonModo>
+                <BotonModo activo={modoPgn === "texto"} onClick={() => setModoPgn("texto")}>
+                  Pegar un PGN
+                </BotonModo>
+              </div>
 
-        {/* El rival puede ser un socio (y entonces se enlaza, para poder cruzar
-            los enfrentamientos internos) o cualquiera de fuera, que es el caso
-            normal: se escribe el nombre a mano. */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="rivalId" className="text-sm font-medium text-tinta">
-            ¿El rival es del club?
-          </label>
-          <select
-            id="rivalId"
-            name="rivalId"
-            defaultValue={v.rivalId}
-            onChange={(e) => setRivalId(e.target.value)}
-            className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta"
-          >
-            <option value="">No, es de otro club</option>
-            {socios.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
+              {modoPgn === "tablero" ? (
+                <>
+                  <p className="text-xs text-tinta-suave">
+                    Toca la pieza y luego la casilla. Solo deja hacer jugadas legales, y
+                    el PGN se escribe solo.
+                  </p>
+                  <EditorTablero
+                    onCambio={setPgnTablero}
+                    volteado={color === "negras"}
+                  />
+                  {/* Lo que se envía es el PGN que ha generado el tablero. */}
+                  <input type="hidden" name="pgn" value={pgnTablero} />
+                </>
+              ) : (
+                <Area
+                  id="pgn"
+                  etiqueta="PGN"
+                  valor={v.pgn}
+                  filas={6}
+                  mono
+                  marcador={'[Event "..."]\n1. e4 e5 2. Nf3 ...'}
+                  ayuda="Si la tienes en Lichess o Chess.com, copia el PGN y pégalo aquí."
+                />
+              )}
+            </div>
 
-        {rivalId === "" && (
-          <Campo
-            id="rivalNombre"
-            etiqueta="Nombre del rival"
-            requerido
-            valor={v.rivalNombre}
-            marcador="Apellidos, Nombre"
-          />
-        )}
-        {rivalId !== "" && (
-          // Si el rival es socio, el nombre sale de su ficha: se manda igual
-          // porque la columna es obligatoria y es lo que se muestra en las listas.
-          <input
-            type="hidden"
-            name="rivalNombre"
-            value={socios.find((s) => s.id === rivalId)?.nombre ?? ""}
-          />
-        )}
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="color" className="text-sm font-medium text-tinta">
-              Tus piezas
-            </label>
-            <select
-              id="color"
-              name="color"
-              value={color}
-              onChange={(e) => setColor(e.target.value)}
-              className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta"
-            >
-              <option value="blancas">♙ Blancas</option>
-              <option value="negras">♟ Negras</option>
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="resultado" className="text-sm font-medium text-tinta">
-              Resultado
-            </label>
-            <select
-              id="resultado"
-              name="resultado"
-              defaultValue={v.resultado}
-              className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta"
-            >
-              <option value="1">Gané</option>
-              <option value="0.5">Tablas</option>
-              <option value="0">Perdí</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Campo id="miElo" etiqueta="Tu ELO (opcional)" tipo="number" valor={v.miElo} />
-          <Campo
-            id="rivalElo"
-            etiqueta="ELO del rival (opcional)"
-            tipo="number"
-            valor={v.rivalElo}
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor="tournamentId" className="text-sm font-medium text-tinta">
-            Torneo
-          </label>
-          <select
-            id="tournamentId"
-            name="tournamentId"
-            defaultValue={v.tournamentId}
-            className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta"
-          >
-            <option value="">Ninguno / lo escribo abajo</option>
-            {torneos.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.nombre}
-              </option>
-            ))}
-          </select>
-          <p className="text-xs text-tinta-suave">
-            Si no está en la lista, déjalo en blanco y escríbelo aquí:
-          </p>
-        </div>
-        <Campo
-          id="torneoTexto"
-          etiqueta="Torneo (texto libre)"
-          valor={v.torneoTexto}
-          marcador="Interclubs, jornada 3"
-        />
-
-        <Campo
-          id="apertura"
-          etiqueta="Apertura (opcional)"
-          valor={v.apertura}
-          marcador="Siciliana, variante Najdorf"
-        />
-
-        <Area
-          id="notas"
-          etiqueta="Anotaciones (opcional)"
-          valor={v.notas}
-          filas={4}
-          marcador="Qué pasó, dónde se decidió, qué aprendiste…"
-        />
-
-        {/* Las jugadas: en el tablero o pegando el PGN. El tablero va primero
-            porque es el caso normal —una partida de tablero no tiene PGN hasta
-            que alguien la escribe— y teclear "1. e4 e5" a mano es pedirle al
-            socio que no la suba. */}
-        <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium text-tinta">Las jugadas (opcional)</span>
-          <div className="flex gap-2">
-            <BotonModo
-              activo={modoPgn === "tablero"}
-              onClick={() => setModoPgn("tablero")}
-            >
-              Meterlas en el tablero
-            </BotonModo>
-            <BotonModo activo={modoPgn === "texto"} onClick={() => setModoPgn("texto")}>
-              Pegar un PGN
-            </BotonModo>
           </div>
 
-          {modoPgn === "tablero" ? (
-            <>
-              <p className="text-xs text-tinta-suave">
-                Toca la pieza y luego la casilla. Solo deja hacer jugadas legales, y
-                el PGN se escribe solo.
-              </p>
-              <EditorTablero
-                onCambio={setPgnTablero}
-                volteado={color === "negras"}
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Campo id="fecha" etiqueta="Fecha" tipo="date" requerido valor={v.fecha} />
+              <Campo id="ronda" etiqueta="Ronda (opcional)" tipo="number" valor={v.ronda} />
+            </div>
+
+            {/* El rival puede ser un socio (y entonces se enlaza, para poder cruzar
+                los enfrentamientos internos) o cualquiera de fuera, que es el caso
+                normal: se escribe el nombre a mano. */}
+            <div className="flex flex-col gap-1">
+              <label htmlFor="rivalId" className="text-sm font-medium text-tinta">
+                ¿El rival es del club?
+              </label>
+              <select
+                id="rivalId"
+                name="rivalId"
+                defaultValue={v.rivalId}
+                onChange={(e) => setRivalId(e.target.value)}
+                className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta"
+              >
+                <option value="">No, es de otro club</option>
+                {socios.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {rivalId === "" && (
+              <Campo
+                id="rivalNombre"
+                etiqueta="Nombre del rival"
+                requerido
+                valor={v.rivalNombre}
+                marcador="Apellidos, Nombre"
               />
-              {/* Lo que se envía es el PGN que ha generado el tablero. */}
-              <input type="hidden" name="pgn" value={pgnTablero} />
-            </>
-          ) : (
-            <Area
-              id="pgn"
-              etiqueta="PGN"
-              valor={v.pgn}
-              filas={6}
-              mono
-              marcador={'[Event "..."]\n1. e4 e5 2. Nf3 ...'}
-              ayuda="Si la tienes en Lichess o Chess.com, copia el PGN y pégalo aquí."
-            />
-          )}
-        </div>
+            )}
+            {rivalId !== "" && (
+              // Si el rival es socio, el nombre sale de su ficha: se manda igual
+              // porque la columna es obligatoria y es lo que se muestra en las listas.
+              <input
+                type="hidden"
+                name="rivalNombre"
+                value={socios.find((s) => s.id === rivalId)?.nombre ?? ""}
+              />
+            )}
 
-        <div className="flex gap-2">
-          <Boton variante="degradado" type="submit" disabled={pendiente} className="flex-1">
-            {pendiente ? "Guardando…" : inicial?.id ? "Guardar cambios" : "Guardar partida"}
-          </Boton>
-          <Boton variante="secundario" onClick={() => router.back()} disabled={pendiente}>
-            Cancelar
-          </Boton>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label htmlFor="color" className="text-sm font-medium text-tinta">
+                  Tus piezas
+                </label>
+                <select
+                  id="color"
+                  name="color"
+                  value={color}
+                  onChange={(e) => setColor(e.target.value)}
+                  className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta"
+                >
+                  <option value="blancas">♙ Blancas</option>
+                  <option value="negras">♟ Negras</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="resultado" className="text-sm font-medium text-tinta">
+                  Resultado
+                </label>
+                <select
+                  id="resultado"
+                  name="resultado"
+                  defaultValue={v.resultado}
+                  className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta"
+                >
+                  <option value="1">Gané</option>
+                  <option value="0.5">Tablas</option>
+                  <option value="0">Perdí</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Campo id="miElo" etiqueta="Tu ELO (opcional)" tipo="number" valor={v.miElo} />
+              <Campo
+                id="rivalElo"
+                etiqueta="ELO del rival (opcional)"
+                tipo="number"
+                valor={v.rivalElo}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label htmlFor="tournamentId" className="text-sm font-medium text-tinta">
+                Torneo
+              </label>
+              <select
+                id="tournamentId"
+                name="tournamentId"
+                defaultValue={v.tournamentId}
+                className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta"
+              >
+                <option value="">Ninguno / lo escribo abajo</option>
+                {torneos.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.nombre}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-tinta-suave">
+                Si no está en la lista, déjalo en blanco y escríbelo aquí:
+              </p>
+            </div>
+            <Campo
+              id="torneoTexto"
+              etiqueta="Torneo (texto libre)"
+              valor={v.torneoTexto}
+              marcador="Interclubs, jornada 3"
+            />
+
+            <Campo
+              id="apertura"
+              etiqueta="Apertura (opcional)"
+              valor={v.apertura}
+              marcador="Siciliana, variante Najdorf"
+            />
+
+            <Area
+              id="notas"
+              etiqueta="Anotaciones (opcional)"
+              valor={v.notas}
+              filas={4}
+              marcador="Qué pasó, dónde se decidió, qué aprendiste…"
+            />
+
+            <div className="flex gap-2">
+              <Boton variante="degradado" type="submit" disabled={pendiente} className="flex-1">
+                {pendiente ? "Guardando…" : inicial?.id ? "Guardar cambios" : "Guardar partida"}
+              </Boton>
+              <Boton variante="secundario" onClick={() => router.back()} disabled={pendiente}>
+                Cancelar
+              </Boton>
+            </div>
+          </div>
         </div>
       </form>
     </Tarjeta>

@@ -10,6 +10,7 @@ import { textoResultado, type Resultado } from "@/lib/partidas/validar";
 import { AccionesPartida } from "./AccionesPartida";
 import { VisorPartida } from "@/components/ajedrez/VisorPartida";
 import { Contenedor } from "@/components/ui/Contenedor";
+import { EstadoVacio } from "@/components/ui/EstadoVacio";
 
 export default async function PartidaPage({
   params,
@@ -44,99 +45,122 @@ export default async function PartidaPage({
         titulo={`${duenio} vs ${p.rival_nombre}`}
         subtitulo={formatearRangoFechas(p.fecha, p.fecha)}
         volverA="/club/partidas"
+        medida="panel"
       />
-      <Contenedor medida="lectura" className="space-y-4">
-        <Tarjeta destacada>
-          {/* El emparejamiento se muestra por colores, que es como se lee una
-              partida, y no por "dueño y rival": quien la consulta quiere saber
-              quién llevaba blancas. */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-sm text-tinta">
-                <span aria-hidden>♙</span> {blancas}
-              </p>
-              <p className="mt-1 text-sm text-tinta">
-                <span aria-hidden>♟</span> {negras}
-              </p>
-            </div>
-            <span className="shrink-0 rounded-full bg-tarjeta px-3 py-1 text-sm font-semibold text-tinta ring-1 ring-borde">
-              {textoResultado(resultado)} de {duenio.split(",")[0].split(" ")[0]}
-            </span>
+      {/* EL TABLERO PRIMERO, y no la ficha de datos. Es lo que se viene a ver de
+          una partida; el torneo, la ronda y los ELO son contexto. En escritorio
+          va a la izquierda con los datos al lado, para que ninguno de los dos
+          quede debajo del pliegue; en móvil, arriba, y el resto detrás. */}
+      <Contenedor medida="panel">
+        {/* La columna del tablero va acotada: `aspect-square` con todo el ancho de
+            un panel daría un tablero de 670 px que no cabe de una vez en pantalla. */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,32rem)_1fr]">
+          <div className="space-y-3">
+            {p.pgn ? (
+              <>
+                <Tarjeta>
+                  {/* El tablero se orienta desde el punto de vista del dueño de la
+                      partida: quien la consulta quiere verla como la vivió él. */}
+                  <VisorPartida pgn={p.pgn} volteado={p.color === "negras"} />
+                </Tarjeta>
+                <details className="px-1">
+                  <summary className="cursor-pointer text-xs text-tinta-suave">
+                    Ver el PGN en texto (para copiarlo)
+                  </summary>
+                  <pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap break-words rounded-xl border border-borde bg-tarjeta p-3 font-mono text-xs text-tinta">
+                    {p.pgn}
+                  </pre>
+                </details>
+              </>
+            ) : (
+              <Tarjeta>
+                <EstadoVacio
+                  icono="♜"
+                  titulo="Sin jugadas"
+                  detalle={
+                    esMia
+                      ? "Puedes añadirlas editando la partida."
+                      : "Se subió solo con los datos."
+                  }
+                />
+              </Tarjeta>
+            )}
           </div>
-        </Tarjeta>
 
-        <Tarjeta>
-          <dl className="space-y-1.5 text-sm">
-            <Dato etiqueta="Torneo" valor={torneo} />
-            <Dato etiqueta="Ronda" valor={p.ronda ? String(p.ronda) : null} />
-            <Dato etiqueta="Apertura" valor={p.apertura} />
-            <Dato
-              etiqueta={`ELO de ${duenio.split(",")[0].split(" ")[0]}`}
-              valor={p.mi_elo ? String(p.mi_elo) : null}
-            />
-            <Dato
-              etiqueta="ELO del rival"
-              valor={p.rival_elo ? String(p.rival_elo) : null}
-            />
-          </dl>
-        </Tarjeta>
-
-        {p.notas && (
-          <section className="space-y-2">
-            <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
-              Anotaciones
-            </h2>
-            <Tarjeta>
-              <p className="whitespace-pre-line text-sm text-tinta">{p.notas}</p>
+          <div className="space-y-3">
+            <Tarjeta destacada>
+              {/* El emparejamiento se muestra por colores, que es como se lee una
+                  partida, y no por "dueño y rival": quien la consulta quiere saber
+                  quién llevaba blancas. */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm text-tinta">
+                    <span aria-hidden>♙</span> {blancas}
+                  </p>
+                  <p className="mt-1 text-sm text-tinta">
+                    <span aria-hidden>♟</span> {negras}
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-tarjeta px-3 py-1 text-sm font-semibold text-tinta ring-1 ring-borde">
+                  {textoResultado(resultado)} de{" "}
+                  {duenio.split(",")[0].split(" ")[0]}
+                </span>
+              </div>
             </Tarjeta>
-          </section>
-        )}
 
-        {p.pgn && (
-          <section className="space-y-2">
-            <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
-              PGN
-            </h2>
-            <Tarjeta>
-              {/* El tablero se orienta desde el punto de vista del dueño de la
-                  partida: quien la consulta quiere verla como la vivió él. */}
-              <VisorPartida pgn={p.pgn} volteado={p.color === "negras"} />
+            <Tarjeta compacta>
+              <dl className="space-y-1.5 text-sm">
+                <Dato etiqueta="Torneo" valor={torneo} />
+                <Dato etiqueta="Ronda" valor={p.ronda ? String(p.ronda) : null} />
+                <Dato etiqueta="Apertura" valor={p.apertura} />
+                <Dato
+                  etiqueta={`ELO de ${duenio.split(",")[0].split(" ")[0]}`}
+                  valor={p.mi_elo ? String(p.mi_elo) : null}
+                />
+                <Dato
+                  etiqueta="ELO del rival"
+                  valor={p.rival_elo ? String(p.rival_elo) : null}
+                />
+              </dl>
             </Tarjeta>
-            <details className="px-1">
-              <summary className="cursor-pointer text-xs text-tinta-suave">
-                Ver el PGN en texto (para copiarlo)
-              </summary>
-              <pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap break-words rounded-xl border border-borde bg-tarjeta p-3 font-mono text-xs text-tinta">
-                {p.pgn}
-              </pre>
-            </details>
-          </section>
-        )}
 
-        {esMia && (
-          <div className="flex flex-wrap gap-2 pt-2">
-            <Boton
-              variante="secundario"
-              href={`/club/partidas/${p.id}/editar`}
-              className="flex-1 text-sm"
-            >
-              Editar
-            </Boton>
-            <AccionesPartida id={p.id} />
+            {p.notas && (
+              <Tarjeta compacta>
+                <p className="text-xs font-semibold uppercase tracking-wide text-tinta-suave">
+                  Anotaciones
+                </p>
+                <p className="mt-1.5 whitespace-pre-line text-sm text-tinta">
+                  {p.notas}
+                </p>
+              </Tarjeta>
+            )}
+
+            {esMia && (
+              <div className="flex flex-wrap gap-2">
+                <Boton
+                  variante="secundario"
+                  href={`/club/partidas/${p.id}/editar`}
+                  className="flex-1 text-sm"
+                >
+                  Editar
+                </Boton>
+                <AccionesPartida id={p.id} />
+              </div>
+            )}
+
+            {!esMia && (
+              <p className="px-1 text-xs text-tinta-suave">
+                Subida por{" "}
+                <Link
+                  href={`/club/partidas?q=${encodeURIComponent(duenio)}`}
+                  className="text-acento-texto underline"
+                >
+                  {duenio}
+                </Link>
+              </p>
+            )}
           </div>
-        )}
-
-        {!esMia && (
-          <p className="px-1 text-xs text-tinta-suave">
-            Subida por{" "}
-            <Link
-              href={`/club/partidas?q=${encodeURIComponent(duenio)}`}
-              className="text-acento-texto underline"
-            >
-              {duenio}
-            </Link>
-          </p>
-        )}
+        </div>
       </Contenedor>
     </main>
   );
