@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Chess } from "chess.js";
 import { Tablero } from "./Tablero";
+import { BotonCopiar } from "@/components/ui/BotonCopiar";
 
 /**
  * Reproduce un PGN guardado, jugada a jugada, sobre el mismo tablero que usa el
@@ -53,12 +54,17 @@ export function VisorPartida({
   const [volteado, setVolteado] = useState(volteadoInicial);
 
   if ("error" in analisis) {
+    // Justo aquí es donde más falta hace poder copiarlo: si la app no sabe leerlo,
+    // el camino es llevárselo a otro sitio que sí.
     return (
-      <p className="text-sm text-tinta-suave">
-        {analisis.error === "sin-jugadas"
-          ? "El PGN guardado no tiene jugadas que reproducir."
-          : "No se ha podido leer el PGN para reproducirlo. Lo tienes en texto más abajo."}
-      </p>
+      <div className="space-y-3">
+        <p className="text-sm text-tinta-suave">
+          {analisis.error === "sin-jugadas"
+            ? "El PGN guardado no tiene jugadas que reproducir."
+            : "No se ha podido leer el PGN para reproducirlo. Lo tienes en texto más abajo."}
+        </p>
+        <BotonCopiar texto={pgn} etiqueta="Copiar PGN" />
+      </div>
     );
   }
 
@@ -117,6 +123,12 @@ export function VisorPartida({
             </span>
           ))}
         </p>
+      </div>
+
+      {/* Copiar el PGN va junto a las jugadas y no escondido en un desplegable:
+          es lo que se hace con una partida ajena —llevártela a Lichess a mirarla. */}
+      <div className="flex justify-end">
+        <BotonCopiar texto={pgn} etiqueta="Copiar PGN" />
       </div>
     </div>
   );

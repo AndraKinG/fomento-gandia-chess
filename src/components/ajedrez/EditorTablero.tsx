@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Chess } from "chess.js";
 import { Tablero } from "./Tablero";
 import { Boton } from "@/components/ui/Boton";
+import { BotonCopiar } from "@/components/ui/BotonCopiar";
 
 type Promocion = { from: string; to: string } | null;
 
@@ -43,6 +44,7 @@ export function EditorTablero({
   // jugadas: es lo que hace que la interfaz se vuelva a pintar y lo que permite
   // reconstruir la posición sin depender de mutaciones invisibles.
   const [jugadas, setJugadas] = useState<string[]>([]);
+  const [pgn, setPgn] = useState("");
   const [seleccionada, setSeleccionada] = useState<string | null>(null);
   const [promocion, setPromocion] = useState<Promocion>(null);
 
@@ -87,7 +89,12 @@ export function EditorTablero({
         break;
       }
     }
-    onCambio(nuevas.length === 0 ? "" : c.pgn());
+    const generado = nuevas.length === 0 ? "" : c.pgn();
+    // Se guarda además de avisar al formulario porque el botón de copiar lo
+    // necesita aquí dentro, y volver a recorrer las jugadas para reconstruirlo
+    // sería hacer dos veces el mismo trabajo.
+    setPgn(generado);
+    onCambio(generado);
   }
 
   function mover(from: string, to: string, promocionA?: string) {
@@ -222,6 +229,14 @@ export function EditorTablero({
               </span>
             ))}
           </p>
+        </div>
+      )}
+
+      {/* El PGN que va a guardarse, a mano: mientras se mete una partida en el
+          tablero es normal quererla también fuera de la app. */}
+      {pgn !== "" && (
+        <div className="flex justify-end">
+          <BotonCopiar texto={pgn} etiqueta="Copiar PGN" />
         </div>
       )}
     </div>

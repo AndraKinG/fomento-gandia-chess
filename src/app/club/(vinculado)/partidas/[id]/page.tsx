@@ -65,7 +65,7 @@ export default async function PartidaPage({
                 </Tarjeta>
                 <details className="px-1">
                   <summary className="cursor-pointer text-xs text-tinta-suave">
-                    Ver el PGN en texto (para copiarlo)
+                    Ver el PGN en texto
                   </summary>
                   <pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap break-words rounded-xl border border-borde bg-tarjeta p-3 font-mono text-xs text-tinta">
                     {p.pgn}
