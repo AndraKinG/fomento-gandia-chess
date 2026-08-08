@@ -11,6 +11,7 @@ import {
   type Jugada,
 } from "@/lib/vivo/partida";
 import { relojInicial } from "@/lib/vivo/reloj";
+import { blancasEnAmistosa } from "@/lib/vivo/colores";
 
 /**
  * Todo lo que cambia una partida en vivo.
@@ -135,8 +136,9 @@ export async function retar(datos: {
 /**
  * Acepta un reto y crea la partida.
  *
- * AQUÍ SE REPARTEN LOS COLORES, en el servidor: si el azar lo tirara el navegador,
- * el que reta elegiría color siempre.
+ * LOS COLORES SE REPARTEN AQUÍ, en el servidor: si el azar lo tirara el navegador,
+ * el que reta elegiría color siempre. La regla la pone `blancasEnAmistosa` — se
+ * sortea la primera vez que se ven esos dos y a partir de ahí se alterna.
  */
 export async function aceptarReto(retoId: string): Promise<Respuesta> {
   const sesion = await sesionActual();
@@ -152,8 +154,32 @@ export async function aceptarReto(retoId: string): Promise<Respuesta> {
   if (reto.retado_id !== sesion.playerId) return { error: "Ese reto no es para ti." };
   if (reto.estado !== "pendiente") return { error: "Ese reto ya está resuelto." };
 
-  const quiere = reto.color as "blancas" | "negras" | "azar";
-  const retaConBlancas = quiere === "azar" ? Math.random() < 0.5 : quiere === "blancas";
+  // El último encuentro AMISTOSO entre estos dos, que es lo que decide la
+  // alternancia. Las de torneo no cuentan: allí el color lo reparte el
+  // emparejador con el criterio oficial y no forma serie con las amistosas.
+  const { data: anteriores } = await db
+    .from("live_games")
+    .select("blancas_id, negras_id")
+    .eq("origen", "reto")
+    .or(
+      `and(blancas_id.eq.${reto.reta_id},negras_id.eq.${reto.retado_id}),` +
+        `and(blancas_id.eq.${reto.retado_id},negras_id.eq.${reto.reta_id})`
+    )
+    .order("creada_en", { ascending: false })
+    .limit(1);
+
+  const ultimo = anteriores?.[0]
+    ? { blancasId: anteriores[0].blancas_id as string, negrasId: anteriores[0].negras_id as string }
+    : null;
+
+  const conBlancas = blancasEnAmistosa({
+    retaId: reto.reta_id,
+    retadoId: reto.retado_id,
+    quiere: reto.color as "blancas" | "negras" | "azar",
+    ultimo,
+    moneda: Math.random(),
+  });
+  const retaConBlancas = conBlancas === reto.reta_id;
   const cadencia = { baseMs: reto.base_min * 60_000, incrementoMs: reto.incremento_s * 1000 };
   const reloj = relojInicial(cadencia);
 

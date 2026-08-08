@@ -7,6 +7,7 @@ import {
   IconoAdmin,
   IconoInicio,
   IconoInterclubs,
+  IconoJugar,
   IconoPartidas,
   IconoPerfil,
   IconoTorneos,
@@ -61,6 +62,15 @@ const SECCIONES: Seccion[] = [
     label: "Torneos",
     Icono: IconoTorneos,
     rutas: ["/club/torneos"],
+  },
+  // Jugar va ANTES de Partidas porque son lo mismo visto de dos maneras: aquí se
+  // juegan y allí se guardan. Seis pestañas siguen cabiendo en un móvil; siete no,
+  // que por eso Torneos se fusionó en su día.
+  {
+    href: "/club/jugar",
+    label: "Jugar",
+    Icono: IconoJugar,
+    rutas: ["/club/jugar"],
   },
   {
     href: "/club/partidas",

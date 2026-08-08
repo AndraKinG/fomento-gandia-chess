@@ -61,6 +61,18 @@ export function IconoTorneos({ className }: Props) {
   );
 }
 
+/** Jugar: un peón sobre casillas, que es jugar ahora mismo y no consultar. */
+export function IconoJugar({ className }: Props) {
+  return (
+    <svg {...COMUN} className={className}>
+      <circle cx="12" cy="6" r="2.4" />
+      <path d="M9.6 8.4h4.8l-1.2 3h-2.4l-1.2-3Z" />
+      <path d="M10.2 11.4 9 16h6l-1.2-4.6" />
+      <path d="M6.5 19.5h11" />
+    </svg>
+  );
+}
+
 /** Partidas: torre, el repositorio de partidas. */
 export function IconoPartidas({ className }: Props) {
   return (

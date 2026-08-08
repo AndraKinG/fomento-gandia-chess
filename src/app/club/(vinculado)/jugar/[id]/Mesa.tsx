@@ -1,0 +1,387 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Chess } from "chess.js";
+import { createClient } from "@/lib/supabase/client";
+import { Tablero } from "@/components/ajedrez/Tablero";
+import { Boton } from "@/components/ui/Boton";
+import { Banner } from "@/components/ui/Banner";
+import { enReloj, paraPintar, type Reloj } from "@/lib/vivo/reloj";
+import {
+  abandonar,
+  aceptarTablas,
+  mover,
+  ofrecerTablas,
+  reclamarPorTiempo,
+} from "../actions";
+
+/**
+ * La mesa: tablero, los dos relojes y el chat.
+ *
+ * QUÉ HACE Y QUÉ NO. Pinta y propone; no decide nada. La jugada se manda al
+ * servidor y la posición que se ve sale SIEMPRE de lo que hay guardado, nunca de lo
+ * que este componente crea que ha pasado. Si el servidor rechaza la jugada, el
+ * tablero no se ha movido y no hay nada que deshacer.
+ *
+ * EL RELOJ DE AQUÍ ES DECORADO: cuenta hacia atrás para que se vea correr, pero
+ * arranca siempre de los números que manda el servidor y se corrige con cada
+ * jugada. El que manda es el de la base.
+ */
+
+export type Partida = {
+  id: string;
+  blancasId: string;
+  negrasId: string;
+  blancasNombre: string;
+  negrasNombre: string;
+  jugadas: string[];
+  turno: "w" | "b";
+  blancasMs: number;
+  negrasMs: number;
+  baseMs: number;
+  incrementoMs: number;
+  ultimaJugadaEn: string | null;
+  resultado: string | null;
+  motivo: string | null;
+  tablasOfrecidasPor: string | null;
+};
+
+export type Mensaje = { id: string; playerId: string; texto: string; creadoEn: string };
+
+const MOTIVOS: Record<string, string> = {
+  mate: "por mate",
+  tiempo: "por tiempo",
+  abandono: "por abandono",
+  ahogado: "por ahogado",
+  "tablas-acordadas": "de común acuerdo",
+  "material-insuficiente": "por material insuficiente",
+  "triple-repeticion": "por triple repetición",
+  "regla-50": "por la regla de las 50 jugadas",
+};
+
+export function Mesa({
+  inicial,
+  mensajesIniciales,
+  yo,
+}: {
+  inicial: Partida;
+  mensajesIniciales: Mensaje[];
+  /** Ficha de quien mira. null = está de espectador. */
+  yo: string | null;
+}) {
+  const [p, setP] = useState(inicial);
+  const [mensajes, setMensajes] = useState(mensajesIniciales);
+  const [error, setError] = useState<string | null>(null);
+  const [texto, setTexto] = useState("");
+  const [ahora, setAhora] = useState(() => Date.now());
+  const finChat = useRef<HTMLDivElement | null>(null);
+
+  const miColor: "w" | "b" | null =
+    yo === p.blancasId ? "w" : yo === p.negrasId ? "b" : null;
+  const enJuego = p.resultado === null;
+  const meToca = enJuego && miColor !== null && p.turno === miColor;
+
+  // TIEMPO REAL: la fila entera llega en cada cambio (`replica identity full` en la
+  // migración 0022), así que la jugada del rival aparece sola, sin recargar.
+  useEffect(() => {
+    const supabase = createClient();
+    const canal = supabase
+      .channel(`partida-${p.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "live_games", filter: `id=eq.${p.id}` },
+        (aviso) => {
+          const f = aviso.new as Record<string, unknown>;
+          setP((antes) => ({
+            ...antes,
+            jugadas: (f.jugadas as string[]) ?? [],
+            turno: f.turno as "w" | "b",
+            blancasMs: f.blancas_ms as number,
+            negrasMs: f.negras_ms as number,
+            ultimaJugadaEn: (f.ultima_jugada_en as string | null) ?? null,
+            resultado: (f.resultado as string | null) ?? null,
+            motivo: (f.motivo as string | null) ?? null,
+            tablasOfrecidasPor: (f.tablas_ofrecidas_por as string | null) ?? null,
+          }));
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "live_chat", filter: `live_game_id=eq.${p.id}` },
+        (aviso) => {
+          const f = aviso.new as Record<string, unknown>;
+          setMensajes((antes) =>
+            antes.some((m) => m.id === f.id)
+              ? antes
+              : [
+                  ...antes,
+                  {
+                    id: f.id as string,
+                    playerId: f.player_id as string,
+                    texto: f.texto as string,
+                    creadoEn: f.creado_en as string,
+                  },
+                ]
+          );
+        }
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(canal);
+    };
+  }, [p.id]);
+
+  // La cuenta atrás. Cada décima porque en los últimos segundos se ven décimas; en
+  // cuanto la partida acaba se para, que si no sigue restando sobre un resultado.
+  useEffect(() => {
+    if (!enJuego) return;
+    const t = setInterval(() => setAhora(Date.now()), 100);
+    return () => clearInterval(t);
+  }, [enJuego]);
+
+  useEffect(() => {
+    finChat.current?.scrollIntoView({ block: "end" });
+  }, [mensajes]);
+
+  const reloj: Reloj = {
+    blancasMs: p.blancasMs,
+    negrasMs: p.negrasMs,
+    turno: p.turno,
+    ultimaJugadaEn: p.ultimaJugadaEn ? Date.parse(p.ultimaJugadaEn) : null,
+  };
+  const tiempos = enJuego
+    ? paraPintar(reloj, ahora)
+    : { blancasMs: p.blancasMs, negrasMs: p.negrasMs };
+
+  // La posición sale de las jugadas, que es la única fuente de verdad. Memoizada
+  // porque se reconstruye entera y el componente se repinta diez veces por segundo
+  // con la cuenta atrás.
+  const juego = useMemo(() => {
+    const c = new Chess();
+    for (const j of p.jugadas) {
+      try {
+        c.move(j);
+      } catch {
+        break;
+      }
+    }
+    return c;
+  }, [p.jugadas]);
+  const ultima = juego.history({ verbose: true }).at(-1);
+
+  const [elegida, setElegida] = useState<string | null>(null);
+  const destinos = elegida
+    ? juego.moves({ square: elegida as never, verbose: true }).map((m) => m.to as string)
+    : [];
+
+  async function enviar(desde: string, hasta: string) {
+    setElegida(null);
+    // Coronación: si la jugada admite corona, se pide dama. Elegir pieza es un caso
+    // raro en partida rápida y un diálogo aquí cuesta segundos de reloj.
+    const posibles = juego.moves({ square: desde as never, verbose: true });
+    const corona = posibles.some((m) => m.to === hasta && m.promotion) ? "q" : undefined;
+    const r = await mover(p.id, { desde, hasta, corona });
+    if (r.error) setError(r.error);
+  }
+
+  function tocar(casilla: string) {
+    if (!meToca) return;
+    if (elegida && destinos.includes(casilla)) {
+      void enviar(elegida, casilla);
+      return;
+    }
+    const pieza = juego.get(casilla as never);
+    setElegida(pieza && pieza.color === miColor ? casilla : null);
+  }
+
+  async function mandarMensaje() {
+    const limpio = texto.trim();
+    if (!limpio || !yo) return;
+    setTexto("");
+    const supabase = createClient();
+    // El chat sí lo escribe el cliente: su política solo deja escribir como uno
+    // mismo y en las partidas propias (migración 0022).
+    const { error: e } = await supabase
+      .from("live_chat")
+      .insert({ live_game_id: p.id, player_id: yo, texto: limpio });
+    if (e) setError("No se ha podido mandar el mensaje.");
+  }
+
+  const arriba = miColor === "b" ? "blancas" : "negras";
+  const nombreArriba = arriba === "blancas" ? p.blancasNombre : p.negrasNombre;
+  const nombreAbajo = arriba === "blancas" ? p.negrasNombre : p.blancasNombre;
+  const msArriba = arriba === "blancas" ? tiempos.blancasMs : tiempos.negrasMs;
+  const msAbajo = arriba === "blancas" ? tiempos.negrasMs : tiempos.blancasMs;
+  const turnoArriba = arriba === "blancas" ? p.turno === "w" : p.turno === "b";
+
+  const meOfrecenTablas =
+    enJuego && p.tablasOfrecidasPor !== null && p.tablasOfrecidasPor !== yo && miColor !== null;
+
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,32rem)_1fr]">
+      <div className="space-y-2">
+        <Jugador nombre={nombreArriba} ms={msArriba} corriendo={enJuego && turnoArriba} />
+        <Tablero
+          filas={juego.board()}
+          volteado={miColor === "b"}
+          seleccionada={elegida}
+          destinos={destinos}
+          ultimoMovimiento={ultima ? { from: ultima.from, to: ultima.to } : null}
+          enJaque={
+            juego.isCheck()
+              ? (juego
+                  .board()
+                  .flat()
+                  .find((c) => c && c.type === "k" && c.color === juego.turn())?.square ?? null)
+              : null
+          }
+          onToque={tocar}
+          onSoltar={(desde, hasta) => void enviar(desde, hasta)}
+          deshabilitado={!meToca}
+        />
+        <Jugador nombre={nombreAbajo} ms={msAbajo} corriendo={enJuego && !turnoArriba} />
+      </div>
+
+      <div className="space-y-3">
+        {p.resultado && (
+          <Banner tipo="ok">
+            {p.resultado === "1/2-1/2" ? "Tablas" : `Ganan las ${p.resultado === "1-0" ? "blancas" : "negras"}`}
+            {p.motivo ? ` ${MOTIVOS[p.motivo] ?? ""}` : ""}.
+          </Banner>
+        )}
+        {meOfrecenTablas && (
+          <Banner tipo="aviso">
+            Te ofrecen tablas.{" "}
+            <button
+              type="button"
+              onClick={() => void aceptarTablas(p.id)}
+              className="font-semibold underline"
+            >
+              Aceptar
+            </button>
+          </Banner>
+        )}
+        {error && <Banner tipo="error">{error}</Banner>}
+
+        {enJuego && miColor !== null && (
+          <div className="flex flex-wrap gap-2">
+            <Boton
+              variante="secundario"
+              className="px-3 py-1.5 text-sm"
+              onClick={() => void ofrecerTablas(p.id)}
+            >
+              {p.tablasOfrecidasPor === yo ? "Retirar tablas" : "Ofrecer tablas"}
+            </Boton>
+            <Boton
+              variante="secundario"
+              className="px-3 py-1.5 text-sm"
+              onClick={() => void abandonar(p.id)}
+            >
+              Abandonar
+            </Boton>
+            {/* Solo cuando de verdad se le ha acabado al rival: el servidor lo
+                vuelve a comprobar, pero enseñar el botón antes de tiempo confunde. */}
+            {!meToca && msArriba <= 0 && (
+              <Boton
+                variante="solido"
+                className="px-3 py-1.5 text-sm"
+                onClick={() => void reclamarPorTiempo(p.id)}
+              >
+                Reclamar por tiempo
+              </Boton>
+            )}
+          </div>
+        )}
+
+        <div className="rounded-2xl border border-borde bg-tarjeta">
+          <p className="border-b border-borde px-3 py-2 text-xs font-semibold uppercase tracking-wide text-tinta-suave">
+            Jugadas
+          </p>
+          <p className="max-h-32 overflow-auto p-3 font-mono text-sm leading-6 text-tinta">
+            {p.jugadas.length === 0 && (
+              <span className="text-tinta-suave">Todavía no se ha jugado nada.</span>
+            )}
+            {p.jugadas.map((j, i) => (
+              <span key={i} className="mr-2">
+                {i % 2 === 0 && <span className="text-tinta-suave">{i / 2 + 1}. </span>}
+                {j}
+              </span>
+            ))}
+          </p>
+        </div>
+
+        <div className="flex h-64 flex-col rounded-2xl border border-borde bg-tarjeta">
+          <p className="border-b border-borde px-3 py-2 text-xs font-semibold uppercase tracking-wide text-tinta-suave">
+            Chat
+          </p>
+          <div className="flex-1 space-y-1.5 overflow-y-auto p-3">
+            {mensajes.length === 0 && (
+              <p className="text-sm text-tinta-suave">Aún no habéis dicho nada.</p>
+            )}
+            {mensajes.map((m) => (
+              <p key={m.id} className="text-sm">
+                <span className="font-semibold text-tinta-suave">
+                  {m.playerId === p.blancasId ? p.blancasNombre : p.negrasNombre}:{" "}
+                </span>
+                <span className="text-tinta">{m.texto}</span>
+              </p>
+            ))}
+            <div ref={finChat} />
+          </div>
+          {miColor !== null && (
+            <div className="flex gap-2 border-t border-borde p-2">
+              <input
+                value={texto}
+                onChange={(e) => setTexto(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void mandarMensaje();
+                  }
+                }}
+                maxLength={300}
+                placeholder="Escribe…"
+                className="min-w-0 flex-1 rounded-xl border border-borde bg-fondo px-3 py-1.5 text-sm text-tinta placeholder:text-tinta-suave"
+              />
+              <Boton
+                variante="secundario"
+                className="px-3 py-1.5 text-sm"
+                onClick={() => void mandarMensaje()}
+              >
+                Enviar
+              </Boton>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Nombre y reloj de un jugador. El reloj se resalta cuando le corre a él. */
+function Jugador({
+  nombre,
+  ms,
+  corriendo,
+}: {
+  nombre: string;
+  ms: number;
+  corriendo: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-borde bg-tarjeta px-3 py-2">
+      <span className="min-w-0 truncate text-sm text-tinta">{nombre}</span>
+      <span
+        className={`shrink-0 rounded-lg px-2.5 py-1 font-mono text-lg tabular-nums ${
+          ms <= 0
+            ? "bg-red-600 text-white"
+            : corriendo
+              ? "bg-acento-fuerte text-sobre-acento"
+              : "bg-tarjeta-suave text-tinta"
+        }`}
+      >
+        {enReloj(ms)}
+      </span>
+    </div>
+  );
+}
