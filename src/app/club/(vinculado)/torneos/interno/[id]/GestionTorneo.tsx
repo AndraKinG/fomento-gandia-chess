@@ -144,103 +144,130 @@ export function GestionTorneo({
         )}
       </section>
 
-      {/* ---- Rondas ---- */}
-      {rondas.map((r) => (
-        <section key={r.numero} className="space-y-2">
-          <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
-            Ronda {r.numero}
-          </h2>
-          {r.pares.map((p) => (
-            <Tarjeta key={p.id} compacta>
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm text-tinta">
-                    <span aria-hidden>♙</span> {p.blancasNombre}
-                  </p>
-                  <p className="truncate text-sm text-tinta">
-                    <span aria-hidden>♟</span> {p.negrasNombre}
-                  </p>
-                </div>
-                {esJunta && estado !== "terminado" ? (
-                  <div className="flex shrink-0 gap-1">
-                    {(["1", "0.5", "0"] as const).map((valor) => (
-                      <button
-                        key={valor}
-                        type="button"
-                        disabled={pendiente}
-                        onClick={() =>
-                          ejecutar(() =>
-                            anotarResultado(
-                              tournamentId,
-                              p.id,
-                              p.resultado === valor ? null : valor
-                            )
-                          )
-                        }
-                        aria-pressed={p.resultado === valor}
-                        aria-label={
-                          valor === "1"
-                            ? "Ganan blancas"
-                            : valor === "0.5"
-                              ? "Tablas"
-                              : "Ganan negras"
-                        }
-                        className={`w-10 rounded-xl px-1 py-1.5 text-xs font-semibold transition duration-100 active:scale-[0.97] disabled:opacity-50 ${
-                          p.resultado === valor
-                            ? "bg-acento-fuerte text-sobre-acento"
-                            : "border border-borde bg-tarjeta text-tinta-suave"
-                        }`}
-                      >
-                        {valor === "1" ? "1-0" : valor === "0.5" ? "½" : "0-1"}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="shrink-0 rounded-full bg-tarjeta-suave px-2.5 py-0.5 text-xs font-semibold text-acento-texto ring-1 ring-borde-acento">
-                    {p.resultado === "1"
-                      ? "1-0"
-                      : p.resultado === "0.5"
-                        ? "½-½"
-                        : p.resultado === "0"
-                          ? "0-1"
-                          : "por jugar"}
+      {/* ---- Rondas ----
+          UNA SOLA CAJA CON FILAS, como el calendario de Interclubs, y no una tarjeta
+          por emparejamiento. Un suizo de diez con cinco rondas son veinticinco
+          tarjetas de dos líneas: la página se hacía interminable y la clasificación,
+          que es lo que se mira, quedaba a un scroll de distancia. Cada cruce cabe en
+          una línea porque el color ya lo dice el orden (y los símbolos). */}
+      {rondas.length > 0 && (
+        <section className="space-y-2">
+        <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
+          Rondas
+        </h2>
+        <div className="overflow-hidden rounded-2xl border border-borde bg-tarjeta">
+          {rondas.map((r) => (
+            <div key={r.numero}>
+              <h3 className="flex items-baseline gap-2 border-b border-t border-borde bg-tarjeta-suave px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-tinta-suave first:border-t-0">
+                Ronda {r.numero}
+                {r.descansaNombre && (
+                  <span className="ml-auto min-w-0 truncate text-[11px] font-normal normal-case">
+                    Descansa {r.descansaNombre} (+½)
                   </span>
                 )}
-              </div>
-            </Tarjeta>
+              </h3>
+              <ul className="divide-y divide-borde">
+                {r.pares.map((p) => (
+                  <li
+                    key={p.id}
+                    // Dos líneas en móvil y una desde `sm`: con los tres botones de
+                    // resultado al lado, dos nombres largos se quedaban en tres letras.
+                    className="flex flex-col gap-1 px-3 py-2 sm:flex-row sm:items-center sm:gap-3"
+                  >
+                    <span className="flex min-w-0 flex-1 items-center gap-2">
+                      <span className="w-4 shrink-0 text-xs tabular-nums text-tinta-suave">
+                        {p.mesa}
+                      </span>
+                      <span className="min-w-0 truncate text-sm text-tinta">
+                        <span aria-hidden className="text-tinta-suave">
+                          ♙
+                        </span>{" "}
+                        {p.blancasNombre}
+                        <span className="text-tinta-suave"> · </span>
+                        <span aria-hidden className="text-tinta-suave">
+                          ♟
+                        </span>{" "}
+                        {p.negrasNombre}
+                      </span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2 pl-6 sm:pl-0">
+                      {/* El enlace a las jugadas va en la fila de SU cruce, no suelto
+                          debajo de la ronda: así se sabe de qué partida habla. */}
+                      {p.esMia && p.resultado !== null && (
+                        <Link
+                          href={
+                            p.gameId
+                              ? `/club/partidas/${p.gameId}`
+                              : `/club/partidas/nueva?emparejamiento=${p.id}`
+                          }
+                          title={
+                            p.gameId ? "Ver tus jugadas" : "Subir tus jugadas"
+                          }
+                          className="text-xs text-acento-texto underline"
+                        >
+                          {p.gameId ? "Ver jugadas" : "Subir jugadas"}
+                        </Link>
+                      )}
+                      {esJunta && estado !== "terminado" ? (
+                        <span className="flex gap-1">
+                          {(["1", "0.5", "0"] as const).map((valor) => (
+                            <button
+                              key={valor}
+                              type="button"
+                              disabled={pendiente}
+                              onClick={() =>
+                                ejecutar(() =>
+                                  anotarResultado(
+                                    tournamentId,
+                                    p.id,
+                                    p.resultado === valor ? null : valor
+                                  )
+                                )
+                              }
+                              aria-pressed={p.resultado === valor}
+                              aria-label={
+                                valor === "1"
+                                  ? "Ganan blancas"
+                                  : valor === "0.5"
+                                    ? "Tablas"
+                                    : "Ganan negras"
+                              }
+                              className={`w-10 rounded-lg px-1 py-1 text-xs font-semibold transition duration-100 active:scale-[0.97] disabled:opacity-50 ${
+                                p.resultado === valor
+                                  ? "bg-acento-fuerte text-sobre-acento"
+                                  : "border border-borde bg-tarjeta text-tinta-suave"
+                              }`}
+                            >
+                              {valor === "1" ? "1-0" : valor === "0.5" ? "½" : "0-1"}
+                            </button>
+                          ))}
+                        </span>
+                      ) : (
+                        // Ancho fijo para que los resultados queden en columna: en una
+                        // lista larga, cifras que bailan de sitio obligan a buscarlas.
+                        <span
+                          className={`w-16 text-right text-sm font-semibold tabular-nums ${
+                            p.resultado === null ? "text-tinta-suave" : "text-tinta"
+                          }`}
+                        >
+                          {p.resultado === "1"
+                            ? "1-0"
+                            : p.resultado === "0.5"
+                              ? "½-½"
+                              : p.resultado === "0"
+                                ? "0-1"
+                                : "—"}
+                        </span>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-          {r.pares.some((p) => p.esMia && p.resultado !== null) && (
-            <p className="px-1 text-xs text-tinta-suave">
-              {r.pares
-                .filter((p) => p.esMia && p.resultado !== null)
-                .map((p) =>
-                  p.gameId ? (
-                    <Link
-                      key={p.id}
-                      href={`/club/partidas/${p.gameId}`}
-                      className="text-acento-texto underline"
-                    >
-                      Ver tus jugadas de esta ronda
-                    </Link>
-                  ) : (
-                    <Link
-                      key={p.id}
-                      href={`/club/partidas/nueva?emparejamiento=${p.id}`}
-                      className="text-acento-texto underline"
-                    >
-                      Subir tus jugadas de esta ronda
-                    </Link>
-                  )
-                )}
-            </p>
-          )}
-          {r.descansaNombre && (
-            <p className="px-1 text-xs text-tinta-suave">
-              Descansa {r.descansaNombre} (suma medio punto)
-            </p>
-          )}
+        </div>
         </section>
-      ))}
+      )}
 
       {/* ---- Acciones del organizador ---- */}
       {esJunta && estado !== "terminado" && (
