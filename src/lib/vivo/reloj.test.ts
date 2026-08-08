@@ -7,6 +7,7 @@ import {
   restanteDeQuienMueve,
   trasJugada,
   type Cadencia,
+  type Reloj,
 } from "./reloj";
 
 /** 5 minutos con 3 segundos de incremento, que es lo típico de un rápidas de club. */
@@ -96,7 +97,9 @@ describe("trasJugada", () => {
   });
 
   it("dos jugadas seguidas descuentan a cada uno lo suyo", () => {
-    let r = { ...relojInicial(CADENCIA), ultimaJugadaEn: T0 };
+    // Anotado: el objeto de partida infiere `ultimaJugadaEn: number` y `trasJugada`
+    // devuelve el tipo bueno, que la admite nula.
+    let r: Reloj = { ...relojInicial(CADENCIA), ultimaJugadaEn: T0 };
     r = trasJugada(r, CADENCIA, T0 + 10_000); // blancas piensan 10 s
     r = trasJugada(r, CADENCIA, T0 + 40_000); // negras piensan 30 s
     expect(r.blancasMs).toBe(293_000);
