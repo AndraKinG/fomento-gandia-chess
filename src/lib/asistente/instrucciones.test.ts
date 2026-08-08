@@ -59,6 +59,14 @@ describe("instrucciones", () => {
     expect(instrucciones(SOCIO, DIA)).toContain("Nunca digas que has hecho algo");
   });
 
+  it("conoce las secciones de la app, para guiar y no negar lo que existe", () => {
+    // Llegó a decir "de bases de datos de partidas no dispongo" cuando la app
+    // tiene un repositorio entero de partidas.
+    const t = instrucciones(SOCIO, DIA);
+    expect(t).toContain("Partidas: repositorio compartido");
+    expect(t).toContain("NUNCA digas que no tienes datos de algo sin haberlo consultado");
+  });
+
   it("le da los días ya calculados y le prohíbe deducirlos", () => {
     const t = instrucciones(SOCIO, DIA);
     expect(t).toContain("2026-08-08");

@@ -47,3 +47,22 @@ export function filtroBusqueda(texto: string, idsJugadores: readonly string[]): 
   }
   return condiciones.join(",");
 }
+
+/**
+ * Marcador de una partida VISTO DESDE LAS BLANCAS (`1-0`, `½-½`, `0-1`).
+ *
+ * En la base, `resultado` está guardado desde el punto de vista del dueño de la
+ * partida ("1" = gané yo), y `color` dice con qué piezas jugó. Para contar una
+ * partida hay que darle la vuelta cuando el dueño llevaba negras: si no, "1" en una
+ * partida suya con negras se leería como victoria de las blancas, que es lo
+ * contrario de lo que pasó.
+ */
+export function marcadorDesdeBlancas(
+  resultado: "1" | "0.5" | "0",
+  color: "blancas" | "negras"
+): string {
+  if (resultado === "0.5") return "½-½";
+  const ganoElDuenio = resultado === "1";
+  const gananBlancas = color === "blancas" ? ganoElDuenio : !ganoElDuenio;
+  return gananBlancas ? "1-0" : "0-1";
+}

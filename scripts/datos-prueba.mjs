@@ -72,7 +72,10 @@ async function poner() {
     d.setHours(17, 0, 0, 0);
     return d.toISOString();
   };
-  const { data: jornada } = await db
+  // El error SE COMPRUEBA. Sin esto, un fallo aquí dejaba la jornada a medias y el
+  // script petaba diez líneas más abajo con un "cannot read properties of null",
+  // que no dice nada de lo que pasó de verdad. Pasó el 2026-08-08.
+  const { data: jornada, error: errorJornada } = await db
     .from("matches")
     .insert({
       team_id: equipos[0].id,
@@ -85,6 +88,12 @@ async function poner() {
     })
     .select("id")
     .single();
+  if (errorJornada || !jornada) {
+    throw new Error(
+      `No se ha podido crear la jornada de prueba: ${errorJornada?.message ?? "sin datos"}. ` +
+        "Si dice que ya existe, lanza primero `node scripts/datos-prueba.mjs quitar`."
+    );
+  }
   console.log(`Jornada futura creada (R99, dentro de 9 días)`);
 
   // Disponibilidad de 24 socios, repartida.

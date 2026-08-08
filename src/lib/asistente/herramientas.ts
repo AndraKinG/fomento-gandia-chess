@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { filtroBusqueda, marcadorDesdeBlancas } from "@/lib/partidas/buscar";
 
 /**
  * Lo que el asistente puede consultar de la base.
@@ -89,6 +90,22 @@ export const DECLARACIONES: Declaracion[] = [
       type: "object",
       properties: {
         limite: { type: "number", description: "Cuántos torneos como máximo. Por defecto 6, que es lo que cabe en un chat; sube hasta 15 solo si te piden la lista entera." },
+      },
+    },
+  },
+  {
+    name: "buscar_partidas",
+    description:
+      "Repositorio de partidas del club: las que los socios han subido, con fecha, colores, resultado, torneo y apertura. Busca por el nombre de un socio o de un rival. Úsalo siempre que pregunten por las partidas de alguien; NO digas que no tienes partidas sin haberlo consultado antes.",
+    parameters: {
+      type: "object",
+      properties: {
+        nombre: {
+          type: "string",
+          description:
+            "Parte del nombre de un socio o de un rival. Si se omite, devuelve las últimas partidas subidas al club.",
+        },
+        limite: { type: "number", description: "Cuántas partidas como máximo. Por defecto 6; sube hasta 15 solo si te piden la lista entera." },
       },
     },
   },
@@ -241,6 +258,64 @@ export async function ejecutar(
           hora: t.hora,
           ritmo: t.ritmo,
         })),
+      };
+    }
+
+    case "buscar_partidas": {
+      const buscado = typeof args.nombre === "string" ? args.nombre.trim() : "";
+      let consulta = supabase
+        .from("games")
+        .select(
+          "fecha, ronda, rival_nombre, mi_elo, rival_elo, color, resultado, apertura, pgn, torneo_texto, players!games_player_id_fkey(nombre), tournaments(nombre)"
+        )
+        .order("fecha", { ascending: false })
+        .limit(limite(args));
+
+      if (buscado) {
+        // Los socios que cuadran se resuelven APARTE, y luego se filtra por
+        // `player_id`. Filtrar por la tabla incrustada dentro de un `or()` es lo que
+        // rompía la búsqueda de la pantalla: ver `src/lib/partidas/buscar.ts`.
+        const { data: socios } = await supabase
+          .from("players")
+          .select("id")
+          .ilike("nombre", `%${buscado}%`);
+        consulta = consulta.or(
+          filtroBusqueda(buscado, (socios ?? []).map((s) => s.id as string))
+        );
+      }
+
+      const { data, error } = await consulta;
+      if (error) return { error: "No se ha podido leer el repositorio de partidas." };
+      if ((data ?? []).length === 0) {
+        return {
+          partidas: [],
+          aviso: buscado
+            ? `Nadie ha subido todavía ninguna partida que cuadre con "${buscado}".`
+            : "Todavía no hay ninguna partida subida al club.",
+        };
+      }
+      return {
+        partidas: (data ?? []).map((g) => {
+          const duenio =
+            (g.players as unknown as { nombre: string } | null)?.nombre ?? "Socio";
+          const conBlancas = g.color === "blancas";
+          return {
+            fecha: g.fecha,
+            blancas: conBlancas ? duenio : g.rival_nombre,
+            negras: conBlancas ? g.rival_nombre : duenio,
+            // Desde las blancas, que es como se lee un resultado.
+            resultado: marcadorDesdeBlancas(
+              g.resultado as "1" | "0.5" | "0",
+              g.color as "blancas" | "negras"
+            ),
+            torneo:
+              (g.tournaments as unknown as { nombre: string } | null)?.nombre ??
+              g.torneo_texto,
+            ronda: g.ronda,
+            apertura: g.apertura,
+            tieneJugadas: Boolean(g.pgn),
+          };
+        }),
       };
     }
 

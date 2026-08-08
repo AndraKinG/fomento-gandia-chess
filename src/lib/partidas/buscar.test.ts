@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filtroBusqueda, valorSeguro } from "./buscar";
+import { filtroBusqueda, marcadorDesdeBlancas, valorSeguro } from "./buscar";
 
 describe("valorSeguro", () => {
   it("usa el comodín de PostgREST, que es * y no %", () => {
@@ -45,5 +45,29 @@ describe("filtroBusqueda", () => {
 
   it("quita los espacios de los lados", () => {
     expect(filtroBusqueda("  Emilio  ", [])).toBe("rival_nombre.ilike.*Emilio*");
+  });
+});
+
+describe("marcadorDesdeBlancas", () => {
+  it("el dueño gana con blancas", () => {
+    expect(marcadorDesdeBlancas("1", "blancas")).toBe("1-0");
+  });
+
+  it("el dueño gana con negras", () => {
+    // Aquí está la trampa: en la base pone "1", pero ganaron las NEGRAS.
+    expect(marcadorDesdeBlancas("1", "negras")).toBe("0-1");
+  });
+
+  it("el dueño pierde con blancas", () => {
+    expect(marcadorDesdeBlancas("0", "blancas")).toBe("0-1");
+  });
+
+  it("el dueño pierde con negras", () => {
+    expect(marcadorDesdeBlancas("0", "negras")).toBe("1-0");
+  });
+
+  it("las tablas son tablas lleve las piezas que lleve", () => {
+    expect(marcadorDesdeBlancas("0.5", "blancas")).toBe("½-½");
+    expect(marcadorDesdeBlancas("0.5", "negras")).toBe("½-½");
   });
 });
