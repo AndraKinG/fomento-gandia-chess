@@ -154,9 +154,11 @@ export const HERRAMIENTAS: Herramienta[] = [
 /** Las que se le enseñan al modelo según quién pregunta, ya sin el `rango`, que la
  *  API no admite. */
 export function declaracionesPara(rango: Rango): Declaracion[] {
-  return HERRAMIENTAS.filter((h) => alcanza(rango, h.rango)).map(
-    ({ rango: _, ...declaracion }) => declaracion
-  );
+  return HERRAMIENTAS.filter((h) => alcanza(rango, h.rango)).map((h) => ({
+    name: h.name,
+    description: h.description,
+    parameters: h.parameters,
+  }));
 }
 
 /** Nombre de la temporada activa y su id, que hace falta para casi todo. */
