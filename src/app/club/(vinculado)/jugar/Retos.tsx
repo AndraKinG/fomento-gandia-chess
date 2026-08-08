@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Boton } from "@/components/ui/Boton";
 import { Banner } from "@/components/ui/Banner";
+import { clienteEnVivo } from "@/lib/supabase/vivo";
 import { aceptarReto, rechazarReto, retar } from "./actions";
 
 /**
@@ -50,6 +51,68 @@ export function Retos({
 
   const recibidos = retos.filter((r) => r.retadoId === yo);
   const mandados = retos.filter((r) => r.retaId === yo);
+
+  /**
+   * QUE TE ACEPTEN EL RETO TE METE EN LA PARTIDA.
+   *
+   * Antes no pasaba nada: quien retaba se quedaba mirando la pantalla y tenía que
+   * recargar para enterarse de que el otro ya estaba esperando en el tablero, con
+   * el reloj a punto de arrancar. Ahora se escucha el reto y en cuanto pasa a
+   * aceptado se entra solo.
+   *
+   * Con reintento cada tres segundos por si el aviso se pierde: enterarte tarde de
+   * esto es llegar tarde a tu propia partida.
+   */
+  useEffect(() => {
+    const pendientesMios = mandados.map((r) => r.id);
+    if (pendientesMios.length === 0) return;
+
+    let cerrar: (() => void) | null = null;
+    let cancelado = false;
+
+    async function alAceptar(idPartida: string | null) {
+      if (idPartida) router.push(`/club/jugar/${idPartida}`);
+      else router.refresh();
+    }
+
+    void clienteEnVivo().then((supabase) => {
+      if (cancelado) return;
+      const canal = supabase
+        .channel(`retos-${yo}`)
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "challenges", filter: `reta_id=eq.${yo}` },
+          (aviso) => {
+            const f = aviso.new as { estado?: string; live_game_id?: string | null };
+            if (f.estado === "aceptado") void alAceptar(f.live_game_id ?? null);
+            else router.refresh();
+          }
+        )
+        .subscribe();
+      cerrar = () => void supabase.removeChannel(canal);
+
+      const reloj = setInterval(async () => {
+        const { data } = await supabase
+          .from("challenges")
+          .select("estado, live_game_id")
+          .in("id", pendientesMios)
+          .neq("estado", "pendiente");
+        const aceptado = (data ?? []).find((r) => r.estado === "aceptado");
+        if (aceptado) void alAceptar(aceptado.live_game_id ?? null);
+        else if ((data ?? []).length > 0) router.refresh();
+      }, 3000);
+      const anterior = cerrar;
+      cerrar = () => {
+        clearInterval(reloj);
+        anterior?.();
+      };
+    });
+
+    return () => {
+      cancelado = true;
+      cerrar?.();
+    };
+  }, [mandados, router, yo]);
 
   function ejecutar(accion: () => Promise<{ error?: string; id?: string }>, aPartida = false) {
     setError(null);

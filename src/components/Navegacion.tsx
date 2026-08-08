@@ -165,15 +165,20 @@ export function NavLateral({ esAdmin, email }: { esAdmin: boolean; email: string
 }
 
 /**
- * Acceso al perfil: arriba a la derecha y fijo, SOLO en móvil.
+ * Acceso al perfil: a la derecha de la cabecera, SOLO en móvil.
  *
  * Está aquí y no en la barra de abajo por sitio: siete pestañas no caben en un
- * teléfono y Perfil es de las que menos se tocan, así que sube a la esquina —donde
- * lo pone todo el mundo— y libera un hueco abajo para lo que se usa a diario.
+ * teléfono y Perfil es de las que menos se tocan, así que sube arriba —donde lo
+ * pone todo el mundo— y libera un hueco abajo para lo que se usa a diario.
  *
- * En escritorio no existe: allí la barra lateral tiene sitio de sobra y ya lo lleva.
+ * VA DENTRO DE LA CABECERA, no flotando encima. Flotando se comía el título en las
+ * pantallas de nombre largo: la franja azul y el botón no se ponían de acuerdo
+ * sobre de quién era ese trozo de pantalla. Como parte de la fila, el título
+ * simplemente se corta antes de llegar.
+ *
+ * En escritorio no existe: la barra lateral ya lo lleva.
  */
-export function AccesoPerfil({ nombre }: { nombre: string | null }) {
+export function AccesoPerfil() {
   const pathname = usePathname();
   const activo = pathname.startsWith("/club/perfil");
   return (
@@ -181,11 +186,8 @@ export function AccesoPerfil({ nombre }: { nombre: string | null }) {
       href="/club/perfil"
       aria-label="Tu perfil"
       aria-current={activo ? "page" : undefined}
-      title={nombre ?? "Tu perfil"}
-      className={`fixed right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border shadow-sm backdrop-blur lg:hidden ${
-        activo
-          ? "border-borde-acento bg-acento-fuerte text-sobre-acento"
-          : "border-borde bg-tarjeta/90 text-tinta"
+      className={`ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition lg:hidden ${
+        activo ? "bg-white/30" : "bg-white/15 hover:bg-white/25"
       }`}
     >
       <IconoPerfil className="h-5 w-5" />

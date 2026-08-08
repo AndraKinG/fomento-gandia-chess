@@ -58,7 +58,7 @@ export default async function PerfilPage() {
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Mi perfil" subtitulo={profile?.email} />
+      <Cabecera titulo="Mi perfil" subtitulo={profile?.email} volverAtras />
       <Contenedor medida="lectura" className="space-y-4">
         {p ? (
           <Tarjeta destacada className="flex flex-wrap items-center justify-between gap-4">

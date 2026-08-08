@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Chess } from "chess.js";
 import { createClient } from "@/lib/supabase/client";
+import { clienteEnVivo } from "@/lib/supabase/vivo";
 import { Tablero } from "@/components/ajedrez/Tablero";
 import { Boton } from "@/components/ui/Boton";
 import { Banner } from "@/components/ui/Banner";
@@ -97,8 +98,15 @@ export function Mesa({
   // TIEMPO REAL: la fila entera llega en cada cambio (`replica identity full` en la
   // migración 0022), así que la jugada del rival aparece sola, sin recargar.
   useEffect(() => {
-    const supabase = createClient();
-    const canal = supabase
+    // El canal se monta DENTRO de una promesa porque hay que poner el token del
+    // usuario en el socket antes de suscribir: sin él, la RLS filtra todos los
+    // avisos y no llega ninguno. Ver `clienteEnVivo`.
+    let cerrar: (() => void) | null = null;
+    let cancelado = false;
+
+    void clienteEnVivo().then((supabase) => {
+      if (cancelado) return;
+      const canal = supabase
       .channel(`partida-${p.id}`)
       .on(
         "postgres_changes",
@@ -139,8 +147,12 @@ export function Mesa({
         }
       )
       .subscribe();
+      cerrar = () => void supabase.removeChannel(canal);
+    });
+
     return () => {
-      void supabase.removeChannel(canal);
+      cancelado = true;
+      cerrar?.();
     };
   }, [p.id]);
 
@@ -182,6 +194,24 @@ export function Mesa({
           tablasOfrecidasPor: data.tablas_ofrecidas_por,
         };
       });
+      // El chat va en la misma pasada: tenía el mismo problema y ninguna red.
+      const { data: dichos } = await supabase
+        .from("live_chat")
+        .select("id, player_id, texto, creado_en")
+        .eq("live_game_id", p.id)
+        .order("creado_en");
+      if (dichos) {
+        setMensajes((antes) =>
+          antes.length === dichos.length
+            ? antes
+            : dichos.map((m) => ({
+                id: m.id,
+                playerId: m.player_id,
+                texto: m.texto,
+                creadoEn: m.creado_en,
+              }))
+        );
+      }
     }, 2000);
     return () => clearInterval(t);
   }, [p.id, p.resultado]);
