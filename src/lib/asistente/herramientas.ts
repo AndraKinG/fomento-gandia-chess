@@ -26,13 +26,22 @@ export type Declaracion = {
   };
 };
 
-/** Tope de filas por consulta. No es por rendimiento: es que meter 46 filas en la
- *  conversación por cada pregunta gasta la cuota gratuita a lo tonto. */
+/** Techo duro de filas por consulta. Meter 46 filas en la conversación por cada
+ *  pregunta gasta la cuota gratuita a lo tonto. */
 const TOPE = 15;
+
+/**
+ * Filas cuando no se pide un número.
+ *
+ * SEIS Y NO EL TECHO, y esto salió de verlo en producción: a "¿qué torneos hay
+ * pronto?" contestó con quince, uno por línea, y eso en un chat es un muro que
+ * nadie lee. Si el socio quiere la lista entera, el modelo pide más.
+ */
+const POR_DEFECTO = 6;
 
 function limite(args: Record<string, unknown>): number {
   const n = Number(args.limite);
-  return Number.isFinite(n) && n > 0 ? Math.min(n, TOPE) : TOPE;
+  return Number.isFinite(n) && n > 0 ? Math.min(n, TOPE) : POR_DEFECTO;
 }
 
 export const DECLARACIONES: Declaracion[] = [
@@ -47,7 +56,7 @@ export const DECLARACIONES: Declaracion[] = [
           type: "string",
           description: "Parte del nombre de un socio, para buscarlo. Si se omite, devuelve los primeros del orden.",
         },
-        limite: { type: "number", description: "Cuántas filas como máximo (15 por defecto)." },
+        limite: { type: "number", description: "Cuántas filas como máximo. Por defecto 6, que es lo que cabe en un chat; sube hasta 15 solo si te piden la lista entera." },
       },
     },
   },
@@ -68,7 +77,7 @@ export const DECLARACIONES: Declaracion[] = [
           type: "boolean",
           description: "true para devolver solo las que aún no se han jugado.",
         },
-        limite: { type: "number", description: "Cuántas jornadas como máximo (15 por defecto)." },
+        limite: { type: "number", description: "Cuántas jornadas como máximo. Por defecto 6; sube hasta 15 solo si te piden el calendario entero." },
       },
     },
   },
@@ -79,7 +88,7 @@ export const DECLARACIONES: Declaracion[] = [
     parameters: {
       type: "object",
       properties: {
-        limite: { type: "number", description: "Cuántos torneos como máximo (15 por defecto)." },
+        limite: { type: "number", description: "Cuántos torneos como máximo. Por defecto 6, que es lo que cabe en un chat; sube hasta 15 solo si te piden la lista entera." },
       },
     },
   },
@@ -90,7 +99,7 @@ export const DECLARACIONES: Declaracion[] = [
     parameters: {
       type: "object",
       properties: {
-        limite: { type: "number", description: "Cuántas filas como máximo (15 por defecto)." },
+        limite: { type: "number", description: "Cuántas filas como máximo. Por defecto 6, que es lo que cabe en un chat; sube hasta 15 solo si te piden la lista entera." },
       },
     },
   },
