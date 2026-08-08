@@ -23,7 +23,7 @@ export function CrearTorneo() {
     return (
       <Boton
         variante="secundario"
-        className="w-full text-sm sm:w-auto"
+        className="text-sm"
         onClick={() => setAbierto(true)}
       >
         Crear torneo

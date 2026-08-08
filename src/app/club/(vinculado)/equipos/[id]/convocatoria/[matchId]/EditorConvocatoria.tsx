@@ -112,7 +112,15 @@ export function EditorConvocatoria({
 
   const infracciones = useMemo(() => validar(orden, tableros, config, ctx), [orden, tableros, config, ctx]);
   const erroresCount = infracciones.filter((i) => i.nivel === "error").length;
-  const avisosCount = infracciones.filter((i) => i.nivel === "aviso").length;
+  // Los "tablero N vacío" se resumen en UNA línea cuando falta más de uno, así que el
+  // contador tiene que contarlos como uno: si no, decía "8 avisos" con un aviso a la
+  // vista y parecía que se estaban escondiendo siete.
+  const avisosVacios = infracciones.filter(
+    (i) => i.nivel === "aviso" && i.articulo === "borrador"
+  ).length;
+  const avisosCount =
+    infracciones.filter((i) => i.nivel === "aviso").length -
+    (avisosVacios > 1 ? avisosVacios - 1 : 0);
   const estructuralesCount = infracciones.filter(
     (i) => i.nivel === "error" && i.articulo === "estructural"
   ).length;
