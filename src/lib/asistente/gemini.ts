@@ -16,18 +16,26 @@ import { DECLARACIONES } from "./herramientas";
 /**
  * El modelo, y su suplente.
  *
- * NINGÚN NOMBRE DE MODELO ES ETERNO: Google retiró `gemini-2.5-flash` para las
- * cuentas nuevas de un día para otro y dejó muerto al bot del otro proyecto (ver
- * `docs/referencia/chatbot-ia-garestudio.md`). Por eso hay una variable de entorno
- * para forzar otro sin tocar código, y el catálogo de los que acepta una clave se
- * consulta en `https://generativelanguage.googleapis.com/v1beta/models?key=CLAVE`.
+ * NINGÚN NOMBRE DE MODELO ES ETERNO, y lo hemos visto DOS VECES el mismo día:
+ * Google ya había retirado `gemini-2.5-flash` (que dejó muerto al bot del otro
+ * proyecto, ver `docs/referencia/chatbot-ia-garestudio.md`) y, probando aquí, la
+ * clave del club recibe un 404 con `gemini-2.5-flash-lite` — "no longer available
+ * to new users". Por eso hay `LLM_MODEL` para forzar otro sin tocar código, y por
+ * eso el suplente es un ALIAS (`-latest`), que Google va moviendo solo.
+ * El catálogo que acepta una clave se consulta en
+ * `https://generativelanguage.googleapis.com/v1beta/models?key=CLAVE`.
  *
- * EL SUPLENTE NO ES UN LUJO: el modelo bueno de la capa gratuita da 503 a ratos
- * cuando está saturado, y el ligero casi nunca. Se reintenta al vuelo dentro de la
- * misma petición, así que el socio no se entera.
+ * POR QUÉ LA VERSIÓN LIGERA Y NO LA BUENA: `gemini-3.5-flash` contesta algo mejor,
+ * pero **se le acabó la cuota gratuita a la tercera pregunta** al probarlo con la
+ * clave del club. La ligera aguantó toda la batería sin rechistar y contesta de
+ * sobra para esto — reconduce con gracia, no se inventa datos y acierta las fechas.
+ * Si algún día se paga la API, `LLM_MODEL=gemini-3.5-flash` y a correr.
+ *
+ * El suplente entra si el principal da 503 o 429, dentro de la misma petición, así
+ * que el socio no se entera.
  */
-const MODELO = process.env.LLM_MODEL ?? "gemini-3.5-flash";
-const SUPLENTE = "gemini-3.1-flash-lite";
+const MODELO = process.env.LLM_MODEL ?? "gemini-3.1-flash-lite";
+const SUPLENTE = "gemini-flash-lite-latest";
 
 const URL = (modelo: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
