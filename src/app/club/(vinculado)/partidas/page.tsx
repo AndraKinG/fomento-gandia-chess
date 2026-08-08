@@ -62,33 +62,30 @@ export default async function PartidasPage({
         subtitulo={soloMias ? undefined : "Todas las que ha subido el club"} medida="panel"
       />
       <Contenedor medida="panel" className="space-y-4">
-        <Pestanas>
-          <Pestana href="/club/partidas" activa={!soloMias}>
-            Todas
-          </Pestana>
-          <Pestana href="/club/partidas?mias=1" activa={soloMias}>
-            Mías
-          </Pestana>
-        </Pestanas>
-
-        <Buscador valor={busqueda} soloMias={soloMias} />
-
-        <Boton variante="degradado" href="/club/partidas/nueva" className="w-full">
-          Subir una partida
-        </Boton>
-
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Boton
-            variante="secundario"
-            href="/club/partidas/importar"
-            className="flex-1 text-sm"
-          >
-            Importar de Lichess o Chess.com
-          </Boton>
-          <div className="flex-1">
+        {/* Pestañas y acciones en la MISMA fila desde `sm`. Apiladas eran cuatro
+            bloques a todo lo ancho —uno de ellos un degradado de 970 px— antes de
+            llegar a la primera partida. */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <Pestanas>
+            <Pestana href="/club/partidas" activa={!soloMias}>
+              Todas
+            </Pestana>
+            <Pestana href="/club/partidas?mias=1" activa={soloMias}>
+              Mías
+            </Pestana>
+          </Pestanas>
+          <div className="flex flex-wrap items-center gap-2">
+            <Boton variante="solido" href="/club/partidas/nueva" className="text-sm">
+              Subir partida
+            </Boton>
+            <Boton variante="secundario" href="/club/partidas/importar" className="text-sm">
+              Importar
+            </Boton>
             <Exportar />
           </div>
         </div>
+
+        <Buscador valor={busqueda} soloMias={soloMias} />
 
         {error && (
           <Tarjeta compacta>

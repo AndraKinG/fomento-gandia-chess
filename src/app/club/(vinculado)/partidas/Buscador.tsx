@@ -22,7 +22,9 @@ export function Buscador({ valor, soloMias }: { valor: string; soloMias: boolean
 
   return (
     <form
-      className="flex gap-2"
+      // Con `panel` el campo se estiraba a 970 px para un nombre y pico. Un buscador
+      // más largo que ancho no ayuda a escribir.
+      className="flex max-w-xl gap-2"
       action={() => {
         buscar(texto);
       }}
@@ -34,7 +36,7 @@ export function Buscador({ valor, soloMias }: { valor: string; soloMias: boolean
         onChange={(e) => setTexto(e.target.value)}
         placeholder="Buscar por nombre (tuyo o del rival)"
         aria-label="Buscar partidas por nombre"
-        className="flex-1 rounded-xl border border-borde bg-tarjeta p-3 text-tinta placeholder:text-tinta-suave"
+        className="flex-1 rounded-xl border border-borde bg-tarjeta px-3 py-2 text-tinta placeholder:text-tinta-suave"
       />
       <button
         type="submit"

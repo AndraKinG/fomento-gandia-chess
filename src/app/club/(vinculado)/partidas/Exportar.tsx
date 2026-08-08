@@ -18,11 +18,13 @@ export function Exportar() {
   const [pendiente, startTransition] = useTransition();
 
   return (
-    <div className="space-y-2">
+    // `contents` para que el botón entre en la fila de acciones del padre en vez de
+    // meter un bloque propio. El aviso de error sí necesita su sitio, y va debajo.
+    <div className="contents">
       {error && <Banner tipo="error">{error}</Banner>}
       <Boton
         variante="secundario"
-        className="w-full text-sm"
+        className="text-sm"
         disabled={pendiente}
         onClick={() => {
           setError(null);
@@ -44,7 +46,7 @@ export function Exportar() {
           });
         }}
       >
-        {pendiente ? "Preparando…" : "Descargar mis partidas (.pgn)"}
+        {pendiente ? "Preparando…" : "Descargar (.pgn)"}
       </Boton>
     </div>
   );

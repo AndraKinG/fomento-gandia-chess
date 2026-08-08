@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { sesionActual } from "@/lib/auth/sesion";
-import { fuerza } from "@/lib/elo/fuerza";
 import { ActivarNotificaciones } from "@/components/PushSubscriber";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Cabecera } from "@/components/ui/Cabecera";
@@ -25,6 +24,24 @@ export default async function PerfilPage() {
     .eq("id", user!.id)
     .single();
 
+  // ELO OFICIAL Y NÚMERO DE ORDEN, del orden de fuerza de la temporada activa.
+  //
+  // POR QUÉ NO BASTA CON `players`: las 46 fichas del club tienen `elo_fide` y
+  // `elo_feda` a null —los importadores de FIDE y FEDA no han llegado a rellenarlos—,
+  // así que `fuerza()` caía siempre al 1400 de respaldo y esta pantalla le decía a
+  // TODO EL MUNDO que su fuerza era 1400. El dato real es `force_order.elo_oficial`,
+  // que es además lo que manda en las convocatorias (RGC 52.1).
+  const { data: temporadaActiva } = await supabase
+    .from("seasons").select("id").eq("activa", true).maybeSingle();
+  const { data: filaOrden } = profile?.player_id && temporadaActiva
+    ? await supabase
+        .from("force_order")
+        .select("numero, bis_index, elo_oficial")
+        .eq("season_id", temporadaActiva.id)
+        .eq("player_id", profile.player_id)
+        .maybeSingle()
+    : { data: null };
+
   // Solicitudes de ingreso sin resolver. Esta es la ÚNICA puerta de la junta a
   // esa pantalla: no tiene acceso a /club/admin. Va en el perfil y no en el
   // inicio porque el inicio cuenta lo que pasa en el club, no tareas de gestión.
@@ -44,16 +61,35 @@ export default async function PerfilPage() {
       <Cabecera titulo="Mi perfil" subtitulo={profile?.email} />
       <Contenedor medida="lectura" className="space-y-4">
         {p ? (
-          <Tarjeta destacada>
-            <p className="text-lg font-semibold text-tinta">{p.nombre}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <ChipElo valor={p.elo_fide} etiqueta="FIDE" />
-              <ChipElo valor={p.elo_feda} etiqueta="FEDA" />
-              <ChipElo
-                valor={fuerza({ eloFide: p.elo_fide, eloFeda: p.elo_feda, eloOtro: p.elo_otro })}
-                etiqueta="Fuerza"
-              />
+          <Tarjeta destacada className="flex flex-wrap items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-lg font-semibold text-tinta">{p.nombre}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {/* FIDE y FEDA solo si los tiene: hoy no los tiene nadie, y tres
+                    chips con un guion no dicen nada. */}
+                {p.elo_fide !== null && <ChipElo valor={p.elo_fide} etiqueta="FIDE" />}
+                {p.elo_feda !== null && <ChipElo valor={p.elo_feda} etiqueta="FEDA" />}
+                {filaOrden && (
+                  <Link
+                    href="/club/orden-fuerza"
+                    className="inline-flex items-center gap-1 rounded-full bg-tarjeta-suave px-2.5 py-0.5 text-xs font-medium text-acento-texto ring-1 ring-borde-acento"
+                  >
+                    Nº {filaOrden.numero}
+                    {filaOrden.bis_index ? "bis" : ""} del club →
+                  </Link>
+                )}
+              </div>
             </div>
+            {filaOrden?.elo_oficial ? (
+              <div className="text-right">
+                <p className="text-3xl font-bold tabular-nums text-tinta">
+                  {filaOrden.elo_oficial}
+                </p>
+                <p className="text-xs uppercase tracking-wide text-tinta-suave">
+                  ELO oficial
+                </p>
+              </div>
+            ) : null}
           </Tarjeta>
         ) : (
           <EstadoVacio
@@ -109,17 +145,24 @@ export default async function PerfilPage() {
           </Link>
         )}
 
-        <ThemeToggle />
-        <ActivarNotificaciones />
-        <form action={logout}>
-          <BotonAccion
-            variante="secundario"
-            trabajando="Cerrando sesión…"
-            className="w-full text-sm font-normal"
-          >
-            Cerrar sesión
-          </BotonAccion>
-        </form>
+        {/* Los tres ajustes juntos en una tarjeta. Sueltos eran tres barras a todo lo
+            ancho, una de ellas en degradado, que pesaban más que la propia ficha. */}
+        <Tarjeta className="flex flex-col gap-3">
+          <p className="text-sm font-semibold text-tinta">Ajustes</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <ThemeToggle />
+            <ActivarNotificaciones />
+          </div>
+          <form action={logout} className="border-t border-borde pt-3">
+            <BotonAccion
+              variante="secundario"
+              trabajando="Cerrando sesión…"
+              className="text-sm font-normal"
+            >
+              Cerrar sesión
+            </BotonAccion>
+          </form>
+        </Tarjeta>
       </Contenedor>
     </main>
   );
