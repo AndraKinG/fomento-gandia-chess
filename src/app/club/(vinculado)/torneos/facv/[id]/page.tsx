@@ -196,12 +196,17 @@ export default async function TorneoPage({
         </section>
 
         {!terminado && resumen.faltanPlazas && (
+          // "y solo 0 plazas libres" era el caso NORMAL de este aviso —salta cuando no
+          // caben todos— y sonaba a error. Sin plazas se dice "ninguna plaza libre".
           <Banner tipo="aviso">
             Hay {resumen.sinPlaza.length}{" "}
-            {resumen.sinPlaza.length === 1 ? "persona" : "personas"} sin sitio y solo{" "}
-            {resumen.plazasLibres}{" "}
-            {resumen.plazasLibres === 1 ? "plaza libre" : "plazas libres"}. Hace falta
-            otro coche.
+            {resumen.sinPlaza.length === 1 ? "persona" : "personas"} sin sitio y{" "}
+            {resumen.plazasLibres === 0
+              ? "ninguna plaza libre"
+              : `solo ${resumen.plazasLibres} ${
+                  resumen.plazasLibres === 1 ? "plaza libre" : "plazas libres"
+                }`}
+            . Hace falta otro coche.
           </Banner>
         )}
 

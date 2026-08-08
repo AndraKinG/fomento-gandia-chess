@@ -12,6 +12,7 @@ import {
   etiquetaNumero,
   ordenarPorElo,
 } from "@/lib/elo/ranking-oficial";
+import { inicioDelTrozo, partirEnDos } from "@/lib/ui/columnas";
 
 type Fila = {
   numero: number;
@@ -27,6 +28,107 @@ type Fila = {
 
 /** Cómo se ordena la lista. Son los dos criterios que pidió el propietario. */
 type Criterio = "orden" | "elo";
+
+/**
+ * Un trozo de la lista, como tabla.
+ *
+ * Tabla y no una tarjeta por jugador: son 46 filas de cuatro datos, y una lista de
+ * tarjetas obliga a bajar cuatro pantallas para ver algo que cabe de una vez.
+ *
+ * `desde` es la posición global del primer elemento del trozo: en el orden por ELO
+ * la primera columna es el puesto, y con la lista partida en dos el índice local
+ * empezaría otra vez por 1 en la segunda mitad.
+ */
+function TablaRanking({
+  filas,
+  desde,
+  criterio,
+  miFicha,
+  conFide,
+  conFeda,
+}: {
+  filas: Fila[];
+  desde: number;
+  criterio: Criterio;
+  miFicha: string | null;
+  conFide: boolean;
+  conFeda: boolean;
+}) {
+  return (
+    <Tarjeta compacta>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-xs text-tinta-suave">
+              <th scope="col" className="pb-1 pr-2 font-medium">
+                {criterio === "elo" ? "#" : "Nº"}
+              </th>
+              <th scope="col" className="pb-1 pr-2 font-medium">
+                Jugador
+              </th>
+              <th scope="col" className="pb-1 pr-2 text-right font-medium">
+                Oficial
+              </th>
+              {/* Las columnas de FIDE y FEDA solo si alguien tiene ese ELO. Estaban
+                  siempre, y con las 46 fichas sin ninguno de los dos eran dos columnas
+                  de guiones ocupando ancho. Vuelven solas en cuanto haya un dato. */}
+              {conFide && (
+                <th scope="col" className="hidden pb-1 pr-2 text-right font-medium sm:table-cell">
+                  FIDE
+                </th>
+              )}
+              {conFeda && (
+                <th scope="col" className="hidden pb-1 text-right font-medium sm:table-cell">
+                  FEDA
+                </th>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map((f, i) => {
+              const soyYo = f.ficha === miFicha;
+              return (
+                <tr
+                  key={`${f.numero}-${f.bisIndex}`}
+                  className={`border-t border-borde ${soyYo ? "bg-tarjeta-suave" : ""}`}
+                >
+                  <td className="py-1.5 pr-2 tabular-nums text-tinta-suave">
+                    {criterio === "elo"
+                      ? desde + i + 1
+                      : etiquetaNumero(f.numero, f.bisIndex)}
+                  </td>
+                  <td className="py-1.5 pr-2 text-tinta">
+                    <span className={soyYo ? "font-semibold" : ""}>{f.nombre}</span>
+                    {/* En el orden por ELO se enseña al lado el número de orden: es lo
+                        que deja ver de un vistazo dónde los dos criterios no coinciden. */}
+                    {criterio === "elo" && (
+                      <span className="ml-2 text-xs text-tinta-suave">
+                        nº {etiquetaNumero(f.numero, f.bisIndex)}
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-1.5 pr-2 text-right font-semibold tabular-nums text-tinta">
+                    {f.eloOficial || "—"}
+                  </td>
+                  {conFide && (
+                    <td className="hidden py-1.5 pr-2 text-right tabular-nums text-tinta-suave sm:table-cell">
+                      {f.eloFide ?? "—"}
+                    </td>
+                  )}
+                  {conFeda && (
+                    <td className="hidden py-1.5 text-right tabular-nums text-tinta-suave sm:table-cell">
+                      {f.eloFeda ?? "—"}
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Tarjeta>
+  );
+}
 
 function Estadistica({ valor, etiqueta }: { valor: string; etiqueta: string }) {
   return (
@@ -99,6 +201,11 @@ export default async function OrdenFuerzaPage({
   });
 
   const visibles = criterio === "elo" ? ordenarPorElo(filas) : filas;
+  // Ninguna de las 46 fichas tiene ELO FEDA ni FIDE (la FACV publica el suyo y el id
+  // FIDE, no el número), así que eran dos columnas de guiones ocupando ancho.
+  const conFide = filas.some((f) => f.eloFide !== null);
+  const conFeda = filas.some((f) => f.eloFeda !== null);
+  const trozos = partirEnDos(visibles);
 
   // Estadísticas del club: salen de la misma consulta, así que no cuestan nada, y
   // llenan de contenido útil el hueco de arriba en vez de dejar la tabla sola.
@@ -182,70 +289,24 @@ export default async function OrdenFuerzaPage({
               </Pestana>
             </Pestanas>
 
-            <Tarjeta compacta>
-              {/* Tabla y no una tarjeta por jugador: son 46 filas y en un monitor
-                  una lista de tarjetas obliga a desplazarse cuatro pantallas para
-                  ver algo que cabe de una vez. Las columnas de FIDE y FEDA se
-                  esconden en móvil, donde no caben cuatro números por fila. */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs text-tinta-suave">
-                      <th scope="col" className="pb-1 pr-2 font-medium">
-                        {criterio === "elo" ? "#" : "Nº"}
-                      </th>
-                      <th scope="col" className="pb-1 pr-2 font-medium">
-                        Jugador
-                      </th>
-                      <th scope="col" className="pb-1 pr-2 text-right font-medium">
-                        Oficial
-                      </th>
-                      <th scope="col" className="hidden pb-1 pr-2 text-right font-medium sm:table-cell">
-                        FIDE
-                      </th>
-                      <th scope="col" className="hidden pb-1 text-right font-medium sm:table-cell">
-                        FEDA
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visibles.map((f, i) => {
-                      const soyYo = f.ficha === sesion?.playerId;
-                      return (
-                        <tr
-                          key={`${f.numero}-${f.bisIndex}`}
-                          className={`border-t border-borde ${soyYo ? "bg-tarjeta-suave" : ""}`}
-                        >
-                          <td className="py-1.5 pr-2 tabular-nums text-tinta-suave">
-                            {criterio === "elo" ? i + 1 : etiquetaNumero(f.numero, f.bisIndex)}
-                          </td>
-                          <td className="py-1.5 pr-2 text-tinta">
-                            <span className={soyYo ? "font-semibold" : ""}>{f.nombre}</span>
-                            {/* En el orden por ELO se enseña al lado el número de
-                                orden: es lo que deja ver de un vistazo dónde los dos
-                                criterios no coinciden. */}
-                            {criterio === "elo" && (
-                              <span className="ml-2 text-xs text-tinta-suave">
-                                nº {etiquetaNumero(f.numero, f.bisIndex)}
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-1.5 pr-2 text-right font-semibold tabular-nums text-tinta">
-                            {f.eloOficial || "—"}
-                          </td>
-                          <td className="hidden py-1.5 pr-2 text-right tabular-nums text-tinta-suave sm:table-cell">
-                            {f.eloFide ?? "—"}
-                          </td>
-                          <td className="hidden py-1.5 text-right tabular-nums text-tinta-suave sm:table-cell">
-                            {f.eloFeda ?? "—"}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </Tarjeta>
+            {/* DOS COLUMNAS DESDE `lg`, no una tabla de 46 filas. La lista es alta y
+                estrecha: en un monitor ocupaba metro y medio de scroll mientras el
+                nombre más largo dejaba media pantalla en blanco a su derecha. Partida
+                en dos cabe casi de una vez, y el corte va por la mitad para que las
+                dos columnas midan lo mismo. */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {trozos.map((trozo, n) => (
+                <TablaRanking
+                  key={n}
+                  filas={trozo}
+                  desde={inicioDelTrozo(trozos, n)}
+                  criterio={criterio}
+                  miFicha={sesion?.playerId ?? null}
+                  conFide={conFide}
+                  conFeda={conFeda}
+                />
+              ))}
+            </div>
 
             <Tarjeta compacta>
               <p className="text-xs text-tinta-suave">
