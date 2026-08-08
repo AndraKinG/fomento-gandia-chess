@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Chess } from "chess.js";
 import { Tablero } from "./Tablero";
 import { BotonCopiar } from "@/components/ui/BotonCopiar";
-import { Analisis } from "./Analisis";
+import { BarraEvaluacion, PanelAnalisis, useAnalisis } from "./Analisis";
 
 /**
  * Reproduce un PGN guardado, jugada a jugada, sobre el mismo tablero que usa el
@@ -62,6 +62,10 @@ export function VisorPartida({
 
   const [indice, setIndice] = useState(0);
   const [volteado, setVolteado] = useState(volteadoInicial);
+  // El hook va aquí, ANTES del retorno del PGN ilegible: los hooks se llaman siempre
+  // y en el mismo orden, y colocarlo más abajo lo saltaría en esa rama.
+  const fenActual = "error" in analisis ? "" : (analisis.posiciones[indice]?.fen ?? "");
+  const analizador = useAnalisis(fenActual);
 
   if ("error" in analisis) {
     // Justo aquí es donde más falta hace poder copiarlo: si la app no sabe leerlo,
@@ -84,12 +88,24 @@ export function VisorPartida({
 
   return (
     <div className="space-y-3">
-      <Tablero
-        filas={actual.filas}
-        volteado={volteado}
-        ultimoMovimiento={actual.from && actual.to ? { from: actual.from, to: actual.to } : null}
-        deshabilitado
-      />
+      {/* La barra pegada al tablero y de su misma altura (`self-stretch`), como en
+          cualquier analizador: el número suelto debajo no dice de un vistazo quién
+          está mejor. */}
+      <div className="flex gap-2">
+        {analizador.estado === "encendido" && (
+          <BarraEvaluacion puntuacion={analizador.blancas} volteado={volteado} />
+        )}
+        <div className="min-w-0 flex-1">
+          <Tablero
+            filas={actual.filas}
+            volteado={volteado}
+            ultimoMovimiento={
+              actual.from && actual.to ? { from: actual.from, to: actual.to } : null
+            }
+            deshabilitado
+          />
+        </div>
+      </div>
 
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm text-tinta-suave">
@@ -137,7 +153,7 @@ export function VisorPartida({
 
       {/* El análisis va DEBAJO de las jugadas, no encima del tablero: se enciende
           a mano y quien solo quiere ver la partida no debe encontrárselo delante. */}
-      <Analisis fen={actual.fen} />
+      <PanelAnalisis fen={actual.fen} {...analizador} />
 
       {/* Copiar el PGN va junto a las jugadas y no escondido en un desplegable:
           es lo que se hace con una partida ajena —llevártela a Lichess a mirarla. */}

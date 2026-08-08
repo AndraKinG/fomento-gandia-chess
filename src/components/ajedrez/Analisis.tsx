@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Boton } from "@/components/ui/Boton";
 import {
   desdeLasBlancas,
@@ -9,6 +9,7 @@ import {
   pvEnJugadas,
   textoPuntuacion,
   type Analisis as Evaluacion,
+  type Puntuacion,
 } from "@/lib/ajedrez/evaluacion";
 import { Motor } from "@/lib/ajedrez/motor";
 
@@ -16,20 +17,20 @@ import { Motor } from "@/lib/ajedrez/motor";
  *  club y tarda poco; subirlo se nota en el móvil y no cambia el veredicto. */
 const PROFUNDIDAD = 18;
 
-type Estado = "apagado" | "cargando" | "encendido" | "error";
+export type EstadoAnalisis = "apagado" | "cargando" | "encendido" | "error";
 
 /**
- * Analiza la posición que se está viendo, con Stockfish dentro del navegador.
+ * Enciende Stockfish y mantiene la evaluación de la posición que se está viendo.
+ *
+ * ES UN HOOK y no un componente porque lo que sale de aquí se pinta en DOS SITIOS
+ * que no están juntos: la barra va pegada al tablero y el resto debajo de las
+ * jugadas. Con un solo componente habría que elegir uno de los dos.
  *
  * SOLO EN EL REVISOR de partidas, por decisión del propietario: al meter una partida
  * en el tablero no hace falta que nadie te diga si la jugada era buena.
- *
- * El motor se enciende A MANO. Son 7 MB de WebAssembly, y no se le gastan a nadie
- * por abrir una partida; una vez cargado, el navegador lo guarda y las siguientes
- * veces es instantáneo.
  */
-export function Analisis({ fen }: { fen: string }) {
-  const [estado, setEstado] = useState<Estado>("apagado");
+export function useAnalisis(fen: string) {
+  const [estado, setEstado] = useState<EstadoAnalisis>("apagado");
   const [evaluacion, setEvaluacion] = useState<Evaluacion | null>(null);
   const motor = useRef<Motor | null>(null);
 
@@ -48,7 +49,7 @@ export function Analisis({ fen }: { fen: string }) {
     motor.current.analizar(fen, PROFUNDIDAD, setEvaluacion);
   }, [fen, estado]);
 
-  async function encender() {
+  const encender = useCallback(async () => {
     setEstado("cargando");
     try {
       const m = new Motor();
@@ -58,15 +59,68 @@ export function Analisis({ fen }: { fen: string }) {
     } catch {
       setEstado("error");
     }
-  }
+  }, []);
 
-  function apagar() {
+  const apagar = useCallback(() => {
     motor.current?.cerrar();
     motor.current = null;
     setEvaluacion(null);
     setEstado("apagado");
-  }
+  }, []);
 
+  const blancas: Puntuacion | null = evaluacion
+    ? desdeLasBlancas(evaluacion.puntuacion, turnoDe(fen))
+    : null;
+
+  return { estado, evaluacion, blancas, encender, apagar };
+}
+
+/**
+ * Barra de evaluación, en VERTICAL y al lado del tablero.
+ *
+ * GIRA CON EL TABLERO: abajo va siempre el color que se ve abajo, que es el del
+ * socio que mira la partida. Es lo que hacen Lichess y Chess.com, y sin eso la barra
+ * dice lo contrario de lo que parece cuando la partida se ve desde las negras.
+ */
+export function BarraEvaluacion({
+  puntuacion,
+  volteado,
+}: {
+  puntuacion: Puntuacion | null;
+  volteado: boolean;
+}) {
+  const blanco = puntuacion ? porcentajeBarra(puntuacion) : 50;
+
+  return (
+    <div
+      role="img"
+      aria-label={
+        puntuacion ? `Evaluación ${textoPuntuacion(puntuacion)}` : "Evaluación pendiente"
+      }
+      // El aro no es adorno: la parte de las blancas es casi del color del fondo
+      // claro y sin él no se ve dónde acaba la barra.
+      className="relative w-3 shrink-0 self-stretch overflow-hidden rounded-full bg-[#2a3f55] ring-1 ring-borde"
+    >
+      <div
+        className={`absolute inset-x-0 bg-[#e9f2fb] transition-[height] duration-200 ${
+          volteado ? "top-0" : "bottom-0"
+        }`}
+        style={{ height: `${blanco}%` }}
+      />
+    </div>
+  );
+}
+
+/** El número, la profundidad y la línea que propone el motor. Va debajo, donde no
+ *  estorba a quien solo quiere pasar las jugadas. */
+export function PanelAnalisis({
+  fen,
+  estado,
+  evaluacion,
+  blancas,
+  encender,
+  apagar,
+}: ReturnType<typeof useAnalisis> & { fen: string }) {
   if (estado === "apagado" || estado === "error") {
     return (
       <div className="flex flex-wrap items-center gap-2">
@@ -83,34 +137,13 @@ export function Analisis({ fen }: { fen: string }) {
   }
 
   if (estado === "cargando") {
-    return (
-      <p className="text-sm text-tinta-suave">Cargando el motor (7 MB)…</p>
-    );
+    return <p className="text-sm text-tinta-suave">Cargando el motor (7 MB)…</p>;
   }
 
-  const blancas = evaluacion ? desdeLasBlancas(evaluacion.puntuacion, turnoDe(fen)) : null;
   const jugadas = evaluacion ? pvEnJugadas(fen, evaluacion.pv) : [];
 
   return (
-    <div className="space-y-2">
-      {/* La barra: blancas a la izquierda, negras a la derecha, como en cualquier
-          análisis. Los colores son los de las casillas del tablero, no los del tema,
-          para que sea evidente qué mitad es de quién. */}
-      <div
-        // El aro no es adorno: la mitad de las blancas es casi del color del fondo
-        // claro y sin él no se ve dónde acaba la barra.
-        className="h-2 w-full overflow-hidden rounded-full bg-[#2a3f55] ring-1 ring-borde"
-        role="img"
-        aria-label={
-          blancas ? `Evaluación ${textoPuntuacion(blancas)}` : "Evaluación pendiente"
-        }
-      >
-        <div
-          className="h-full bg-[#e9f2fb] transition-[width] duration-200"
-          style={{ width: `${blancas ? porcentajeBarra(blancas) : 50}%` }}
-        />
-      </div>
-
+    <div className="space-y-1.5">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="text-sm font-semibold tabular-nums text-tinta">
           {blancas ? textoPuntuacion(blancas) : "…"}
