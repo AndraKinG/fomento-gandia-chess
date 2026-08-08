@@ -11,6 +11,7 @@ import { Buscador } from "./Buscador";
 import { Exportar } from "./Exportar";
 import { Contenedor, REJILLA } from "@/components/ui/Contenedor";
 import { Pestana, Pestanas } from "@/components/ui/Pestanas";
+import { filtroBusqueda } from "@/lib/partidas/buscar";
 
 // "½" y no "=": es como se escriben las tablas en el resto de la app (el acta, el
 // marcador de una jornada y la clasificación de los torneos internos).
@@ -46,10 +47,18 @@ export default async function PartidasPage({
   // Búsqueda por nombre: vale tanto el del rival como el del socio dueño de la
   // partida, que es como la gente busca ("las de Pedro" y "las que jugó alguien
   // contra Pedro" son la misma pregunta desde fuera).
+  //
+  // Los socios se resuelven ANTES, en su propia consulta, y aquí se filtra por
+  // `player_id`. Filtrar por `players.nombre` dentro del `or` hacía fallar la consulta
+  // entera —PostgREST no admite columnas de una tabla incrustada en el árbol lógico— y
+  // el resultado era que buscar un nombre dejaba el repositorio EN BLANCO.
   if (busqueda) {
-    const patron = `%${busqueda}%`;
+    const { data: socios } = await supabase
+      .from("players")
+      .select("id")
+      .ilike("nombre", `%${busqueda}%`);
     consulta = consulta.or(
-      `rival_nombre.ilike.${patron},players.nombre.ilike.${patron}`
+      filtroBusqueda(busqueda, (socios ?? []).map((s) => s.id as string))
     );
   }
 
