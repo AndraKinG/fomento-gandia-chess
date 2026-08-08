@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Boton } from "@/components/ui/Boton";
 import { Banner } from "@/components/ui/Banner";
+import { jugarEmparejamiento } from "@/app/club/(vinculado)/jugar/actions";
 import {
   anotarResultado,
   borrarUltimaRonda,
@@ -229,6 +230,25 @@ export function GestionTorneo({
                 <span className="flex shrink-0 items-center gap-2 pl-6 sm:pl-0">
                   {/* El enlace a las jugadas va en la fila de SU cruce, no suelto
                       debajo de la ronda: así se sabe de qué partida habla. */}
+                  {/* JUGARLA EN LA APP, mientras no tenga resultado y solo si es
+                      tuya. Ni los colores ni la cadencia se eligen aquí: los pone
+                      el torneo. */}
+                  {p.esMia && p.resultado === null && estado !== "terminado" && (
+                    <button
+                      type="button"
+                      disabled={pendiente}
+                      onClick={() =>
+                        ejecutar(async () => {
+                          const r = await jugarEmparejamiento(p.id);
+                          if (r.id) router.push(`/club/jugar/${r.id}`);
+                          return r;
+                        })
+                      }
+                      className="text-xs font-semibold text-acento-texto underline disabled:opacity-50"
+                    >
+                      Jugar aquí
+                    </button>
+                  )}
                   {p.esMia && p.resultado !== null && (
                     <Link
                       href={

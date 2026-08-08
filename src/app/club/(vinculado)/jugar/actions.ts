@@ -12,6 +12,7 @@ import {
 } from "@/lib/vivo/partida";
 import { relojInicial } from "@/lib/vivo/reloj";
 import { blancasEnAmistosa } from "@/lib/vivo/colores";
+import { aPgn } from "@/lib/vivo/partida";
 
 /**
  * Todo lo que cambia una partida en vivo.
@@ -78,6 +79,86 @@ function aFila(e: Estado) {
     // ofrecieron hace cinco jugadas no es lo que nadie espera.
     tablas_ofrecidas_por: null,
   };
+}
+
+/**
+ * Lo que hay que hacer cuando una partida de TORNEO se acaba: escribir el resultado
+ * en el emparejamiento y dejar el PGN en el repositorio.
+ *
+ * SE LLAMA DESDE TODOS LOS FINALES —mate, tiempo, abandono, tablas—, porque una
+ * partida se puede acabar de muchas maneras y el torneo tiene que enterarse de
+ * todas. El ELO del club no hay que tocarlo: se recalcula solo desde los
+ * emparejamientos.
+ *
+ * Es idempotente: si el emparejamiento ya tiene resultado no se pisa, porque el
+ * organizador puede haberlo corregido a mano y su palabra vale más que esto.
+ */
+async function cerrarEnElTorneo(
+  db: ReturnType<typeof createAdminClient>,
+  fila: Fila,
+  resultado: string
+): Promise<void> {
+  if (!fila.club_pairing_id) return;
+
+  const { data: par } = await db
+    .from("club_pairings")
+    .select("id, resultado, game_id, round_id")
+    .eq("id", fila.club_pairing_id)
+    .maybeSingle();
+  if (!par || par.resultado !== null) return;
+
+  // `club_pairings.resultado` se guarda DESDE LAS BLANCAS, igual que en toda la app.
+  const desdeBlancas = resultado === "1-0" ? "1" : resultado === "0-1" ? "0" : "0.5";
+
+  // El PGN, al repositorio. La partida se guarda a nombre del jugador de blancas:
+  // la base lleva una fila por dueño, y duplicarla para los dos dejaría la misma
+  // partida dos veces en las búsquedas.
+  const { data: nombres } = await db
+    .from("players")
+    .select("id, nombre")
+    .in("id", [fila.blancas_id, fila.negras_id]);
+  const nombre = new Map((nombres ?? []).map((n) => [n.id, n.nombre as string]));
+
+  const { data: ronda } = await db
+    .from("club_rounds")
+    .select("numero, club_tournaments(nombre)")
+    .eq("id", par.round_id)
+    .maybeSingle();
+  const nombreTorneo =
+    (ronda?.club_tournaments as unknown as { nombre: string } | null)?.nombre ??
+    "Torneo del club";
+  const hoy = new Date().toISOString().slice(0, 10);
+
+  const pgn = aPgn(aEstado(fila), {
+    blancas: nombre.get(fila.blancas_id) ?? "Socio",
+    negras: nombre.get(fila.negras_id) ?? "Socio",
+    fecha: hoy,
+    evento: nombreTorneo,
+  });
+
+  const { data: guardada } = await db
+    .from("games")
+    .insert({
+      player_id: fila.blancas_id,
+      fecha: hoy,
+      ronda: ronda?.numero ?? null,
+      rival_nombre: nombre.get(fila.negras_id) ?? "Socio",
+      rival_id: fila.negras_id,
+      color: "blancas",
+      resultado: desdeBlancas,
+      torneo_texto: nombreTorneo,
+      pgn,
+    })
+    .select("id")
+    .single();
+
+  await db
+    .from("club_pairings")
+    .update({ resultado: desdeBlancas, game_id: guardada?.id ?? par.game_id })
+    .eq("id", par.id);
+
+  revalidatePath("/club/torneos/interno");
+  revalidatePath("/club/torneos/interno/ranking");
 }
 
 function refrescar(id: string): void {
@@ -254,6 +335,13 @@ export async function mover(partidaId: string, jugada: Jugada): Promise<Respuest
   }
 
   await mia.db.from("live_games").update(aFila(r.estado)).eq("id", partidaId);
+  if (r.estado.resultado) {
+    await cerrarEnElTorneo(
+      mia.db,
+      { ...mia.fila, jugadas: r.estado.jugadas },
+      r.estado.resultado
+    );
+  }
   refrescar(partidaId);
   return {};
 }
@@ -277,6 +365,7 @@ export async function abandonar(partidaId: string): Promise<Respuesta> {
       tablas_ofrecidas_por: null,
     })
     .eq("id", partidaId);
+  await cerrarEnElTorneo(mia.db, mia.fila, fin.resultado);
   refrescar(partidaId);
   return {};
 }
@@ -331,6 +420,7 @@ export async function aceptarTablas(partidaId: string): Promise<Respuesta> {
       tablas_ofrecidas_por: null,
     })
     .eq("id", partidaId);
+  await cerrarEnElTorneo(mia.db, mia.fila, "1/2-1/2");
   refrescar(partidaId);
   return {};
 }
@@ -353,6 +443,83 @@ export async function reclamarPorTiempo(partidaId: string): Promise<Respuesta> {
   if (!cerrada) return { error: "Al rival todavía le queda tiempo." };
 
   await mia.db.from("live_games").update(aFila(cerrada)).eq("id", partidaId);
+  if (cerrada.resultado) await cerrarEnElTorneo(mia.db, mia.fila, cerrada.resultado);
   refrescar(partidaId);
   return {};
+}
+
+/**
+ * Abre (o recupera) la partida en vivo de un emparejamiento de torneo.
+ *
+ * LOS COLORES SE COPIAN DEL EMPAREJAMIENTO, no se sortean: los repartió el
+ * emparejador con el criterio oficial al generar la ronda, y volver a tirarlos aquí
+ * rompería el equilibrio de colores de todo el torneo.
+ *
+ * LA CADENCIA ES DEL TORNEO y no de quien abre la mesa: si la eligiera cada uno,
+ * dos mesas de la misma ronda se jugarían a ritmos distintos, y eso no es un torneo.
+ */
+export async function jugarEmparejamiento(pairingId: string): Promise<Respuesta> {
+  const sesion = await sesionActual();
+  if (!sesion?.playerId) return { error: "No autorizado" };
+
+  const db = createAdminClient();
+  const { data: par } = await db
+    .from("club_pairings")
+    .select("id, blancas_id, negras_id, resultado, round_id")
+    .eq("id", pairingId)
+    .maybeSingle();
+  if (!par) return { error: "Ese emparejamiento no existe." };
+  if (![par.blancas_id, par.negras_id].includes(sesion.playerId)) {
+    return { error: "Esa partida no es tuya." };
+  }
+  if (par.resultado !== null) return { error: "Esa partida ya tiene resultado." };
+
+  // Si ya está abierta, se entra a la que hay. El índice único de la 0023 lo
+  // garantiza también en la base, por si llegan dos toques a la vez.
+  const { data: existente } = await db
+    .from("live_games")
+    .select("id")
+    .eq("club_pairing_id", pairingId)
+    .maybeSingle();
+  if (existente) return { id: existente.id };
+
+  const { data: ronda } = await db
+    .from("club_rounds")
+    .select("club_tournaments(base_min, incremento_s)")
+    .eq("id", par.round_id)
+    .maybeSingle();
+  const torneo = ronda?.club_tournaments as unknown as
+    | { base_min: number; incremento_s: number }
+    | null;
+  const cadencia = {
+    baseMs: (torneo?.base_min ?? 10) * 60_000,
+    incrementoMs: (torneo?.incremento_s ?? 5) * 1000,
+  };
+  const reloj = relojInicial(cadencia);
+
+  const { data: creada, error } = await db
+    .from("live_games")
+    .insert({
+      blancas_id: par.blancas_id,
+      negras_id: par.negras_id,
+      origen: "torneo",
+      club_pairing_id: pairingId,
+      base_ms: cadencia.baseMs,
+      incremento_ms: cadencia.incrementoMs,
+      blancas_ms: reloj.blancasMs,
+      negras_ms: reloj.negrasMs,
+    })
+    .select("id")
+    .single();
+  if (error || !creada) {
+    // Choque con el índice único: alguien la acaba de abrir. Se entra a la suya.
+    const { data: yaEsta } = await db
+      .from("live_games")
+      .select("id")
+      .eq("club_pairing_id", pairingId)
+      .maybeSingle();
+    if (yaEsta) return { id: yaEsta.id };
+    return { error: "No se ha podido abrir la partida." };
+  }
+  return { id: creada.id };
 }
