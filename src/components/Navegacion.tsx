@@ -51,7 +51,17 @@ const SECCIONES: Seccion[] = [
   // socio los dos son "torneos", y separarlos en dos secciones dejaba siete
   // pestañas que no caben en un móvil. `rutas` es el prefijo padre, así que la
   // entrada queda marcada tanto en los de fuera como en los del club.
-  { href: "/club/torneos", label: "Torneos", Icono: IconoTorneos, rutas: ["/club/torneos"] },
+  //
+  // APUNTA DIRECTO A LA PESTAÑA, no a `/club/torneos`. Esa ruta es un redirect, y
+  // pasar por ella se notaba: esqueleto de carga, salto, y esqueleto otra vez. El
+  // redirect sigue existiendo, pero solo para los enlaces viejos de las
+  // notificaciones push ya enviadas, que es para lo que se hizo.
+  {
+    href: "/club/torneos/facv",
+    label: "Torneos",
+    Icono: IconoTorneos,
+    rutas: ["/club/torneos"],
+  },
   {
     href: "/club/partidas",
     label: "Partidas",
