@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Chess } from "chess.js";
 import { Tablero } from "./Tablero";
 import { BotonCopiar } from "@/components/ui/BotonCopiar";
+import { Analisis } from "./Analisis";
 
 /**
  * Reproduce un PGN guardado, jugada a jugada, sobre el mismo tablero que usa el
@@ -33,7 +34,15 @@ export function VisorPartida({
       // memoria, y así avanzar y retroceder es instantáneo y sin recalcular.
       const reproduccion = new Chess();
       const posiciones = [
-        { filas: reproduccion.board(), san: null as string | null, from: null as string | null, to: null as string | null },
+        {
+          filas: reproduccion.board(),
+          san: null as string | null,
+          from: null as string | null,
+          to: null as string | null,
+          // El FEN se guarda aquí porque es lo que come el motor, y sacarlo de la
+          // posición cuando hace falta obligaría a rehacer la partida entera.
+          fen: reproduccion.fen(),
+        },
       ];
       for (const m of historial) {
         reproduccion.move(m.san);
@@ -42,6 +51,7 @@ export function VisorPartida({
           san: m.san,
           from: m.from,
           to: m.to,
+          fen: reproduccion.fen(),
         });
       }
       return { posiciones, historial };
@@ -124,6 +134,10 @@ export function VisorPartida({
           ))}
         </p>
       </div>
+
+      {/* El análisis va DEBAJO de las jugadas, no encima del tablero: se enciende
+          a mano y quien solo quiere ver la partida no debe encontrárselo delante. */}
+      <Analisis fen={actual.fen} />
 
       {/* Copiar el PGN va junto a las jugadas y no escondido en un desplegable:
           es lo que se hace con una partida ajena —llevártela a Lichess a mirarla. */}

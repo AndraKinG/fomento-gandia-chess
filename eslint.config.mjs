@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Stockfish va TAL CUAL, sin tocar: es código ajeno, compilado por emscripten y
+    // minificado, y no tiene sentido pasarle nuestras reglas de estilo. Si algún día
+    // se actualiza, se sustituye el fichero y ya.
+    "public/motor/**",
   ]),
 ]);
 
