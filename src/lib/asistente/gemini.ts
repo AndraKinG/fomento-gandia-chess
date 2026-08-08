@@ -1,4 +1,4 @@
-import { DECLARACIONES } from "./herramientas";
+import type { Declaracion } from "./herramientas";
 
 /**
  * Llamada a Gemini por su API REST, sin librería.
@@ -64,10 +64,13 @@ export class SinClave extends Error {}
 export async function responder({
   instrucciones,
   historial,
+  herramientas,
   ejecutor,
 }: {
   instrucciones: string;
   historial: Turno[];
+  /** Ya filtradas por rango: aquí no se decide quién puede usar qué. */
+  herramientas: Declaracion[];
   ejecutor: Ejecutor;
 }): Promise<string> {
   const clave = process.env.GEMINI_API_KEY;
@@ -89,7 +92,7 @@ export async function responder({
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: instrucciones }] },
         contents: contenidos,
-        tools: [{ functionDeclarations: DECLARACIONES }],
+        tools: [{ functionDeclarations: herramientas }],
         generationConfig: {
           temperature: 0.8,
           // Tope de respuesta: el asistente contesta corto por instrucciones, y

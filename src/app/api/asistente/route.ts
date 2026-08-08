@@ -3,7 +3,8 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { sesionActual } from "@/lib/auth/sesion";
 import { nombreDePila } from "@/lib/auth/nombre";
 import { instrucciones } from "@/lib/asistente/instrucciones";
-import { ejecutar } from "@/lib/asistente/herramientas";
+import { declaracionesPara, ejecutar } from "@/lib/asistente/herramientas";
+import { rangoDe } from "@/lib/asistente/rangos";
 import { responder, SinClave } from "@/lib/asistente/gemini";
 import { acabaEnPregunta, leerHistorial } from "@/lib/asistente/peticion";
 import { freno } from "@/lib/asistente/limite";
@@ -81,6 +82,9 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createServerSupabase();
+  // EL RANGO SALE DE LA SESIÓN, nunca de lo que mande el navegador ni de lo que
+  // diga el socio en el chat.
+  const rango = rangoDe(sesion);
 
   try {
     const texto = await responder({
@@ -94,7 +98,9 @@ export async function POST(request: Request) {
         new Date()
       ),
       historial,
-      ejecutor: (nombre, args) => ejecutar(nombre, args, supabase, sesion.playerId),
+      herramientas: declaracionesPara(rango),
+      ejecutor: (nombre, args) =>
+        ejecutar(nombre, args, supabase, sesion.playerId, rango),
     });
 
     if (!texto) {

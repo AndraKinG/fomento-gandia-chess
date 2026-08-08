@@ -2,7 +2,10 @@
  * Prueba el CARÁCTER del asistente contra el modelo de verdad, sin navegador y sin
  * base de datos: las herramientas se responden con datos de mentira.
  *
- *   node --experimental-strip-types scripts/probar-asistente.mjs
+ *   node --experimental-strip-types --import ./scripts/cargar-ts.mjs scripts/probar-asistente.mjs
+ *
+ * Con `RANGO=jugador` delante habla como un socio sin cargo, que es como se
+ * comprueba que no le cuenta cosas de administración.
  *
  * PARA QUÉ: el prompt es lo que define el producto y no se puede comprobar con
  * tests unitarios —que solo miran que el texto contenga tal frase—. Esto enseña lo
@@ -13,7 +16,7 @@
  */
 import { readFileSync } from "node:fs";
 import { instrucciones } from "../src/lib/asistente/instrucciones.ts";
-import { DECLARACIONES } from "../src/lib/asistente/herramientas.ts";
+import { declaracionesPara } from "../src/lib/asistente/herramientas.ts";
 
 const env = Object.fromEntries(
   readFileSync(".env.local", "utf8")
@@ -22,7 +25,10 @@ const env = Object.fromEntries(
     .map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1).trim()])
 );
 const CLAVE = env.GEMINI_API_KEY;
-const MODELO = process.argv[2] ?? "gemini-3.5-flash";
+const MODELO = process.argv[2] ?? "gemini-3.1-flash-lite";
+/** Rango con el que se habla, para comprobar que el asistente cuenta cosas
+ *  distintas a un socio y a un admin: `RANGO=jugador node scripts/...`. */
+const RANGO = process.env.RANGO ?? "admin";
 
 // Datos de mentira, pero con la forma exacta que devuelven las herramientas.
 const FALSOS = {
@@ -44,9 +50,15 @@ const FALSOS = {
 };
 
 const SISTEMA = instrucciones(
-  { nombre: "Joan", esAdmin: true, esJunta: false, tieneFicha: true },
+  {
+    nombre: "Joan",
+    esAdmin: RANGO === "admin",
+    esJunta: RANGO === "junta",
+    tieneFicha: true,
+  },
   new Date()
 );
+const HERRAMIENTAS = declaracionesPara(RANGO);
 
 async function preguntar(texto) {
   const contents = [{ role: "user", parts: [{ text: texto }] }];
@@ -59,7 +71,7 @@ async function preguntar(texto) {
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: SISTEMA }] },
           contents,
-          tools: [{ functionDeclarations: DECLARACIONES }],
+          tools: [{ functionDeclarations: HERRAMIENTAS }],
           generationConfig: { temperature: 0.8, maxOutputTokens: 800 },
         }),
       }

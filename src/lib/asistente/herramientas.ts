@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { filtroBusqueda, marcadorDesdeBlancas } from "@/lib/partidas/buscar";
+import { alcanza, type Rango } from "./rangos";
 
 /**
  * Lo que el asistente puede consultar de la base.
@@ -16,7 +17,14 @@ import { filtroBusqueda, marcadorDesdeBlancas } from "@/lib/partidas/buscar";
 
 type Cliente = SupabaseClient;
 
-/** Declaración de una herramienta, en el formato que espera Gemini. */
+/**
+ * Declaración tal como la espera Gemini, y NADA MÁS.
+ *
+ * El tipo está separado del de abajo porque la API **rechaza la petición entera con
+ * un 400** si le llega un campo que no conoce: mandarle nuestro `rango` dentro de la
+ * declaración dejaba al asistente sin contestar. Se filtra por rango aquí dentro y
+ * se manda solo lo que la API entiende.
+ */
 export type Declaracion = {
   name: string;
   description: string;
@@ -26,6 +34,9 @@ export type Declaracion = {
     required?: string[];
   };
 };
+
+/** Lo que se guarda aquí: la declaración más el rango mínimo para usarla. */
+export type Herramienta = Declaracion & { rango: Rango };
 
 /** Techo duro de filas por consulta. Meter 46 filas en la conversación por cada
  *  pregunta gasta la cuota gratuita a lo tonto. */
@@ -45,9 +56,10 @@ function limite(args: Record<string, unknown>): number {
   return Number.isFinite(n) && n > 0 ? Math.min(n, TOPE) : POR_DEFECTO;
 }
 
-export const DECLARACIONES: Declaracion[] = [
+export const HERRAMIENTAS: Herramienta[] = [
   {
     name: "orden_de_fuerza",
+    rango: "jugador",
     description:
       "Orden de fuerza oficial de la FACV para la temporada en curso: número de orden, nombre y ELO oficial de cada socio. Es el que manda en las convocatorias del Interclubs. Úsalo para saber quién es más fuerte, en qué tablero juega alguien o cuál es el ELO de un socio.",
     parameters: {
@@ -63,12 +75,14 @@ export const DECLARACIONES: Declaracion[] = [
   },
   {
     name: "mi_ficha",
+    rango: "jugador",
     description:
       "Los datos del propio socio con el que estás hablando: su número de orden, su ELO oficial y su equipo. Úsalo cuando pregunte por 'mi' algo.",
     parameters: { type: "object", properties: {} },
   },
   {
     name: "calendario_interclubs",
+    rango: "jugador",
     description:
       "Jornadas del Interclubs de los equipos del club en la temporada en curso: ronda, rival, si se juega en casa, fecha y marcador si ya se jugó. Úsalo para la próxima jornada, el calendario o cómo fue un encuentro.",
     parameters: {
@@ -84,6 +98,7 @@ export const DECLARACIONES: Declaracion[] = [
   },
   {
     name: "proximos_torneos",
+    rango: "jugador",
     description:
       "Torneos de fuera del club (calendario de la FACV y los que añade el club) que todavía no se han jugado: nombre, fechas, lugar y ritmo. Úsalo para saber a qué se puede ir a jugar.",
     parameters: {
@@ -95,6 +110,7 @@ export const DECLARACIONES: Declaracion[] = [
   },
   {
     name: "buscar_partidas",
+    rango: "jugador",
     description:
       "Repositorio de partidas del club: las que los socios han subido, con fecha, colores, resultado, torneo y apertura. Busca por el nombre de un socio o de un rival. Úsalo siempre que pregunten por las partidas de alguien; NO digas que no tienes partidas sin haberlo consultado antes.",
     parameters: {
@@ -111,6 +127,7 @@ export const DECLARACIONES: Declaracion[] = [
   },
   {
     name: "ranking_del_club",
+    rango: "jugador",
     description:
       "Ranking de ELO INTERNO del club, el que sale solo de los torneos que organiza el club. No confundir con el orden de fuerza oficial de la FACV.",
     parameters: {
@@ -120,7 +137,27 @@ export const DECLARACIONES: Declaracion[] = [
       },
     },
   },
+  {
+    name: "solicitudes_de_alta",
+    rango: "junta",
+    description:
+      "Solicitudes de vinculación pendientes: socios que se han creado cuenta y esperan que se les apruebe la ficha. Solo para junta y administración.",
+    parameters: {
+      type: "object",
+      properties: {
+        limite: { type: "number", description: "Cuántas como máximo. Por defecto 6." },
+      },
+    },
+  },
 ];
+
+/** Las que se le enseñan al modelo según quién pregunta, ya sin el `rango`, que la
+ *  API no admite. */
+export function declaracionesPara(rango: Rango): Declaracion[] {
+  return HERRAMIENTAS.filter((h) => alcanza(rango, h.rango)).map(
+    ({ rango: _, ...declaracion }) => declaracion
+  );
+}
 
 /** Nombre de la temporada activa y su id, que hace falta para casi todo. */
 async function temporadaActiva(supabase: Cliente) {
@@ -143,9 +180,34 @@ export async function ejecutar(
   nombre: string,
   args: Record<string, unknown>,
   supabase: Cliente,
-  playerId: string | null
+  playerId: string | null,
+  rango: Rango
 ): Promise<unknown> {
+  // SE VUELVE A COMPROBAR AQUÍ, aunque las herramientas ya se filtren antes de
+  // enseñárselas al modelo: una lista que se filtra en un sitio y se obedece en
+  // otro se acaba desincronizando, y el día que pase no puede colarse nada.
+  const declarada = HERRAMIENTAS.find((h) => h.name === nombre);
+  if (declarada && !alcanza(rango, declarada.rango)) {
+    return { error: "Eso no le corresponde a esta persona. No se lo cuentes." };
+  }
+
   switch (nombre) {
+    case "solicitudes_de_alta": {
+      const { data, error } = await supabase
+        .from("link_requests")
+        .select("created_at, players(nombre)")
+        .eq("status", "pendiente")
+        .order("created_at")
+        .limit(limite(args));
+      if (error) return { error: "No se han podido leer las solicitudes." };
+      return {
+        solicitudes: (data ?? []).map((s) => ({
+          ficha: (s.players as unknown as { nombre: string } | null)?.nombre ?? "—",
+          pedidaEl: s.created_at,
+        })),
+      };
+    }
+
     case "orden_de_fuerza": {
       const season = await temporadaActiva(supabase);
       if (!season) return { error: "No hay ninguna temporada activa." };
