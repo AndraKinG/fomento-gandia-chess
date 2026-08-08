@@ -20,6 +20,36 @@ import { freno } from "@/lib/asistente/limite";
  * asistente con clave de servicio sería una puerta trasera a toda la base.
  */
 
+/**
+ * Diagnóstico, solo para el admin.
+ *
+ * EXISTE PORQUE ADIVINAR SALE CARO: cuando el asistente dice que no está
+ * configurado, la causa está siempre en el nombre de la variable o en el entorno
+ * donde se guardó, y desde fuera no hay forma de saber cuál de las dos. Esto lo
+ * dice en una petición en vez de en tres despliegues.
+ *
+ * NUNCA DEVUELVE EL VALOR de ninguna clave: solo los NOMBRES de las variables que
+ * se le parecen, y de la nuestra si está y cuánto mide. Con eso se caza una errata
+ * sin enseñar el secreto.
+ */
+export async function GET() {
+  const sesion = await sesionActual();
+  if (!sesion?.esAdmin) {
+    return NextResponse.json({ error: "No autorizado." }, { status: 403 });
+  }
+  const clave = process.env.GEMINI_API_KEY;
+  return NextResponse.json({
+    configurado: Boolean(clave),
+    largoDeLaClave: clave?.length ?? 0,
+    modelo: process.env.LLM_MODEL ?? "(el de por defecto)",
+    entorno: process.env.VERCEL_ENV ?? "local",
+    // Los nombres que se le parecen, para cazar una errata o un espacio de más.
+    variablesParecidas: Object.keys(process.env)
+      .filter((n) => /GEMINI|LLM|API_KEY/i.test(n))
+      .sort(),
+  });
+}
+
 export async function POST(request: Request) {
   const sesion = await sesionActual();
   if (!sesion) {
