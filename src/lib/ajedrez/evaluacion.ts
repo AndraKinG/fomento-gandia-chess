@@ -37,6 +37,11 @@ export function leerInfo(linea: string): Omit<Analisis, "puntuacion"> & {
   puntuacion: Puntuacion;
 } | null {
   if (!linea.startsWith("info ")) return null;
+  // Atajo antes de partir la cadena: una línea sin `score` no sirve para nada, y
+  // descartarla cuesta una búsqueda de texto en vez de crear un array de veinte.
+  // (Medido: una búsqueda a profundidad 18 son ~41 mensajes, 18 con puntuación. No
+  // era la avalancha que parecía, pero el atajo no estorba.)
+  if (!linea.includes(" score ")) return null;
   const trozos = linea.split(/\s+/);
 
   const iProfundidad = trozos.indexOf("depth");

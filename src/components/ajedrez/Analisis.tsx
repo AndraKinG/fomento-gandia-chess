@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Boton } from "@/components/ui/Boton";
 import {
   desdeLasBlancas,
   lineaNumerada,
@@ -111,6 +110,42 @@ export function BarraEvaluacion({
   );
 }
 
+/**
+ * El interruptor del análisis, para la fila de mandos del tablero.
+ *
+ * Va AL LADO DEL DE GIRAR, no debajo con el resultado: los dos son mandos del
+ * tablero, y el resultado es otra cosa. Mismo aspecto que los de pasar jugada para
+ * que la fila se lea como una sola cosa.
+ */
+export function BotonAnalisis({
+  estado,
+  encender,
+  apagar,
+}: Pick<ReturnType<typeof useAnalisis>, "estado" | "encender" | "apagar">) {
+  const encendido = estado === "encendido";
+  const cargando = estado === "cargando";
+  return (
+    <button
+      type="button"
+      onClick={encendido ? apagar : encender}
+      disabled={cargando}
+      aria-pressed={encendido}
+      title={
+        encendido
+          ? "Quitar el análisis"
+          : "Analizar con Stockfish (la primera vez descarga 7 MB)"
+      }
+      className={`rounded-xl border px-3 py-1.5 text-sm transition duration-100 active:scale-[0.97] disabled:opacity-60 ${
+        encendido
+          ? "border-borde-acento bg-acento-fuerte text-sobre-acento"
+          : "border-borde bg-tarjeta text-tinta hover:bg-tarjeta-suave"
+      }`}
+    >
+      {cargando ? "Cargando…" : "Analizar"}
+    </button>
+  );
+}
+
 /** El número, la profundidad y la línea que propone el motor. Va debajo, donde no
  *  estorba a quien solo quiere pasar las jugadas. */
 export function PanelAnalisis({
@@ -118,21 +153,17 @@ export function PanelAnalisis({
   estado,
   evaluacion,
   blancas,
-  encender,
-  apagar,
-}: ReturnType<typeof useAnalisis> & { fen: string }) {
-  if (estado === "apagado" || estado === "error") {
+}: Pick<ReturnType<typeof useAnalisis>, "estado" | "evaluacion" | "blancas"> & {
+  fen: string;
+}) {
+  // Apagado no ocupa sitio: el botón ya está arriba y no hace falta anunciarlo.
+  if (estado === "apagado") return null;
+
+  if (estado === "error") {
     return (
-      <div className="flex flex-wrap items-center gap-2">
-        <Boton variante="secundario" className="px-3 py-1.5 text-sm" onClick={encender}>
-          Analizar
-        </Boton>
-        <p className="text-xs text-tinta-suave">
-          {estado === "error"
-            ? "No se ha podido cargar el motor. Inténtalo otra vez."
-            : "Stockfish, en tu navegador. La primera vez descarga 7 MB."}
-        </p>
-      </div>
+      <p className="text-xs text-tinta-suave">
+        No se ha podido cargar el motor. Vuelve a pulsar Analizar.
+      </p>
     );
   }
 
@@ -153,13 +184,6 @@ export function PanelAnalisis({
             profundidad {evaluacion.profundidad}
           </span>
         )}
-        <Boton
-          variante="secundario"
-          className="ml-auto px-3 py-1 text-xs"
-          onClick={apagar}
-        >
-          Quitar el análisis
-        </Boton>
       </div>
 
       {jugadas.length > 0 && (

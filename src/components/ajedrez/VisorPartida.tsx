@@ -4,7 +4,12 @@ import { useMemo, useState } from "react";
 import { Chess } from "chess.js";
 import { Tablero } from "./Tablero";
 import { BotonCopiar } from "@/components/ui/BotonCopiar";
-import { BarraEvaluacion, PanelAnalisis, useAnalisis } from "./Analisis";
+import {
+  BarraEvaluacion,
+  BotonAnalisis,
+  PanelAnalisis,
+  useAnalisis,
+} from "./Analisis";
 
 /**
  * Reproduce un PGN guardado, jugada a jugada, sobre el mismo tablero que usa el
@@ -116,7 +121,8 @@ export function VisorPartida({
             ({indice}/{total})
           </span>
         </p>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap justify-end gap-1">
+          <BotonAnalisis {...analizador} />
           <Paso
             etiqueta="Girar el tablero"
             simbolo="⇅"

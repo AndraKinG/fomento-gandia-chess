@@ -25,30 +25,39 @@ const RUTA = "/motor/stockfish-18-lite-single.js";
  *  móvil con mala cobertura la primera vez puede ser lento de verdad. */
 const ESPERA_ARRANQUE = 60_000;
 
-/** Lo que se le da al motor para contestar un `isready` una vez cargado. Cortar una
- *  búsqueda es cosa de milisegundos; si pasan cinco segundos es que algo va mal. */
-const ESPERA_RESPUESTA = 5_000;
-
 export type Escucha = (a: Analisis) => void;
 
+/**
+ * SIN TEMPORIZADORES A PROPÓSITO, salvo el del arranque.
+ *
+ * La primera versión encolaba las peticiones y esperaba un `readyok` con un tope de
+ * cinco segundos. Se quedaba colgada: **el navegador frena los temporizadores de una
+ * pestaña que no está delante**, así que basta con cambiar de aplicación un momento
+ * en el móvil para que ese tope salte sin que pase nada malo, y el motor quedaba
+ * marcado como roto para siempre. Desde fuera: análisis congelado y el botón sin
+ * hacer nada.
+ *
+ * Ahora se va con el protocolo y no con el reloj. Después de un `go`, el motor
+ * SIEMPRE contesta `bestmove`, tanto si termina como si se le manda `stop`. Así que
+ * se guarda la posición pendiente, se pide `stop` si está buscando, y es la llegada
+ * de `bestmove` la que lanza la siguiente búsqueda. Gana siempre la última posición
+ * pedida, que es lo que se quiere al pasar jugadas seguidas.
+ */
 export class Motor {
   private w: Worker | null = null;
   private escucha: Escucha | null = null;
-  /** Sube con cada petición. Sirve para tirar a la basura lo que llegue tarde de un
-   *  análisis que ya no interesa. */
-  private generacion = 0;
-  /** true solo entre el `go` y la siguiente petición. Sin esto, las evaluaciones que
-   *  el motor todavía está escupiendo de la posición ANTERIOR se pintarían como si
-   *  fueran de la nueva. */
-  private enMarcha = false;
-  /** Las peticiones se encolan porque hay que ESPERAR al motor entre medias, y al
-   *  pasar jugadas seguidas se piden más rápido de lo que contesta. */
-  private cola: Promise<void> = Promise.resolve();
-  private roto = false;
+  /** Posición que falta por analizar. Solo se guarda la última: si se pasan cinco
+   *  jugadas seguidas, las cuatro primeras ya no le importan a nadie. */
+  private pendiente: string | null = null;
+  private profundidad = 18;
+  private buscando = false;
+  /** Profundidad ya repartida de la búsqueda en curso, para no avisar dos veces de
+   *  la misma: dentro de una profundidad el motor reevalúa cada vez que encuentra
+   *  algo mejor, y repintar por cada una no aporta nada. */
+  private ultimaProfundidad = 0;
 
-  /** true en cuanto el motor ha contestado `uciok`. */
   get listo(): boolean {
-    return this.w !== null && !this.roto;
+    return this.w !== null;
   }
 
   async arrancar(): Promise<void> {
@@ -84,85 +93,66 @@ export class Motor {
       throw e;
     }
 
-    w.addEventListener("message", (e) => {
-      const info = leerInfo(String(e.data ?? ""));
-      if (info && this.enMarcha) this.escucha?.(info);
-    });
-    // Si el Worker se cae con el motor ya arrancado, se marca roto para que la
-    // pantalla pueda decirlo. Antes esto no se miraba y el análisis se quedaba
-    // callado y en blanco, sin que nadie supiera por qué.
-    w.addEventListener("error", () => {
-      this.roto = true;
-      this.enMarcha = false;
-    });
+    w.addEventListener("message", (e) => this.alMensaje(String(e.data ?? "")));
     this.w = w;
   }
 
-  /**
-   * Analiza una posición. Cada llamada anula la anterior.
-   *
-   * EL PROBLEMA QUE RESUELVE LA COLA: UCI no admite un `position` mientras el motor
-   * está pensando, y `stop` no es instantáneo —el motor todavía tiene que terminar y
-   * contestar—. Mandando `stop` + `position` + `go` de golpe, pasar tres jugadas
-   * seguidas dejaba al motor mudo: el análisis se quedaba en su estado de partida y
-   * ya no volvía. Ahora se espera un `readyok` entre medias, y las peticiones se
-   * encolan, que es como se habla con un motor UCI.
-   */
-  analizar(fen: string, profundidad: number, escucha: Escucha): void {
-    if (!this.w || this.roto) return;
-    const mia = ++this.generacion;
-    this.escucha = escucha;
-    // Deja de repartir: lo que quede del análisis anterior ya no vale.
-    this.enMarcha = false;
-
-    this.cola = this.cola.then(async () => {
-      const w = this.w;
-      if (!w || this.roto || mia !== this.generacion) return;
-      w.postMessage("stop");
-      try {
-        await this.esperar(w, "readyok", () => w.postMessage("isready"));
-      } catch {
-        this.roto = true;
-        return;
-      }
-      // Mientras se esperaba puede haber entrado otra petición más nueva.
-      if (mia !== this.generacion) return;
-      w.postMessage(`position fen ${fen}`);
-      w.postMessage(`go depth ${profundidad}`);
-      this.enMarcha = true;
-    });
+  private alMensaje(linea: string): void {
+    if (linea.startsWith("bestmove")) {
+      // Se acabó la búsqueda, por las buenas o porque se le mandó parar. Es AQUÍ
+      // donde arranca la siguiente: el motor ya está libre, sin adivinar cuándo.
+      this.buscando = false;
+      this.lanzar();
+      return;
+    }
+    if (!this.buscando) return;
+    const info = leerInfo(linea);
+    if (!info || info.profundidad <= this.ultimaProfundidad) return;
+    this.ultimaProfundidad = info.profundidad;
+    this.escucha?.(info);
   }
 
-  /** Espera una respuesta concreta del motor, con tope: si se pierde, la cola no
-   *  puede quedarse esperando para siempre y bloquear todo lo que venga detrás. */
-  private esperar(w: Worker, respuesta: string, pedir: () => void): Promise<void> {
-    return new Promise<void>((cumplir, fallar) => {
-      const reloj = setTimeout(() => {
-        w.removeEventListener("message", alMensaje);
-        fallar(new Error(`El motor no contesta ${respuesta}`));
-      }, ESPERA_RESPUESTA);
-      const alMensaje = (e: MessageEvent) => {
-        if (String(e.data ?? "").trim() !== respuesta) return;
-        clearTimeout(reloj);
-        w.removeEventListener("message", alMensaje);
-        cumplir();
-      };
-      w.addEventListener("message", alMensaje);
-      pedir();
-    });
+  /** Manda a analizar lo que haya pendiente, si el motor está libre. */
+  private lanzar(): void {
+    const w = this.w;
+    const fen = this.pendiente;
+    if (!w || this.buscando || fen === null) return;
+    this.pendiente = null;
+    this.ultimaProfundidad = 0;
+    this.buscando = true;
+    w.postMessage(`position fen ${fen}`);
+    w.postMessage(`go depth ${this.profundidad}`);
+  }
+
+  /**
+   * Pide analizar una posición. Sustituye a cualquier petición anterior que aún no
+   * haya salido: al pasar jugadas se cambia de posición mucho más rápido de lo que
+   * el motor termina.
+   */
+  analizar(fen: string, profundidad: number, escucha: Escucha): void {
+    if (!this.w) return;
+    this.escucha = escucha;
+    this.profundidad = profundidad;
+    this.pendiente = fen;
+    if (this.buscando) {
+      // No se manda `position` mientras piensa: UCI no lo admite. Se le corta, y la
+      // llegada de `bestmove` lanzará esta posición.
+      this.w.postMessage("stop");
+      return;
+    }
+    this.lanzar();
   }
 
   parar(): void {
-    this.generacion++;
-    this.enMarcha = false;
+    this.pendiente = null;
     this.escucha = null;
-    this.w?.postMessage("stop");
+    if (this.buscando) this.w?.postMessage("stop");
   }
 
   cerrar(): void {
-    this.generacion++;
-    this.enMarcha = false;
+    this.pendiente = null;
     this.escucha = null;
+    this.buscando = false;
     this.w?.terminate();
     this.w = null;
   }
