@@ -3,10 +3,9 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
-import { ChipElo } from "@/components/ui/ChipElo";
 import { Banner } from "@/components/ui/Banner";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
-import { solicitarVinculo } from "./actions";
+import { ListaFichas } from "./ListaFichas";
 import { Contenedor } from "@/components/ui/Contenedor";
 
 export default async function VincularPage({
@@ -104,46 +103,23 @@ export default async function VincularPage({
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera
         titulo="¿Quién eres?"
-        subtitulo="Busca tu nombre en la lista del club"
+        subtitulo="Búscate en la lista del club"
+        medida="panel"
       />
-      <Contenedor medida="lectura" className="space-y-4">
-        <p className="text-sm text-tinta-suave">
-          Elige tu ficha. El admin del club confirmará que eres tú antes de
-          darte acceso.
-        </p>
+      <Contenedor medida="panel" className="space-y-4">
         {error && <Banner tipo="error">{error}</Banner>}
-        <ul className="space-y-2 sm:grid sm:grid-cols-2 sm:gap-3 sm:space-y-0">
-          {libres.map((p) => (
-            <li key={p.id}>
-              <Tarjeta className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <span className="min-w-0 truncate text-tinta">{p.nombre}</span>
-                  <span className="shrink-0">
-                    <ChipElo valor={p.elo} etiqueta="FACV" />
-                  </span>
-                </div>
-                <form
-                  className="shrink-0"
-                  action={async () => {
-                    "use server";
-                    const r = await solicitarVinculo(p.id);
-                    if (r?.error)
-                      redirect("/club/vincular?error=" + encodeURIComponent(r.error));
-                  }}
-                >
-                  <button className="shrink-0 rounded-xl bg-acento-fuerte px-4 py-1.5 text-sm font-semibold text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]">
-                    Soy yo
-                  </button>
-                </form>
-              </Tarjeta>
-            </li>
-          ))}
-        </ul>
-        {libres.length === 0 && (
+        <p className="text-sm text-tinta-suave">
+          Elige tu ficha y el admin del club confirmará que eres tú antes de darte
+          acceso.
+        </p>
+
+        {libres.length === 0 ? (
           <EstadoVacio
             titulo="No queda ninguna ficha libre"
             detalle="Todas las fichas del orden de fuerza están ya vinculadas o pendientes. Avisa al admin del club."
           />
+        ) : (
+          <ListaFichas fichas={libres.map((p) => ({ id: p.id, nombre: p.nombre, elo: p.elo }))} />
         )}
 
         {/* La lista sale del orden de fuerza, que se cierra a principio de

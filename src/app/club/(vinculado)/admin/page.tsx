@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Contenedor, Rejilla } from "@/components/ui/Contenedor";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 const ENLACES = [
   {
@@ -60,7 +61,17 @@ const ENLACES = [
   },
 ] as const;
 
-export default function AdminPage() {
+export default async function AdminPage() {
+  // Las solicitudes pendientes se cuentan aquí para poder avisar en la propia
+  // rejilla. Sin el aviso, una solicitud puede pasar semanas esperando: nada en
+  // Administración distingue "Vinculaciones" con trabajo pendiente de sin él, y
+  // el push solo llega al aparato donde alguien aceptó las notificaciones.
+  const supabase = await createServerSupabase();
+  const { count: pendientes } = await supabase
+    .from("link_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pendiente");
+
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera titulo="Administración" medida="panel" />
@@ -69,19 +80,30 @@ export default function AdminPage() {
           {/* Nueve opciones en una sola columna obligan a recorrer la pantalla de
               arriba abajo; en tres columnas se ven todas de un vistazo. */}
           <Rejilla columnas={3}>
-            {ENLACES.map((enlace) => (
-              <Link key={enlace.href} href={enlace.href}>
-                <Tarjeta className="flex h-full items-center gap-3 transition hover:border-borde-acento">
-                  <span aria-hidden className="text-2xl">
-                    {enlace.icono}
-                  </span>
-                  <div>
-                    <p className="font-semibold text-tinta">{enlace.titulo}</p>
-                    <p className="text-sm text-tinta-suave">{enlace.detalle}</p>
-                  </div>
-                </Tarjeta>
-              </Link>
-            ))}
+            {ENLACES.map((enlace) => {
+              const aviso =
+                enlace.href === "/club/admin/vinculaciones" ? (pendientes ?? 0) : 0;
+              return (
+                <Link key={enlace.href} href={enlace.href}>
+                  <Tarjeta className="flex h-full items-center gap-3 transition hover:border-borde-acento">
+                    <span aria-hidden className="text-2xl">
+                      {enlace.icono}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-2 font-semibold text-tinta">
+                        {enlace.titulo}
+                        {aviso > 0 && (
+                          <span className="rounded-full bg-acento-fuerte px-2 py-0.5 text-xs font-bold text-sobre-acento">
+                            {aviso}
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-sm text-tinta-suave">{enlace.detalle}</p>
+                    </div>
+                  </Tarjeta>
+                </Link>
+              );
+            })}
           </Rejilla>
         </nav>
       </Contenedor>
