@@ -12,7 +12,6 @@ import {
   sincronizarResultadosFACV,
 } from "./actions";
 import { Cabecera } from "@/components/ui/Cabecera";
-import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Banner } from "@/components/ui/Banner";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { Contenedor } from "@/components/ui/Contenedor";
@@ -174,32 +173,57 @@ export default async function EquiposPage({
       <Contenedor medida="panel" className="space-y-4">
         {msg ? <Banner tipo={tipo === "ok" ? "ok" : "error"}>{msg}</Banner> : null}
 
-        <Tarjeta>
-          <form action={accionCrear} className="flex flex-col gap-3">
-            <p className="font-semibold text-tinta">Nuevo equipo</p>
-            <input
-              name="nombre" required placeholder="Nombre (ej. Fomento de Gandia B)"
-              className={CAMPO}
-            />
-            <input
-              name="categoria" required placeholder="Categoría (ej. 1ª Prov. Valencia Sur)"
-              className={CAMPO}
-            />
-            <select name="margen_elo" defaultValue="" className={CAMPO}>
-              <option value="">Sin margen (orden estricto)</option>
-              <option value="100">≥100 ELO (División de Honor)</option>
-              <option value="200">≥200 ELO (Autonómicas)</option>
-            </select>
-            <input
-              name="num_tableros" type="number" min={1} defaultValue={8} required
-              placeholder="Número de tableros"
-              className={CAMPO}
-            />
-            <button className="rounded-xl bg-acento-fuerte p-3 font-semibold text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]">
+        {/* PLEGADO Y DEBAJO NO: dar de alta un equipo es cosa de una vez al año, y
+            ocupaba la primera pantalla entera por delante de la lista de equipos, que
+            es a lo que se entra. */}
+        <details className="group rounded-2xl border border-borde bg-tarjeta p-4 shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-semibold text-tinta">
+            Nuevo equipo
+            <span
+              aria-hidden
+              className="shrink-0 text-tinta-suave transition-transform group-open:rotate-180"
+            >
+              ▾
+            </span>
+          </summary>
+          {/* CON ETIQUETA CADA CAMPO. Iban solo con `placeholder`, y el de número de
+              tableros llega con un 8 puesto: el placeholder desaparece en cuanto hay
+              valor, así que se veía un campo con un "8" y nada que dijera qué era. */}
+          <form action={accionCrear} className="mt-3 flex max-w-xl flex-col gap-3">
+            <label className="flex flex-col gap-1 text-sm text-tinta-suave">
+              Nombre
+              <input
+                name="nombre" required placeholder="Fomento de Gandia B"
+                className={CAMPO}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-tinta-suave">
+              Categoría
+              <input
+                name="categoria" required placeholder="1ª Prov. Valencia Sur"
+                className={CAMPO}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-tinta-suave">
+              Margen de ELO para invertir el orden
+              <select name="margen_elo" defaultValue="" className={CAMPO}>
+                <option value="">Sin margen (orden estricto)</option>
+                <option value="100">≥100 ELO (División de Honor)</option>
+                <option value="200">≥200 ELO (Autonómicas)</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-tinta-suave">
+              Número de tableros
+              <input
+                name="num_tableros" type="number" min={1} defaultValue={8} required
+                className={CAMPO}
+              />
+            </label>
+            <BotonAccion variante="solido" trabajando="Creando…" className="self-start">
               Crear equipo
-            </button>
+            </BotonAccion>
           </form>
-        </Tarjeta>
+        </details>
 
         {/* Los tres importadores en fila desde tableta: apilados ocupaban tres
             líneas enteras antes de llegar a los equipos. El orden es el de

@@ -47,16 +47,10 @@ export function ListaRoles({ socios }: { socios: SocioConRoles[] }) {
           Los rangos <b className="font-semibold">se suman</b>: si alguno te permite
           algo, puedes.
         </p>
-        <ul className="mt-2 space-y-1 text-xs text-tinta-suave">
-          <li>
-            <b className="font-semibold">Jugador</b> no se reparte aquí: lo es todo
-            socio con cuenta y ficha vinculada.
-          </li>
-          <li>
-            <b className="font-semibold">Capitán</b> tampoco: se nombra por equipo y
-            temporada en <span className="font-mono">Equipos y capitanes</span>.
-          </li>
-        </ul>
+        <p className="mt-1 text-xs text-tinta-suave">
+          Aquí solo se reparten junta y admin. Jugador sale de tener ficha; capitán, de
+          Equipos y capitanes.
+        </p>
       </Tarjeta>
 
       {socios.map((s) => (

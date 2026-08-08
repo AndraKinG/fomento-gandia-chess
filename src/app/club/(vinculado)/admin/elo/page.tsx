@@ -72,19 +72,23 @@ export default async function EloAdminPage({
       <Cabecera titulo="Actualización de ELO" volverA="/club/admin" medida="panel" />
       <Contenedor medida="panel" className="space-y-4">
         {msg ? <Banner tipo={tipo === "ok" ? "ok" : "error"}>{msg}</Banner> : null}
-        <form action={refrescarFide}>
-          <BotonAccion
-            className="w-full text-sm"
-            trabajando="Consultando 48 perfiles en fide.com…"
-          >
-            Actualizar FIDE ahora (perfiles fide.com)
-          </BotonAccion>
-        </form>
-        <form action={refrescarFeda}>
-          <BotonAccion className="w-full text-sm" trabajando="Descargando la lista de FEDA…">
-            Actualizar FEDA ahora (descarga lista oficial)
-          </BotonAccion>
-        </form>
+        {/* Los dos en fila: apilados eran dos barras de 970 px, una encima de otra,
+            para dos acciones que se usan una vez al mes. */}
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <form action={refrescarFide} className="flex-1">
+            <BotonAccion
+              className="w-full text-sm"
+              trabajando="Consultando fide.com…"
+            >
+              Actualizar FIDE
+            </BotonAccion>
+          </form>
+          <form action={refrescarFeda} className="flex-1">
+            <BotonAccion variante="secundario" className="w-full text-sm" trabajando="Descargando la lista de FEDA…">
+              Actualizar FEDA
+            </BotonAccion>
+          </form>
+        </div>
         <Banner tipo="aviso">
           Ojo: la lista automática de feda.org puede estar desactualizada
           (última publicada: 2023). Para datos actuales usa la subida manual
