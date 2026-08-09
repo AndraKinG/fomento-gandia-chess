@@ -31,6 +31,14 @@ import {
  * arranca siempre de los números que manda el servidor y se corrige con cada
  * jugada. El que manda es el de la base.
  *
+ * Y NO SE MEZCLAN DOS RELOJES, que es de donde salía el temblor al mover. La fila
+ * trae `ultima_jugada_en` con la hora DEL SERVIDOR; restarle la hora del navegador
+ * mide, además del tiempo pensado, la diferencia entre los dos relojes — y esa
+ * diferencia son segundos enteros en cuanto un aparato va desajustado. El número
+ * subía y bajaba solo. Aquí se ignora esa marca para pintar: cuando llega una fila
+ * se apunta el instante LOCAL en que llegó, y la cuenta atrás mide contra él. Así
+ * solo se resta tiempo medido con el mismo reloj.
+ *
  * POR QUÉ LA JUGADA SE PINTA ANTES DE MANDARLA. La primera versión esperaba a que
  * el servidor contestara para mover la pieza, y con una acción de servidor por
  * jugada eso son cientos de milisegundos en los que el tablero está congelado. En
@@ -93,7 +101,7 @@ export function Mesa({
   const [mensajes, setMensajes] = useState(mensajesIniciales);
   const [error, setError] = useState<string | null>(null);
   const [texto, setTexto] = useState("");
-  const [ahora, setAhora] = useState(() => Date.now());
+  const [ahora, setAhora] = useState(() => performance.now());
   /** Estado de la conexión en vivo, para poder enseñarlo. Un canal que se suscribe
    *  pero no recibe nada es indistinguible de uno sano y sin novedades. */
   const [enVivo, setEnVivo] = useState<"conectando" | "si" | "no">("conectando");
@@ -111,6 +119,20 @@ export function Mesa({
    * es viejo y se tira.
    */
   const jugadasFirmes = useRef(inicial.jugadas.length);
+  /**
+   * Momento LOCAL en que llegó el estado que se está pintando.
+   *
+   * Es la referencia de la cuenta atrás. No se usa `ultima_jugada_en` porque esa
+   * marca es del reloj del servidor y aquí se resta con el del navegador: la
+   * diferencia entre ambos se colaba entera en el tiempo que se enseña.
+   *
+   * VA EN ESTADO Y NO EN UNA REFERENCIA porque hace falta PARA PINTAR: el reloj se
+   * dibuja a partir de él, y una referencia leída al pintar no repinta nada.
+   */
+  const [recibidoEn, setRecibidoEn] = useState(() => performance.now());
+  /** Jugadas que había en el último estado aplicado, para saber si una novedad
+   *  llegó por difusión o la pilló el reintento. */
+  const antesJugadas = useRef(inicial.jugadas.length);
   const cajaChat = useRef<HTMLDivElement | null>(null);
 
   const miColor: "w" | "b" | null =
@@ -130,6 +152,7 @@ export function Mesa({
     const cuantas = ((f.jugadas as string[]) ?? []).length;
     if (cuantas < jugadasFirmes.current && !f.resultado) return;
     jugadasFirmes.current = cuantas;
+    setRecibidoEn(performance.now());
     setP((antes) => ({
       ...antes,
       jugadas: (f.jugadas as string[]) ?? [],
@@ -165,6 +188,10 @@ export function Mesa({
       .on("broadcast", { event: "cambio" }, (mensaje) => {
         const f = (mensaje.payload as { fila?: Record<string, unknown> })?.fila;
         if (!f) return;
+        // Si la difusión entrega, se dice: es la diferencia entre ir fino y ir a
+        // base de repreguntar, y hasta ahora había que adivinarlo.
+        setEnVivo("si");
+        antesJugadas.current = ((f.jugadas as string[]) ?? []).length;
         aplicarFila(f);
       })
       .on(
@@ -194,7 +221,9 @@ export function Mesa({
       )
       .subscribe((estado) => {
         if (cancelado) return;
-        setEnVivo(estado === "SUBSCRIBED" ? "si" : estado === "CLOSED" ? "conectando" : "no");
+        // Estar suscrito NO es estar en vivo: el canal se suscribía bien y no
+        // llegaba nada. Solo cuenta haber recibido una difusión de verdad.
+        if (estado !== "SUBSCRIBED") setEnVivo("no");
       });
       cerrar = () => void supabase.removeChannel(canal);
     });
@@ -228,6 +257,11 @@ export function Mesa({
       const cuantas = (data.jugadas ?? []).length;
       if (cuantas < jugadasFirmes.current && !data.resultado) return;
       jugadasFirmes.current = cuantas;
+      // Si la novedad llega por aquí y no por difusión, la partida se está
+      // sosteniendo con el reintento: se dice, para no vender fluidez que no hay.
+      if ((data.jugadas ?? []).length !== antesJugadas.current) setEnVivo("no");
+      antesJugadas.current = (data.jugadas ?? []).length;
+      setRecibidoEn(performance.now());
       setP((antes) => {
         // Si no ha cambiado nada, se devuelve el mismo objeto: cambiarlo repintaría
         // el tablero entero dos veces por segundo para nada.
@@ -276,7 +310,7 @@ export function Mesa({
   // cuanto la partida acaba se para, que si no sigue restando sobre un resultado.
   useEffect(() => {
     if (!enJuego) return;
-    const t = setInterval(() => setAhora(Date.now()), 100);
+    const t = setInterval(() => setAhora(performance.now()), 100);
     return () => clearInterval(t);
   }, [enJuego]);
 
@@ -290,14 +324,19 @@ export function Mesa({
     if (caja) caja.scrollTop = caja.scrollHeight;
   }, [mensajes]);
 
+  // El reloj se pinta con tiempo MEDIDO EN LOCAL desde que llegó el estado, no con
+  // la marca del servidor. `arrancado` distingue la partida que aún no ha empezado
+  // —donde nadie gasta tiempo— de la que ya corre.
+  const arrancado = p.ultimaJugadaEn !== null;
   const reloj: Reloj = {
     blancasMs: p.blancasMs,
     negrasMs: p.negrasMs,
     turno: p.turno,
-    ultimaJugadaEn: p.ultimaJugadaEn ? Date.parse(p.ultimaJugadaEn) : null,
+    ultimaJugadaEn: arrancado ? 0 : null,
   };
+  const transcurrido = arrancado ? ahora - recibidoEn : 0;
   const tiempos = enJuego
-    ? paraPintar(reloj, ahora)
+    ? paraPintar(reloj, transcurrido)
     : { blancasMs: p.blancasMs, negrasMs: p.negrasMs };
 
   // La posición sale de las jugadas, que es la única fuente de verdad. Memoizada
@@ -341,31 +380,33 @@ export function Mesa({
 
     // Se guarda la posición de antes para poder volver si el servidor dice que no.
     const antes = p;
-    const ahoraMs = Date.now();
 
-    // EL RELOJ TAMBIÉN SE ADELANTA, con la misma cuenta que hará el servidor. Sin
-    // esto, la jugada se pintaba pero los relojes seguían como estaban: el del
-    // rival empezaba a descontar desde la marca vieja y el número pegaba un salto
-    // hacia atrás en cuanto llegaba la fila de verdad.
+    // EL RELOJ TAMBIÉN SE ADELANTA, con la misma cuenta que hará el servidor, pero
+    // midiendo lo pensado EN LOCAL: desde que llegó el último estado hasta ahora.
+    // Mezclar aquí la marca del servidor era lo que hacía temblar el número.
+    const pensado = antes.ultimaJugadaEn === null ? 0 : performance.now() - recibidoEn;
     const relojTrasMover = trasJugada(
       {
         blancasMs: antes.blancasMs,
         negrasMs: antes.negrasMs,
         turno: antes.turno,
-        ultimaJugadaEn: antes.ultimaJugadaEn ? Date.parse(antes.ultimaJugadaEn) : null,
+        ultimaJugadaEn: antes.ultimaJugadaEn === null ? null : 0,
       },
       { baseMs: antes.baseMs, incrementoMs: antes.incrementoMs },
-      ahoraMs
+      pensado
     );
 
     jugadasFirmes.current = antes.jugadas.length + 1;
+    antesJugadas.current = antes.jugadas.length + 1;
+    setRecibidoEn(performance.now());
     setP((estado) => ({
       ...estado,
       jugadas: [...estado.jugadas, san],
       turno: relojTrasMover.turno,
       blancasMs: relojTrasMover.blancasMs,
       negrasMs: relojTrasMover.negrasMs,
-      ultimaJugadaEn: new Date(ahoraMs).toISOString(),
+      // La marca solo dice "el reloj ya corre"; para pintar manda `recibidoEn`.
+      ultimaJugadaEn: new Date().toISOString(),
       // Mover mata cualquier oferta de tablas viva, igual que en el servidor.
       tablasOfrecidasPor: null,
     }));
@@ -423,7 +464,7 @@ export function Mesa({
           <p className="px-1 text-xs text-tinta-suave">
             {enVivo === "conectando"
               ? "Conectando en vivo…"
-              : "Sin conexión en vivo: las jugadas del rival tardan un segundo en aparecer."}
+              : "Sin conexión en vivo: las jugadas del rival tardan un momento en aparecer."}
           </p>
         )}
         <Jugador
