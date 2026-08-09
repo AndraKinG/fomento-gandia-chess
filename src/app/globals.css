@@ -61,3 +61,37 @@ body {
   color: var(--tinta);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
+
+/* Los avisos entran deslizándose desde abajo en vez de aparecer de golpe: un
+   cartel que se materializa encima del tablero se lee como un fallo de pintado, y
+   moviéndose se entiende que es algo que acaba de llegar. */
+@keyframes entra-abajo {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.entra-abajo {
+  animation: entra-abajo 220ms ease-out;
+}
+
+/* Igual, pero desde el centro, para la tarjeta de fin de partida. */
+@keyframes aparece {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.aparece {
+  animation: aparece 200ms ease-out;
+}

@@ -81,6 +81,7 @@ export function Tablero({
   enJaque,
   onToque,
   onSoltar,
+  onCancelar,
   deshabilitado = false,
 }: {
   filas: Filas;
@@ -96,6 +97,10 @@ export function Tablero({
   /** Se ha arrastrado una pieza de una casilla a otra. Sin esto, el tablero solo
    *  funciona a toques. La legalidad la sigue poniendo quien lo usa. */
   onSoltar?: (desde: string, hasta: string) => void;
+  /** Se ha soltado la pieza sin mover (clic derecho o Escape). Hace falta porque la
+   *  selección la lleva quien usa el tablero: sin avisar, la pieza se quedaba
+   *  marcada y con sus destinos pintados después de cancelar. */
+  onCancelar?: () => void;
   deshabilitado?: boolean;
 }) {
   const orden = volteado ? [...filas].reverse().map((f) => [...f].reverse()) : filas;
@@ -111,11 +116,14 @@ export function Tablero({
   useEffect(() => {
     if (!arrastre) return;
     const alPulsar = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setArrastre(null);
+      if (e.key !== "Escape") return;
+      setArrastre(null);
+      abajoEn.current = null;
+      onCancelar?.();
     };
     window.addEventListener("keydown", alPulsar);
     return () => window.removeEventListener("keydown", alPulsar);
-  }, [arrastre]);
+  }, [arrastre, onCancelar]);
 
   /** Casilla que hay bajo un punto de la pantalla, o null si se sale del tablero. */
   function casillaEn(x: number, y: number): string | null {
@@ -127,10 +135,11 @@ export function Tablero({
     return casillaDe(i, j, volteado);
   }
 
-  /** Suelta la pieza que se lleva sin mover nada. */
+  /** Suelta la pieza que se lleva sin mover nada, y la deselecciona. */
   function cancelarArrastre() {
     setArrastre(null);
     abajoEn.current = null;
+    onCancelar?.();
   }
 
   return (

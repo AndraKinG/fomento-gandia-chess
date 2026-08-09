@@ -47,7 +47,9 @@ export function Avisos({ yo }: { yo: string }) {
      *  y dejarlo puesto acaba tapando media pantalla. */
     function informar(id: string, texto: string) {
       setAvisos((a) => (a.some((x) => x.id === id) ? a : [...a, { tipo: "info", id, texto }]));
-      setTimeout(() => setAvisos((a) => a.filter((x) => x.id !== id)), 8000);
+      // Cinco segundos: lo que pidió el propietario y lo que tarda en leerse una
+      // línea sin que estorbe. Los que piden respuesta NO se van solos.
+      setTimeout(() => setAvisos((a) => a.filter((x) => x.id !== id)), 5000);
     }
 
     /** Mira si hay algo nuevo. Sirve de red de seguridad y de primer repaso. */
@@ -151,7 +153,7 @@ export function Avisos({ yo }: { yo: string }) {
       {avisos.map((a) => (
         <div
           key={a.id}
-          className="pointer-events-auto w-full max-w-sm rounded-2xl border border-borde-acento bg-tarjeta p-3 shadow-lg"
+          className="entra-abajo pointer-events-auto w-full max-w-sm rounded-2xl border border-borde-acento bg-tarjeta p-3 shadow-lg"
         >
           {a.tipo === "info" ? (
             <p className="text-sm text-tinta">{a.texto}</p>

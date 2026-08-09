@@ -177,6 +177,7 @@ export function EditorTablero({
         enJaque={reyEnJaque}
         onToque={onToque}
         onSoltar={onSoltar}
+        onCancelar={() => setSeleccionada(null)}
         deshabilitado={juego.isGameOver() || promocion !== null}
       />
 

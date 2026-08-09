@@ -7,6 +7,8 @@ import { clienteEnVivo } from "@/lib/supabase/vivo";
 import { Tablero } from "@/components/ajedrez/Tablero";
 import { Boton } from "@/components/ui/Boton";
 import { Banner } from "@/components/ui/Banner";
+import { BotonCopiar } from "@/components/ui/BotonCopiar";
+import { aPgn } from "@/lib/vivo/partida";
 import { enReloj, paraPintar, trasJugada, type Reloj } from "@/lib/vivo/reloj";
 import {
   abandonar,
@@ -48,6 +50,9 @@ export type Partida = {
   negrasId: string;
   blancasNombre: string;
   negrasNombre: string;
+  /** ELO oficial de cada uno, para el resumen del final. null si no lo tienen. */
+  blancasElo: number | null;
+  negrasElo: number | null;
   jugadas: string[];
   turno: "w" | "b";
   blancasMs: number;
@@ -91,6 +96,9 @@ export function Mesa({
   /** Estado de la conexión en vivo, para poder enseñarlo. Un canal que se suscribe
    *  pero no recibe nada es indistinguible de uno sano y sin novedades. */
   const [enVivo, setEnVivo] = useState<"conectando" | "si" | "no">("conectando");
+  /** El resumen del final se puede cerrar: al acabar una partida mucha gente quiere
+   *  quedarse mirando la posición, y un cartel encima del tablero estorba. */
+  const [resumenCerrado, setResumenCerrado] = useState(false);
   /**
    * Cuántas jugadas damos ya por hechas.
    *
@@ -417,17 +425,15 @@ export function Mesa({
           }
           onToque={tocar}
           onSoltar={(desde, hasta) => void enviar(desde, hasta)}
+          onCancelar={() => setElegida(null)}
           deshabilitado={!meToca}
         />
         <Jugador nombre={nombreAbajo} ms={msAbajo} corriendo={enJuego && !turnoArriba} />
       </div>
 
       <div className="space-y-3">
-        {p.resultado && (
-          <Banner tipo="ok">
-            {p.resultado === "1/2-1/2" ? "Tablas" : `Ganan las ${p.resultado === "1-0" ? "blancas" : "negras"}`}
-            {p.motivo ? ` ${MOTIVOS[p.motivo] ?? ""}` : ""}.
-          </Banner>
+        {p.resultado && !resumenCerrado && (
+          <Resumen partida={p} onCerrar={() => setResumenCerrado(true)} />
         )}
         {meOfrecenTablas && (
           <Banner tipo="aviso">
@@ -533,6 +539,98 @@ export function Mesa({
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Resumen de la partida, al acabar.
+ *
+ * SOLO EXISTE CUANDO HAY RESULTADO, y se puede cerrar: al terminar, mucha gente
+ * quiere quedarse mirando la posición final, y un cartel fijo encima del tablero
+ * estorba. Antes esto era una línea de banner que decía quién había ganado y poco
+ * más; aquí se junta todo lo que se quiere saber en ese momento —quién jugaba, con
+ * qué ELO, cómo acabó— y se puede llevar la partida con el botón de copiar.
+ */
+function Resumen({ partida, onCerrar }: { partida: Partida; onCerrar: () => void }) {
+  const gana =
+    partida.resultado === "1-0"
+      ? partida.blancasNombre
+      : partida.resultado === "0-1"
+        ? partida.negrasNombre
+        : null;
+
+  const pgn = aPgn(
+    {
+      jugadas: partida.jugadas,
+      cadencia: { baseMs: partida.baseMs, incrementoMs: partida.incrementoMs },
+      reloj: {
+        blancasMs: partida.blancasMs,
+        negrasMs: partida.negrasMs,
+        turno: partida.turno,
+        ultimaJugadaEn: null,
+      },
+      resultado: partida.resultado as "1-0" | "0-1" | "1/2-1/2" | null,
+      motivo: null,
+    },
+    {
+      blancas: partida.blancasNombre,
+      negras: partida.negrasNombre,
+      fecha: new Date().toISOString().slice(0, 10),
+    }
+  );
+
+  return (
+    <div className="aparece rounded-2xl border border-borde-acento bg-tarjeta-suave p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-lg font-bold text-tinta">
+            {gana ? `Gana ${gana}` : "Tablas"}
+          </p>
+          <p className="text-sm text-tinta-suave">
+            {partida.motivo ? (MOTIVOS[partida.motivo] ?? "").replace(/^por /, "Por ") : ""}
+            {partida.motivo ? " · " : ""}
+            {Math.round(partida.baseMs / 60_000)}+{Math.round(partida.incrementoMs / 1000)} ·{" "}
+            {partida.jugadas.length} jugadas
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onCerrar}
+          aria-label="Cerrar el resumen"
+          className="shrink-0 rounded-lg px-2 py-1 text-lg leading-none text-tinta-suave transition hover:bg-tarjeta"
+        >
+          ✕
+        </button>
+      </div>
+
+      <dl className="mt-3 space-y-1 text-sm">
+        <div className="flex items-baseline gap-2">
+          <dt className="shrink-0 text-tinta-suave" aria-hidden>
+            ♙
+          </dt>
+          <dd className="min-w-0 flex-1 truncate text-tinta">{partida.blancasNombre}</dd>
+          <dd className="shrink-0 tabular-nums text-tinta-suave">
+            {partida.blancasElo ?? "—"}
+          </dd>
+        </div>
+        <div className="flex items-baseline gap-2">
+          <dt className="shrink-0 text-tinta-suave" aria-hidden>
+            ♟
+          </dt>
+          <dd className="min-w-0 flex-1 truncate text-tinta">{partida.negrasNombre}</dd>
+          <dd className="shrink-0 tabular-nums text-tinta-suave">
+            {partida.negrasElo ?? "—"}
+          </dd>
+        </div>
+      </dl>
+
+      <div className="mt-3 flex items-center gap-2">
+        <span className="rounded-lg bg-tarjeta px-2.5 py-1 font-mono text-sm font-semibold text-tinta ring-1 ring-borde">
+          {partida.resultado}
+        </span>
+        <BotonCopiar texto={pgn} etiqueta="Copiar PGN" className="ml-auto" />
       </div>
     </div>
   );
