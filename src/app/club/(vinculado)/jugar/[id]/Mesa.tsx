@@ -159,6 +159,16 @@ export function Mesa({
   /** Jugadas que había en el último estado aplicado, para saber si una novedad
    *  llegó por difusión o la pilló el reintento. */
   const antesJugadas = useRef(inicial.jugadas.length);
+  /**
+   * Marca del último estado aplicado.
+   *
+   * SIRVE PARA NO REINICIAR EL RELOJ SIN MOTIVO, y ese era el "baja y luego se los
+   * suma": tras cada jugada se relee la fila tres veces, y si la segunda y la
+   * tercera traen lo mismo, volver a aplicarlas ponía la referencia a cero otra vez
+   * — o sea, devolver al reloj los segundos que ya se habían contado. Una fila que
+   * no ha cambiado no se toca.
+   */
+  const ultimaMarca = useRef<string | null>(inicial.ultimaJugadaEn);
   /** El canal, para poder difundir desde aquí lo que escribe el cliente: el chat lo
    *  inserta el navegador, así que el aviso también sale de aquí. */
   const canalRef = useRef<ReturnType<
@@ -182,6 +192,18 @@ export function Mesa({
   const aplicarFila = useCallback((f: Record<string, unknown>) => {
     const cuantas = ((f.jugadas as string[]) ?? []).length;
     if (cuantas < jugadasFirmes.current && !f.resultado) return;
+
+    // Nada nuevo: ni se toca. Volver a aplicar la misma fila reiniciaría la cuenta
+    // atrás y le devolvería al reloj el tiempo ya corrido.
+    const marca = (f.ultima_jugada_en as string | null) ?? null;
+    const igual =
+      marca === ultimaMarca.current &&
+      cuantas === antesJugadas.current &&
+      ((f.resultado as string | null) ?? null) === null;
+    if (igual) return;
+
+    ultimaMarca.current = marca;
+    antesJugadas.current = cuantas;
     jugadasFirmes.current = cuantas;
     setRecibidoEn(performance.now());
     setP((antes) => ({
@@ -201,29 +223,52 @@ export function Mesa({
    * Aplica una jugada que llega por difusión, si es legal en la posición que se está
    * viendo. Solo adelanta el dibujo: la fila de la base manda igual.
    */
-  const aplicarJugadaSuelta = useCallback((san: string) => {
-    setP((antes) => {
-      const c = new Chess();
-      try {
-        for (const j of antes.jugadas) c.move(j);
-        c.move(san);
-      } catch {
-        // No encaja con lo que tenemos: se ignora y ya llegará la fila buena.
-        return antes;
-      }
-      jugadasFirmes.current = antes.jugadas.length + 1;
-      antesJugadas.current = antes.jugadas.length + 1;
-      return {
-        ...antes,
-        jugadas: [...antes.jugadas, san],
-        turno: antes.turno === "w" ? "b" : "w",
-        tablasOfrecidasPor: null,
-      };
-    });
-    // El reloj se recoloca con la fila de verdad; hasta entonces, la referencia se
-    // pone ahora para que la cuenta atrás empiece a correrle al que toca.
-    setRecibidoEn(performance.now());
-  }, []);
+  const aplicarJugadaSuelta = useCallback(
+    (san: string) => {
+      setP((antes) => {
+        const c = new Chess();
+        try {
+          for (const j of antes.jugadas) c.move(j);
+          c.move(san);
+        } catch {
+          // No encaja con lo que tenemos: se ignora y ya llegará la fila buena.
+          return antes;
+        }
+
+        // EL RELOJ DEL RIVAL TAMBIÉN SE ADELANTA, con la misma cuenta que hará el
+        // servidor. Sin esto se pintaba su jugada pero su reloj se quedaba clavado
+        // en el número de antes, y al llegar la fila de verdad pegaba el salto de
+        // golpe: bajaba lo pensado y subía el incremento. Como aquí ya sabemos
+        // cuánto lleva corriendo —desde que llegó el último estado—, se aplica y no
+        // hay salto que dar.
+        const pensado = antes.ultimaJugadaEn === null ? 0 : performance.now() - recibidoEn;
+        const tras = trasJugada(
+          {
+            blancasMs: antes.blancasMs,
+            negrasMs: antes.negrasMs,
+            turno: antes.turno,
+            ultimaJugadaEn: antes.ultimaJugadaEn === null ? null : 0,
+          },
+          { baseMs: antes.baseMs, incrementoMs: antes.incrementoMs },
+          pensado
+        );
+
+        jugadasFirmes.current = antes.jugadas.length + 1;
+        antesJugadas.current = antes.jugadas.length + 1;
+        return {
+          ...antes,
+          jugadas: [...antes.jugadas, san],
+          turno: tras.turno,
+          blancasMs: tras.blancasMs,
+          negrasMs: tras.negrasMs,
+          ultimaJugadaEn: new Date().toISOString(),
+          tablasOfrecidasPor: null,
+        };
+      });
+      setRecibidoEn(performance.now());
+    },
+    [recibidoEn]
+  );
 
   /** Va a por la fila y la aplica. La usan el empujón del rival y el reintento. */
   const releer = useCallback(async () => {
@@ -356,36 +401,10 @@ export function Mesa({
         .eq("id", p.id)
         .maybeSingle();
       if (!data) return;
-      const cuantas = (data.jugadas ?? []).length;
-      if (cuantas < jugadasFirmes.current && !data.resultado) return;
-      jugadasFirmes.current = cuantas;
-      // Si la novedad llega por aquí y no por difusión, la partida se está
-      // sosteniendo con el reintento: se dice, para no vender fluidez que no hay.
-      if ((data.jugadas ?? []).length !== antesJugadas.current) setEnVivo("no");
-      antesJugadas.current = (data.jugadas ?? []).length;
-      setRecibidoEn(performance.now());
-      setP((antes) => {
-        // Si no ha cambiado nada, se devuelve el mismo objeto: cambiarlo repintaría
-        // el tablero entero dos veces por segundo para nada.
-        if (
-          antes.jugadas.length === (data.jugadas ?? []).length &&
-          antes.resultado === data.resultado &&
-          antes.tablasOfrecidasPor === data.tablas_ofrecidas_por
-        ) {
-          return antes;
-        }
-        return {
-          ...antes,
-          jugadas: data.jugadas ?? [],
-          turno: data.turno,
-          blancasMs: data.blancas_ms,
-          negrasMs: data.negras_ms,
-          ultimaJugadaEn: data.ultima_jugada_en,
-          resultado: data.resultado,
-          motivo: data.motivo,
-          tablasOfrecidasPor: data.tablas_ofrecidas_por,
-        };
-      });
+      // Si la novedad la pilla el reintento y no la difusión, la partida se está
+      // sosteniendo a base de repreguntar: se dice, para no vender fluidez que no hay.
+      if ((data.jugadas ?? []).length > antesJugadas.current) setEnVivo("no");
+      aplicarFila(data as Record<string, unknown>);
       // El chat va en la misma pasada: tenía el mismo problema y ninguna red.
       const { data: dichos } = await supabase
         .from("live_chat")
@@ -406,7 +425,7 @@ export function Mesa({
       }
     }, cada);
     return () => clearInterval(t);
-  }, [p.id, p.resultado, meToca]);
+  }, [aplicarFila, p.id, p.resultado, meToca]);
 
   // La cuenta atrás. Cada décima porque en los últimos segundos se ven décimas; en
   // cuanto la partida acaba se para, que si no sigue restando sobre un resultado.
