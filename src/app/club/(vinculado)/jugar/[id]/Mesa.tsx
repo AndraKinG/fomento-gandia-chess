@@ -171,6 +171,19 @@ export function Mesa({
     }));
   }, []);
 
+  /** Va a por la fila y la aplica. La usan el empujón del rival y el reintento. */
+  const releer = useCallback(async () => {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("live_games")
+      .select(
+        "jugadas, turno, blancas_ms, negras_ms, ultima_jugada_en, resultado, motivo, tablas_ofrecidas_por"
+      )
+      .eq("id", inicial.id)
+      .maybeSingle();
+    if (data) aplicarFila(data as Record<string, unknown>);
+  }, [aplicarFila, inicial.id]);
+
   useEffect(() => {
     // El canal se monta DENTRO de una promesa porque hay que poner el token del
     // usuario en el socket antes de suscribir: sin él, la RLS filtra todos los
@@ -208,6 +221,26 @@ export function Mesa({
           antesJugadas.current = ((f.jugadas as string[]) ?? []).length;
           aplicarFila(f);
         })
+        /**
+         * EMPUJÓN DEL RIVAL: "acabo de mover, mírala".
+         *
+         * Lo manda el navegador que mueve, ANTES de que el servidor termine. La
+         * cadena completa —acción de servidor, comprobar sesión, leer, guardar y
+         * difundir— son varios viajes a la base y ahí se iba el retardo que quedaba.
+         * Con el empujón, el rival va a buscar la fila en cuanto se mueve la pieza,
+         * sin esperar a que el servidor acabe.
+         *
+         * NO SE FÍA DE LO QUE MANDA EL OTRO NAVEGADOR: el mensaje no trae la jugada,
+         * solo el aviso. La posición se lee de la base, con su RLS, como siempre.
+         */
+        .on("broadcast", { event: "movio" }, () => {
+          setEnVivo("si");
+          // Dos lecturas: la primera puede adelantarse a que el servidor haya
+          // guardado, y la guarda de jugadas viejas la descartaría dejando la
+          // posición sin cambiar. La segunda, medio segundo después, la pilla.
+          void releer();
+          setTimeout(() => void releer(), 500);
+        })
         .on("broadcast", { event: "chat" }, (mensaje) => {
           const m = (mensaje.payload as { mensaje?: Mensaje })?.mensaje;
           if (!m) return;
@@ -229,7 +262,7 @@ export function Mesa({
       cancelado = true;
       cerrar?.();
     };
-  }, [aplicarFila, p.id]);
+  }, [aplicarFila, p.id, releer]);
 
   // RED DE SEGURIDAD del tiempo real: se recarga la fila cada dos segundos mientras
   // la partida está viva. Si el aviso llegó, esto no cambia nada; si se perdió,
@@ -407,6 +440,11 @@ export function Mesa({
       // Mover mata cualquier oferta de tablas viva, igual que en el servidor.
       tablasOfrecidasPor: null,
     }));
+
+    // Se avisa al rival ANTES de que el servidor conteste: es lo que quita el
+    // retardo de la cadena entera. Si luego el servidor rechaza la jugada, la
+    // relectura del otro lado devolverá la posición buena.
+    void canalRef.current?.send({ type: "broadcast", event: "movio", payload: {} });
 
     const r = await mover(p.id, { desde, hasta, corona });
     if (r.error) {
