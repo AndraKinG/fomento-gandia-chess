@@ -109,6 +109,32 @@ export function Mesa({
    *  quedarse mirando la posición, y un cartel encima del tablero estorba. */
   const [resumenCerrado, setResumenCerrado] = useState(false);
   /**
+   * La ventana del resumen sale UNA VEZ POR PARTIDA, y se recuerda en el navegador.
+   *
+   * Antes volvía a saltar en cada recarga de una partida ya terminada, y eso es un
+   * cartel modal delante de algo que ya has leído. El resumen no se pierde: se queda
+   * en la columna de la derecha para siempre.
+   */
+  const [yaVisto] = useState(() => {
+    // Se lee al crear el estado y no en un efecto: en un efecto, la ventana llegaría
+    // a pintarse un instante antes de esconderse, que es justo el parpadeo que se
+    // quiere evitar. En el servidor no hay `localStorage`, y ahí devuelve false.
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem(`resumen-visto-${inicial.id}`) === "1";
+    } catch {
+      // Sin almacenamiento (modo privado, permisos): se comporta como antes.
+      return false;
+    }
+  });
+  const marcarVisto = useCallback(() => {
+    try {
+      localStorage.setItem(`resumen-visto-${inicial.id}`, "1");
+    } catch {
+      // Da igual: lo peor que pasa es que vuelva a salir.
+    }
+  }, [inicial.id]);
+  /**
    * Cuántas jugadas damos ya por hechas.
    *
    * ES LA GUARDA CONTRA EL REBOTE. Al mover se pinta la jugada al momento, pero el
@@ -171,6 +197,34 @@ export function Mesa({
     }));
   }, []);
 
+  /**
+   * Aplica una jugada que llega por difusión, si es legal en la posición que se está
+   * viendo. Solo adelanta el dibujo: la fila de la base manda igual.
+   */
+  const aplicarJugadaSuelta = useCallback((san: string) => {
+    setP((antes) => {
+      const c = new Chess();
+      try {
+        for (const j of antes.jugadas) c.move(j);
+        c.move(san);
+      } catch {
+        // No encaja con lo que tenemos: se ignora y ya llegará la fila buena.
+        return antes;
+      }
+      jugadasFirmes.current = antes.jugadas.length + 1;
+      antesJugadas.current = antes.jugadas.length + 1;
+      return {
+        ...antes,
+        jugadas: [...antes.jugadas, san],
+        turno: antes.turno === "w" ? "b" : "w",
+        tablasOfrecidasPor: null,
+      };
+    });
+    // El reloj se recoloca con la fila de verdad; hasta entonces, la referencia se
+    // pone ahora para que la cuenta atrás empiece a correrle al que toca.
+    setRecibidoEn(performance.now());
+  }, []);
+
   /** Va a por la fila y la aplica. La usan el empujón del rival y el reintento. */
   const releer = useCallback(async () => {
     const supabase = createClient();
@@ -183,6 +237,20 @@ export function Mesa({
       .maybeSingle();
     if (data) aplicarFila(data as Record<string, unknown>);
   }, [aplicarFila, inicial.id]);
+
+  /**
+   * Relee varias veces, separando los intentos.
+   *
+   * Una sola lectura tras el empujón se adelanta a menudo a que el servidor haya
+   * guardado —son varios viajes a la base—, y entonces no cambia nada y hay que
+   * esperar al reintento normal. Tres intentos cortos cubren el caso sin castigar
+   * a la base.
+   */
+  const releerConInsistencia = useCallback(() => {
+    void releer();
+    setTimeout(() => void releer(), 250);
+    setTimeout(() => void releer(), 800);
+  }, [releer]);
 
   useEffect(() => {
     // El canal se monta DENTRO de una promesa porque hay que poner el token del
@@ -222,24 +290,28 @@ export function Mesa({
           aplicarFila(f);
         })
         /**
-         * EMPUJÓN DEL RIVAL: "acabo de mover, mírala".
+         * EL RIVAL HA MOVIDO, y manda la jugada.
          *
-         * Lo manda el navegador que mueve, ANTES de que el servidor termine. La
-         * cadena completa —acción de servidor, comprobar sesión, leer, guardar y
-         * difundir— son varios viajes a la base y ahí se iba el retardo que quedaba.
-         * Con el empujón, el rival va a buscar la fila en cuanto se mueve la pieza,
-         * sin esperar a que el servidor acabe.
+         * Es lo que hace que se vea al instante. Antes el mensaje solo decía "mira la
+         * fila", y entonces el retardo era el viaje a la base MÁS lo que tardara la
+         * acción de servidor en haber guardado: seguía sin ir fino.
          *
-         * NO SE FÍA DE LO QUE MANDA EL OTRO NAVEGADOR: el mensaje no trae la jugada,
-         * solo el aviso. La posición se lee de la base, con su RLS, como siempre.
+         * QUÉ SE FÍA Y QUÉ NO, que es lo importante: la jugada que llega se
+         * **comprueba aquí** contra la posición propia con las mismas reglas. Si no
+         * es legal, se tira. Y sea legal o no, la posición de verdad sigue siendo la
+         * de la base: la relectura que va detrás la confirma o la corrige.
+         *
+         * Queda una ventana de menos de un segundo en la que un socio podría enseñar
+         * al rival una jugada legal que no ha jugado. Entre dos socios identificados
+         * de un club, y corrigiéndose sola, es un precio asumible por jugar fino.
          */
-        .on("broadcast", { event: "movio" }, () => {
+        .on("broadcast", { event: "movio" }, (mensaje) => {
           setEnVivo("si");
-          // Dos lecturas: la primera puede adelantarse a que el servidor haya
-          // guardado, y la guarda de jugadas viejas la descartaría dejando la
-          // posición sin cambiar. La segunda, medio segundo después, la pilla.
-          void releer();
-          setTimeout(() => void releer(), 500);
+          const san = (mensaje.payload as { san?: string })?.san;
+          if (san) aplicarJugadaSuelta(san);
+          // Y detrás, la de verdad: se reintenta hasta que el servidor haya
+          // guardado, sin dejarlo en una sola lectura que puede llegar antes.
+          void releerConInsistencia();
         })
         .on("broadcast", { event: "chat" }, (mensaje) => {
           const m = (mensaje.payload as { mensaje?: Mensaje })?.mensaje;
@@ -262,7 +334,7 @@ export function Mesa({
       cancelado = true;
       cerrar?.();
     };
-  }, [aplicarFila, p.id, releer]);
+  }, [aplicarFila, aplicarJugadaSuelta, p.id, releerConInsistencia]);
 
   // RED DE SEGURIDAD del tiempo real: se recarga la fila cada dos segundos mientras
   // la partida está viva. Si el aviso llegó, esto no cambia nada; si se perdió,
@@ -441,10 +513,10 @@ export function Mesa({
       tablasOfrecidasPor: null,
     }));
 
-    // Se avisa al rival ANTES de que el servidor conteste: es lo que quita el
-    // retardo de la cadena entera. Si luego el servidor rechaza la jugada, la
+    // Se avisa al rival ANTES de que el servidor conteste, y con la jugada dentro:
+    // es lo que quita el retardo de la cadena entera. Si el servidor la rechaza, la
     // relectura del otro lado devolverá la posición buena.
-    void canalRef.current?.send({ type: "broadcast", event: "movio", payload: {} });
+    void canalRef.current?.send({ type: "broadcast", event: "movio", payload: { san } });
 
     const r = await mover(p.id, { desde, hasta, corona });
     if (r.error) {
@@ -505,16 +577,23 @@ export function Mesa({
 
   return (
     <>
-      {p.resultado && !resumenCerrado && (
-        <Resumen partida={p} onCerrar={() => setResumenCerrado(true)} />
+      {p.resultado && !resumenCerrado && !yaVisto && (
+        <Resumen
+          partida={p}
+          onCerrar={() => {
+            setResumenCerrado(true);
+            marcarVisto();
+          }}
+        />
       )}
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,32rem)_1fr]">
       <div className="space-y-2">
-        {enJuego && enVivo !== "si" && (
+        {/* El aviso SOLO cuando se sabe que algo va mal. Antes salía nada más
+            entrar, cuando lo normal es que todavía no haya llegado ninguna difusión
+            porque nadie ha movido: parecía una avería y no lo era. */}
+        {enJuego && enVivo === "no" && (
           <p className="px-1 text-xs text-tinta-suave">
-            {enVivo === "conectando"
-              ? "Conectando en vivo…"
-              : "Sin conexión en vivo: las jugadas del rival tardan un momento en aparecer."}
+            Sin conexión en vivo: las jugadas del rival tardan un momento en aparecer.
           </p>
         )}
         <Jugador
