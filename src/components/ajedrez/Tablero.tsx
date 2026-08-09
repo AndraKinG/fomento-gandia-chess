@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Tablero blanquiazul del club. Componente PRESENTACIONAL: no sabe las reglas
@@ -17,6 +17,11 @@ import { useRef, useState } from "react";
  *
  * Va con eventos de PUNTERO (`pointerdown`/`move`/`up`), no con la API de arrastrar
  * de HTML: aquella no dispara nada con el dedo, así que en un móvil no existiría.
+ *
+ * SE PUEDE ARREPENTIR A MEDIO ARRASTRE: con la pieza cogida, un clic DERECHO la
+ * suelta donde estaba. Es lo que hace Chess.com y lo que espera quien viene de
+ * allí; sin ello, coger una pieza sin querer con el reloj corriendo obliga a
+ * soltarla en una casilla y a rezar para que sea legal.
  */
 
 /**
@@ -101,6 +106,17 @@ export function Tablero({
   // soltar en otra acabaría contando como un toque en la de destino.
   const abajoEn = useRef<string | null>(null);
 
+  // Escape suelta la pieza: es lo primero que se pulsa cuando algo se ha quedado
+  // pegado al cursor.
+  useEffect(() => {
+    if (!arrastre) return;
+    const alPulsar = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setArrastre(null);
+    };
+    window.addEventListener("keydown", alPulsar);
+    return () => window.removeEventListener("keydown", alPulsar);
+  }, [arrastre]);
+
   /** Casilla que hay bajo un punto de la pantalla, o null si se sale del tablero. */
   function casillaEn(x: number, y: number): string | null {
     const caja = rejilla.current?.getBoundingClientRect();
@@ -111,12 +127,25 @@ export function Tablero({
     return casillaDe(i, j, volteado);
   }
 
+  /** Suelta la pieza que se lleva sin mover nada. */
+  function cancelarArrastre() {
+    setArrastre(null);
+    abajoEn.current = null;
+  }
+
   return (
     <>
       <div
         ref={rejilla}
         role="grid"
         aria-label="Tablero de ajedrez"
+        // El menú del navegador estorbaría justo cuando se quiere cancelar, y con
+        // una pieza cogida el clic derecho ya significa otra cosa.
+        onContextMenu={(e) => {
+          if (!arrastre) return;
+          e.preventDefault();
+          cancelarArrastre();
+        }}
         className="grid aspect-square w-full grid-cols-8 overflow-hidden rounded-xl ring-1 ring-borde-acento"
       >
         {orden.map((fila, i) =>
@@ -143,7 +172,15 @@ export function Tablero({
                 }}
                 onPointerDown={(e) => {
                   if (deshabilitado) return;
-                  if (e.pointerType === "mouse" && e.button !== 0) return;
+                  // Cualquier botón que no sea el principal, con la pieza ya cogida,
+                  // es un "déjalo estar".
+                  if (e.pointerType === "mouse" && e.button !== 0) {
+                    if (arrastre) {
+                      e.preventDefault();
+                      cancelarArrastre();
+                    }
+                    return;
+                  }
                   abajoEn.current = casilla;
                   // Una casilla que ya es destino de la pieza elegida es un movimiento
                   // a medio hacer, no el principio de un arrastre: si empezara aquí,

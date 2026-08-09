@@ -13,6 +13,7 @@ import {
 import { relojInicial } from "@/lib/vivo/reloj";
 import { blancasEnAmistosa } from "@/lib/vivo/colores";
 import { aPgn } from "@/lib/vivo/partida";
+import { enviarPushAMuchos } from "@/lib/push/send";
 
 /**
  * Todo lo que cambia una partida en vivo.
@@ -301,6 +302,32 @@ export async function aceptarReto(retoId: string): Promise<Respuesta> {
     .from("challenges")
     .update({ estado: "aceptado", live_game_id: partida.id })
     .eq("id", retoId);
+
+  // AVISO A QUIEN RETÓ, porque puede no estar mirando la pantalla de Jugar. Si
+  // está, entra solo por tiempo real; si andaba en otra partida o navegando, esto
+  // es lo único que le dice que su rival ya le espera con el reloj a punto.
+  // En silencio si falla: la partida está creada y eso es lo que importa.
+  try {
+    const { data: quienReta } = await db
+      .from("profiles")
+      .select("id")
+      .eq("player_id", reto.reta_id)
+      .maybeSingle();
+    const { data: yo } = await db
+      .from("players")
+      .select("nombre")
+      .eq("id", sesion.playerId)
+      .maybeSingle();
+    if (quienReta?.id) {
+      await enviarPushAMuchos([quienReta.id], {
+        title: "Te han aceptado el reto",
+        body: `${yo?.nombre ?? "Tu rival"} te espera en el tablero.`,
+        url: `/club/jugar/${partida.id}`,
+      });
+    }
+  } catch {
+    // Silencio a propósito: ver comentario de arriba.
+  }
 
   revalidatePath("/club/jugar");
   return { id: partida.id };

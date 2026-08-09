@@ -102,7 +102,7 @@ export function Mesa({
    * es viejo y se tira.
    */
   const jugadasFirmes = useRef(inicial.jugadas.length);
-  const finChat = useRef<HTMLDivElement | null>(null);
+  const cajaChat = useRef<HTMLDivElement | null>(null);
 
   const miColor: "w" | "b" | null =
     yo === p.blancasId ? "w" : yo === p.negrasId ? "b" : null;
@@ -193,7 +193,7 @@ export function Mesa({
     // MÁS RÁPIDO CUANDO ESPERAS AL RIVAL, que es cuando la tardanza se nota: son los
     // segundos en los que estás mirando el tablero sin poder hacer nada. Cuando te
     // toca a ti no hay prisa, porque la novedad la vas a producir tú.
-    const cada = meToca ? 2000 : 600;
+    const cada = meToca ? 2000 : 400;
     const t = setInterval(async () => {
       const { data } = await supabase
         .from("live_games")
@@ -258,8 +258,14 @@ export function Mesa({
     return () => clearInterval(t);
   }, [enJuego]);
 
+  // EL CHAT SE DESPLAZA SOLO, PERO SOLO ÉL. Antes usaba `scrollIntoView`, y eso
+  // desplaza TODOS los contenedores con scroll de los que cuelga —incluida la
+  // ventana—, así que al mandar un mensaje desde una tablet la página entera se iba
+  // arriba del todo y había que volver a bajar. Moviendo el `scrollTop` de la caja,
+  // el resto de la página se queda donde estaba.
   useEffect(() => {
-    finChat.current?.scrollIntoView({ block: "end" });
+    const caja = cajaChat.current;
+    if (caja) caja.scrollTop = caja.scrollHeight;
   }, [mensajes]);
 
   const reloj: Reloj = {
@@ -489,7 +495,7 @@ export function Mesa({
           <p className="border-b border-borde px-3 py-2 text-xs font-semibold uppercase tracking-wide text-tinta-suave">
             Chat
           </p>
-          <div className="flex-1 space-y-1.5 overflow-y-auto p-3">
+          <div ref={cajaChat} className="flex-1 space-y-1.5 overflow-y-auto p-3">
             {mensajes.length === 0 && (
               <p className="text-sm text-tinta-suave">Aún no habéis dicho nada.</p>
             )}
@@ -501,7 +507,6 @@ export function Mesa({
                 <span className="text-tinta">{m.texto}</span>
               </p>
             ))}
-            <div ref={finChat} />
           </div>
           {miColor !== null && (
             <div className="flex gap-2 border-t border-borde p-2">

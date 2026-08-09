@@ -53,24 +53,23 @@ export function Retos({
   const mandados = retos.filter((r) => r.retaId === yo);
 
   /**
-   * QUE TE ACEPTEN EL RETO TE METE EN LA PARTIDA.
+   * LOS RETOS, EN VIVO, POR LOS DOS LADOS.
    *
-   * Antes no pasaba nada: quien retaba se quedaba mirando la pantalla y tenía que
-   * recargar para enterarse de que el otro ya estaba esperando en el tablero, con
-   * el reloj a punto de arrancar. Ahora se escucha el reto y en cuanto pasa a
-   * aceptado se entra solo.
+   * - A QUIEN RETA: en cuanto el otro acepta, se entra directo en la partida. Antes
+   *   se quedaba mirando la pantalla mientras el rival ya esperaba en el tablero.
+   * - A QUIEN LO RECIBE: el reto aparece solo. Antes había que recargar para verlo,
+   *   que es justo lo contrario de retar a alguien que está conectado.
    *
-   * Con reintento cada tres segundos por si el aviso se pierde: enterarte tarde de
-   * esto es llegar tarde a tu propia partida.
+   * Con reintento cada tres segundos por si el aviso se pierde: llegar tarde aquí es
+   * llegar tarde a tu propia partida.
    */
   useEffect(() => {
-    const pendientesMios = mandados.map((r) => r.id);
-    if (pendientesMios.length === 0) return;
+    const mios = mandados.map((r) => r.id);
 
     let cerrar: (() => void) | null = null;
     let cancelado = false;
 
-    async function alAceptar(idPartida: string | null) {
+    function alAceptar(idPartida: string | null) {
       if (idPartida) router.push(`/club/jugar/${idPartida}`);
       else router.refresh();
     }
@@ -79,28 +78,52 @@ export function Retos({
       if (cancelado) return;
       const canal = supabase
         .channel(`retos-${yo}`)
+        // Los que mando yo: me interesa cuándo los aceptan.
         .on(
           "postgres_changes",
           { event: "UPDATE", schema: "public", table: "challenges", filter: `reta_id=eq.${yo}` },
           (aviso) => {
             const f = aviso.new as { estado?: string; live_game_id?: string | null };
-            if (f.estado === "aceptado") void alAceptar(f.live_game_id ?? null);
+            if (f.estado === "aceptado") alAceptar(f.live_game_id ?? null);
             else router.refresh();
           }
+        )
+        // Los que me mandan a mí: me interesa que aparezcan sin recargar.
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "challenges", filter: `retado_id=eq.${yo}` },
+          () => router.refresh()
         )
         .subscribe();
       cerrar = () => void supabase.removeChannel(canal);
 
+      // La red de seguridad mira las dos cosas: si me han aceptado alguno, y si ha
+      // entrado alguno nuevo para mí.
       const reloj = setInterval(async () => {
-        const { data } = await supabase
+        if (mios.length > 0) {
+          const { data } = await supabase
+            .from("challenges")
+            .select("estado, live_game_id")
+            .in("id", mios)
+            .neq("estado", "pendiente");
+          const aceptado = (data ?? []).find((r) => r.estado === "aceptado");
+          if (aceptado) {
+            alAceptar(aceptado.live_game_id ?? null);
+            return;
+          }
+          if ((data ?? []).length > 0) {
+            router.refresh();
+            return;
+          }
+        }
+        const { count } = await supabase
           .from("challenges")
-          .select("estado, live_game_id")
-          .in("id", pendientesMios)
-          .neq("estado", "pendiente");
-        const aceptado = (data ?? []).find((r) => r.estado === "aceptado");
-        if (aceptado) void alAceptar(aceptado.live_game_id ?? null);
-        else if ((data ?? []).length > 0) router.refresh();
+          .select("id", { count: "exact", head: true })
+          .eq("retado_id", yo)
+          .eq("estado", "pendiente");
+        if ((count ?? 0) !== recibidos.length) router.refresh();
       }, 3000);
+
       const anterior = cerrar;
       cerrar = () => {
         clearInterval(reloj);
@@ -112,7 +135,7 @@ export function Retos({
       cancelado = true;
       cerrar?.();
     };
-  }, [mandados, router, yo]);
+  }, [mandados, recibidos.length, router, yo]);
 
   function ejecutar(accion: () => Promise<{ error?: string; id?: string }>, aPartida = false) {
     setError(null);
