@@ -75,7 +75,7 @@ export function Retos({
       else router.refresh();
     }
 
-    void clienteEnVivo().then((supabase) => {
+    void clienteEnVivo().then(({ supabase }) => {
       if (cancelado) return;
       const canal = supabase
         .channel(`retos-${yo}`)

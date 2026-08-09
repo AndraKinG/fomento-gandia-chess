@@ -28,5 +28,8 @@ export async function clienteEnVivo() {
   if (session?.access_token) {
     await supabase.realtime.setAuth(session.access_token);
   }
-  return supabase;
+  // `conSesion` se devuelve para poder DECIRLO en pantalla. Sin él, un canal que se
+  // suscribe pero no recibe nada es indistinguible de uno que funciona y no tiene
+  // novedades, que es exactamente lo que costó dos rondas averiguar.
+  return { supabase, conSesion: Boolean(session?.access_token) };
 }

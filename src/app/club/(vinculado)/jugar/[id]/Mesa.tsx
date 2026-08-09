@@ -88,6 +88,9 @@ export function Mesa({
   const [error, setError] = useState<string | null>(null);
   const [texto, setTexto] = useState("");
   const [ahora, setAhora] = useState(() => Date.now());
+  /** Estado de la conexión en vivo, para poder enseñarlo. Un canal que se suscribe
+   *  pero no recibe nada es indistinguible de uno sano y sin novedades. */
+  const [enVivo, setEnVivo] = useState<"conectando" | "si" | "no">("conectando");
   const finChat = useRef<HTMLDivElement | null>(null);
 
   const miColor: "w" | "b" | null =
@@ -104,8 +107,13 @@ export function Mesa({
     let cerrar: (() => void) | null = null;
     let cancelado = false;
 
-    void clienteEnVivo().then((supabase) => {
+    void clienteEnVivo().then(({ supabase, conSesion }) => {
       if (cancelado) return;
+      if (!conSesion) {
+        // Sin sesión el socket va como anónimo y la RLS filtra TODOS los avisos.
+        setEnVivo("no");
+        return;
+      }
       const canal = supabase
       .channel(`partida-${p.id}`)
       .on(
@@ -146,7 +154,10 @@ export function Mesa({
           );
         }
       )
-      .subscribe();
+      .subscribe((estado) => {
+        if (cancelado) return;
+        setEnVivo(estado === "SUBSCRIBED" ? "si" : estado === "CLOSED" ? "conectando" : "no");
+      });
       cerrar = () => void supabase.removeChannel(canal);
     });
 
@@ -163,6 +174,10 @@ export function Mesa({
   useEffect(() => {
     if (p.resultado !== null) return;
     const supabase = createClient();
+    // MÁS RÁPIDO CUANDO ESPERAS AL RIVAL, que es cuando la tardanza se nota: son los
+    // segundos en los que estás mirando el tablero sin poder hacer nada. Cuando te
+    // toca a ti no hay prisa, porque la novedad la vas a producir tú.
+    const cada = meToca ? 2000 : 600;
     const t = setInterval(async () => {
       const { data } = await supabase
         .from("live_games")
@@ -212,9 +227,9 @@ export function Mesa({
               }))
         );
       }
-    }, 2000);
+    }, cada);
     return () => clearInterval(t);
-  }, [p.id, p.resultado]);
+  }, [p.id, p.resultado, meToca]);
 
   // La cuenta atrás. Cada décima porque en los últimos segundos se ven décimas; en
   // cuanto la partida acaba se para, que si no sigue restando sobre un resultado.
@@ -329,6 +344,13 @@ export function Mesa({
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,32rem)_1fr]">
       <div className="space-y-2">
+        {enJuego && enVivo !== "si" && (
+          <p className="px-1 text-xs text-tinta-suave">
+            {enVivo === "conectando"
+              ? "Conectando en vivo…"
+              : "Sin conexión en vivo: las jugadas del rival tardan un segundo en aparecer."}
+          </p>
+        )}
         <Jugador nombre={nombreArriba} ms={msArriba} corriendo={enJuego && turnoArriba} />
         <Tablero
           filas={juego.board()}

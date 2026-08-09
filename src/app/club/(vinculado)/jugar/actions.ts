@@ -129,7 +129,16 @@ async function cerrarEnElTorneo(
     "Torneo del club";
   const hoy = new Date().toISOString().slice(0, 10);
 
-  const pgn = aPgn(aEstado(fila), {
+  // EL RESULTADO SE PASA A MANO. `fila` es la partida tal como estaba ANTES de
+  // cerrarla, así que su `resultado` todavía es null y el PGN salía con `[Result
+  // "*"]` y terminado en asterisco — una partida ganada guardada como inacabada.
+  // Pasó de verdad con la primera partida de prueba.
+  const estadoFinal: Estado = {
+    ...aEstado(fila),
+    resultado: resultado as Estado["resultado"],
+  };
+
+  const pgn = aPgn(estadoFinal, {
     blancas: nombre.get(fila.blancas_id) ?? "Socio",
     negras: nombre.get(fila.negras_id) ?? "Socio",
     fecha: hoy,
