@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { clienteEnVivo } from "@/lib/supabase/vivo";
 import { aceptarReto, rechazarReto } from "@/app/club/(vinculado)/jugar/actions";
 
@@ -32,6 +32,7 @@ export function Avisos({ yo }: { yo: string }) {
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [pendiente, setPendiente] = useState<string | null>(null);
   const router = useRouter();
+  const pathname = usePathname();
   /** Retos que ya se han anunciado, para no repetir la tarjeta en cada repaso. */
   const vistos = useRef(new Set<string>());
 
@@ -91,25 +92,47 @@ export function Avisos({ yo }: { yo: string }) {
         vistos.current.add(clave);
         const quien = (r.players as unknown as { nombre: string } | null)?.nombre ?? "Tu rival";
         if (r.estado === "aceptado" && r.live_game_id) {
-          router.push(`/club/jugar/${r.live_game_id}`);
+          // Segundo cinturón: si ya estás en esa mesa, no hay a dónde llevarte.
+          if (pathname !== `/club/jugar/${r.live_game_id}`) {
+            router.push(`/club/jugar/${r.live_game_id}`);
+          }
         } else if (r.estado === "rechazado") {
           informar(clave, `${quien} no acepta el reto.`);
         }
       }
     }
 
-    void clienteEnVivo().then(({ supabase }) => {
+    /**
+     * Repaso inicial SILENCIOSO: apunta como visto todo lo que ya había, sin
+     * anunciar nada ni llevar a ninguna parte.
+     *
+     * ES IMPRESCINDIBLE PARA LOS RETOS YA ACEPTADOS, y costó verlo: al recargar la
+     * página, `vistos` empieza vacío, así que el reto que aceptaste hace media hora
+     * volvía a parecer nuevo y te metía en aquella partida —ya terminada, con su
+     * ventana de resumen— como si acabara de pasar. Cada recarga, otra vez.
+     */
+    async function marcarLoQueYaHabia(
+      supabase: Awaited<ReturnType<typeof clienteEnVivo>>["supabase"]
+    ) {
+      const [{ data: paraMi }, { data: mios }] = await Promise.all([
+        supabase.from("challenges").select("id").eq("retado_id", yo).eq("estado", "pendiente"),
+        supabase
+          .from("challenges")
+          .select("id, estado")
+          .eq("reta_id", yo)
+          .neq("estado", "pendiente")
+          .order("creado_en", { ascending: false })
+          .limit(10),
+      ]);
+      for (const r of paraMi ?? []) vistos.current.add(r.id);
+      for (const r of mios ?? []) vistos.current.add(`${r.id}-${r.estado}`);
+    }
+
+    void clienteEnVivo().then(async ({ supabase }) => {
       if (cancelado) return;
-      // El primer repaso NO anuncia lo que ya estaba: solo lo apunta como visto. Si
-      // no, al entrar en la app saltarían tarjetas de retos que ya conocías.
-      void supabase
-        .from("challenges")
-        .select("id")
-        .eq("retado_id", yo)
-        .eq("estado", "pendiente")
-        .then(({ data }) => {
-          for (const r of data ?? []) vistos.current.add(r.id);
-        });
+      // Antes de escuchar nada: lo viejo es viejo.
+      await marcarLoQueYaHabia(supabase);
+      if (cancelado) return;
 
       const canal = supabase
         .channel(`avisos-${yo}`)
@@ -144,7 +167,7 @@ export function Avisos({ yo }: { yo: string }) {
       cancelado = true;
       cerrar?.();
     };
-  }, [router, yo]);
+  }, [pathname, router, yo]);
 
   if (avisos.length === 0) return null;
 
