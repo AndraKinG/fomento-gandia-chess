@@ -124,7 +124,16 @@ function useSecciones(esAdmin: boolean) {
  *
  * Se oculta por debajo de `lg` (1024 px), donde toma el relevo la barra inferior.
  */
-export function NavLateral({ esAdmin, email }: { esAdmin: boolean; email: string }) {
+export function NavLateral({
+  esAdmin,
+  email,
+  pendientes = 0,
+}: {
+  esAdmin: boolean;
+  email: string;
+  /** Retos esperando respuesta. Sale como número rojo sobre Jugar. */
+  pendientes?: number;
+}) {
   const secciones = useSecciones(esAdmin);
 
   return (
@@ -152,6 +161,11 @@ export function NavLateral({ esAdmin, email }: { esAdmin: boolean; email: string
             >
               <Icono className="h-5 w-5 shrink-0" />
               {label}
+              {href === "/club/jugar" && pendientes > 0 && (
+                <span className="ml-auto rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">
+                  {pendientes}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
@@ -200,7 +214,13 @@ export function AccesoPerfil() {
  *
  * Se oculta a partir de `lg`, donde manda la lateral.
  */
-export function NavInferior({ esAdmin }: { esAdmin: boolean }) {
+export function NavInferior({
+  esAdmin,
+  pendientes = 0,
+}: {
+  esAdmin: boolean;
+  pendientes?: number;
+}) {
   const secciones = useSecciones(esAdmin).filter((i) => i.enMovil !== false);
 
   return (
@@ -219,7 +239,16 @@ export function NavInferior({ esAdmin }: { esAdmin: boolean }) {
             activo ? "font-bold text-acento-texto" : "text-tinta-suave"
           }`}
         >
-          <Icono className="h-5 w-5 shrink-0" />
+          {/* El número va PEGADO al icono y no al lado del texto: en una pestaña de
+              70 px de ancho, cualquier cosa a la derecha del nombre lo parte. */}
+          <span className="relative">
+            <Icono className="h-5 w-5 shrink-0" />
+            {href === "/club/jugar" && pendientes > 0 && (
+              <span className="absolute -right-2 -top-1 rounded-full bg-red-600 px-1 text-[10px] font-bold leading-tight text-white">
+                {pendientes}
+              </span>
+            )}
+          </span>
           <span className="w-full truncate text-center">{label}</span>
         </Link>
       ))}

@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { PushSubscriber } from "@/components/PushSubscriber";
 import { NavLateral, NavInferior } from "@/components/Navegacion";
 import { sesionActual } from "@/lib/auth/sesion";
+import { createServerSupabase } from "@/lib/supabase/server";
+import { Avisos } from "@/components/avisos/Avisos";
 import { Asistente } from "@/components/asistente/Asistente";
 
 /**
@@ -29,10 +31,22 @@ export default async function ClubLayout({
   // En ese caso no se pinta ninguna de las dos barras.
   const conNavegacion = sesion.playerId != null || sesion.esAdmin;
 
+  // Retos esperándote, para el número rojo. Una consulta de conteo, sin filas.
+  let pendientes = 0;
+  if (sesion.playerId) {
+    const supabase = await createServerSupabase();
+    const { count } = await supabase
+      .from("challenges")
+      .select("id", { count: "exact", head: true })
+      .eq("retado_id", sesion.playerId)
+      .eq("estado", "pendiente");
+    pendientes = count ?? 0;
+  }
+
   return (
     <div className="flex flex-1">
       <PushSubscriber />
-      {conNavegacion && <NavLateral esAdmin={sesion.esAdmin} email={sesion.email} />}
+      {conNavegacion && <NavLateral esAdmin={sesion.esAdmin} email={sesion.email} pendientes={pendientes} />}
       {/* `min-w-0` es imprescindible: sin él una tabla ancha estira el flex y
           empuja el layout, en vez de desplazarse dentro de su contenedor.
           `pb-20` deja hueco para la barra inferior, que solo existe en móvil.
@@ -40,7 +54,11 @@ export default async function ClubLayout({
       <div className={`min-w-0 flex-1 ${conNavegacion ? "pb-20 lg:pb-0" : ""}`}>
         {children}
       </div>
-      {conNavegacion && <NavInferior esAdmin={sesion.esAdmin} />}
+      {conNavegacion && <NavInferior esAdmin={sesion.esAdmin} pendientes={pendientes} />}
+      {/* Los avisos van en el layout porque los retos llegan cuando llegan: si solo
+          existieran en la pantalla de Jugar, quien está mirando una partida o su
+          perfil no se enteraría. */}
+      {sesion.playerId && <Avisos yo={sesion.playerId} />}
       {/* El asistente va en el layout y no en cada pantalla: la gracia es poder
           preguntar sin salir de donde estás. Solo para quien ya tiene ficha: sin
           ella no hay nada del club que consultar y la pantalla de vincular tiene

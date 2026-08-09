@@ -216,6 +216,17 @@ export async function retar(datos: {
   const color = ["blancas", "negras", "azar"].includes(datos.color) ? datos.color : "azar";
 
   const db = createAdminClient();
+  // SE COMPRUEBA AQUÍ TAMBIÉN, y no solo escondiendo la opción en la lista: un reto
+  // a una ficha sin cuenta no lo puede aceptar nadie y se queda colgado para
+  // siempre. Esconder algo de la pantalla no es una comprobación.
+  const { data: tieneCuenta } = await db
+    .from("profiles")
+    .select("id")
+    .eq("player_id", datos.aQuien)
+    .maybeSingle();
+  if (!tieneCuenta) {
+    return { error: "Ese socio todavía no tiene cuenta en la app." };
+  }
   const { data, error } = await db
     .from("challenges")
     .insert({

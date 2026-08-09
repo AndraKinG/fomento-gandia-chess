@@ -19,7 +19,8 @@ export default async function JugarPage() {
   const supabase = await createServerSupabase();
   const yo = sesion?.playerId ?? null;
 
-  const [{ data: partidas }, { data: retos }, { data: socios }] = await Promise.all([
+  const [{ data: partidas }, { data: retos }, { data: socios }, { data: conCuenta }] =
+    await Promise.all([
     supabase
       .from("live_games")
       .select("id, blancas_id, negras_id, resultado, creada_en, base_ms, incremento_ms")
@@ -33,9 +34,14 @@ export default async function JugarPage() {
           .order("creado_en", { ascending: false })
       : Promise.resolve({ data: [] }),
     supabase.from("players").select("id, nombre").eq("activo", true).order("nombre"),
+    // SOLO SE PUEDE RETAR A QUIEN TIENE CUENTA. Las 46 fichas del orden de fuerza
+    // son socios del club, pero la mayoría todavía no se ha registrado: retar a una
+    // de ellas creaba un reto que no podía aceptar nadie y se quedaba ahí colgado.
+    supabase.from("profiles").select("player_id").not("player_id", "is", null),
   ]);
 
   const nombre = new Map((socios ?? []).map((s) => [s.id, s.nombre as string]));
+  const registrados = new Set((conCuenta ?? []).map((p) => p.player_id as string));
   const enJuego = (partidas ?? []).filter((p) => p.resultado === null);
   const mias = enJuego.filter((p) => p.blancas_id === yo || p.negras_id === yo);
   const otras = enJuego.filter((p) => p.blancas_id !== yo && p.negras_id !== yo);
@@ -94,7 +100,7 @@ export default async function JugarPage() {
                   color: r.color,
                 }))}
                 socios={(socios ?? [])
-                  .filter((s) => s.id !== yo)
+                  .filter((s) => s.id !== yo && registrados.has(s.id))
                   .map((s) => ({ id: s.id, nombre: s.nombre }))}
               />
             </div>
