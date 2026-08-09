@@ -591,17 +591,14 @@ function puntosDe(resultado: string | null): { blancas: string; negras: string }
 }
 
 /**
- * Resumen de la partida, al acabar.
+ * Lo que se cuenta de una partida acabada: quién ganó, cómo, con qué ELO jugaba
+ * cada uno y el PGN para llevársela.
  *
- * VENTANA POR ENCIMA DE TODO, y no una tarjeta más en la columna: sale UNA vez, al
- * acabar, y es el momento en que se quiere leer eso y nada más. Como tarjeta
- * quedaba mezclada con los mandos y el chat, que ya no sirven para nada.
- *
- * SE CIERRA DE TRES MANERAS —la equis, el fondo y Escape—, porque después de leerlo
- * lo normal es querer quedarse mirando la posición final, y una ventana de la que
- * cuesta salir es peor que no tenerla.
+ * VIVE APARTE porque se pinta en DOS SITIOS: la ventana que salta al terminar, y la
+ * tarjeta que se queda fija en la página. Son el mismo contenido y tienen que decir
+ * lo mismo; duplicarlo sería garantizar que un día dejan de coincidir.
  */
-function Resumen({ partida, onCerrar }: { partida: Partida; onCerrar: () => void }) {
+function ContenidoResumen({ partida }: { partida: Partida }) {
   const gana =
     partida.resultado === "1-0"
       ? partida.blancasNombre
@@ -610,6 +607,52 @@ function Resumen({ partida, onCerrar }: { partida: Partida; onCerrar: () => void
         : null;
   const puntos = puntosDe(partida.resultado);
 
+  return (
+    <>
+      <p className="text-lg font-bold text-tinta">{gana ? `Gana ${gana}` : "Tablas"}</p>
+      <p className="text-sm text-tinta-suave">
+        {partida.motivo ? (MOTIVOS[partida.motivo] ?? "").replace(/^por /, "Por ") : ""}
+        {partida.motivo ? " · " : ""}
+        {Math.round(partida.baseMs / 60_000)}+{Math.round(partida.incrementoMs / 1000)} ·{" "}
+        {partida.jugadas.length} jugadas
+      </p>
+
+      {/* EL RESULTADO, AL LADO DE CADA NOMBRE: así se lee de un vistazo quién hizo
+          qué, en vez de tener que traducir un "1-0" a personas. */}
+      <ul className="mt-3 space-y-1.5">
+        {(
+          [
+            { icono: "♙", nombre: partida.blancasNombre, elo: partida.blancasElo, punto: puntos.blancas },
+            { icono: "♟", nombre: partida.negrasNombre, elo: partida.negrasElo, punto: puntos.negras },
+          ] as const
+        ).map((j) => (
+          <li key={j.icono} className="flex items-center gap-2 rounded-xl bg-tarjeta px-3 py-2">
+            <span aria-hidden className="shrink-0 text-tinta-suave">
+              {j.icono}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-sm text-tinta">{j.nombre}</span>
+            <span className="shrink-0 text-xs tabular-nums text-tinta-suave">
+              {j.elo ?? "—"}
+            </span>
+            <span className="w-6 shrink-0 text-right font-mono text-base font-bold text-tinta">
+              {j.punto}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+/**
+ * Resumen de la partida, al acabar, EN VENTANA.
+ *
+ * Sale UNA vez, al terminar, y es el momento en que se quiere leer eso y nada más.
+ * Se cierra de tres maneras —la equis, el fondo y Escape—, porque después lo normal
+ * es querer mirar la posición final; y al cerrarla el mismo resumen se queda en la
+ * página, así que no se pierde nada.
+ */
+function Resumen({ partida, onCerrar }: { partida: Partida; onCerrar: () => void }) {
   useEffect(() => {
     const alPulsar = (e: KeyboardEvent) => {
       if (e.key === "Escape") onCerrar();
@@ -634,15 +677,7 @@ function Resumen({ partida, onCerrar }: { partida: Partida; onCerrar: () => void
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xl font-bold text-tinta">
-              {gana ? `Gana ${gana}` : "Tablas"}
-            </p>
-            <p className="text-sm text-tinta-suave">
-              {partida.motivo ? (MOTIVOS[partida.motivo] ?? "").replace(/^por /, "Por ") : ""}
-              {partida.motivo ? " · " : ""}
-              {Math.round(partida.baseMs / 60_000)}+
-              {Math.round(partida.incrementoMs / 1000)} · {partida.jugadas.length} jugadas
-            </p>
+            <ContenidoResumen partida={partida} />
           </div>
           <button
             type="button"
@@ -653,33 +688,6 @@ function Resumen({ partida, onCerrar }: { partida: Partida; onCerrar: () => void
             ✕
           </button>
         </div>
-
-        {/* EL RESULTADO, AL LADO DE CADA NOMBRE: así se lee de un vistazo quién hizo
-            qué, en vez de tener que traducir un "1-0" a personas. */}
-        <ul className="mt-4 space-y-1.5">
-          {(
-            [
-              { icono: "♙", nombre: partida.blancasNombre, elo: partida.blancasElo, punto: puntos.blancas },
-              { icono: "♟", nombre: partida.negrasNombre, elo: partida.negrasElo, punto: puntos.negras },
-            ] as const
-          ).map((j) => (
-            <li
-              key={j.icono}
-              className="flex items-center gap-2 rounded-xl bg-tarjeta-suave px-3 py-2"
-            >
-              <span aria-hidden className="shrink-0 text-tinta-suave">
-                {j.icono}
-              </span>
-              <span className="min-w-0 flex-1 truncate text-sm text-tinta">{j.nombre}</span>
-              <span className="shrink-0 text-xs tabular-nums text-tinta-suave">
-                {j.elo ?? "—"}
-              </span>
-              <span className="w-6 shrink-0 text-right font-mono text-base font-bold text-tinta">
-                {j.punto}
-              </span>
-            </li>
-          ))}
-        </ul>
 
         <div className="mt-4 flex items-center gap-2">
           <BotonCopiar texto={pgnDe(partida)} etiqueta="Copiar PGN" />
