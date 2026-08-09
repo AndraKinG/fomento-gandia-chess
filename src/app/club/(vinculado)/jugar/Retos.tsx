@@ -6,6 +6,7 @@ import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Boton } from "@/components/ui/Boton";
 import { Banner } from "@/components/ui/Banner";
 import { clienteEnVivo } from "@/lib/supabase/vivo";
+import { PuntoConectado, usePresencia } from "@/components/presencia/Presencia";
 import { aceptarReto, rechazarReto, retar } from "./actions";
 
 /**
@@ -48,6 +49,14 @@ export function Retos({
   const [error, setError] = useState<string | null>(null);
   const [pendiente, empezar] = useTransition();
   const router = useRouter();
+  const { enLinea } = usePresencia();
+
+  // LOS CONECTADOS PRIMERO. Una partida en vivo con alguien que no está delante no
+  // empieza nunca, así que la lista se ordena por quién puede aceptar ahora mismo.
+  const porRetar = [...socios].sort((a, b) => {
+    const conectado = Number(enLinea.has(b.id)) - Number(enLinea.has(a.id));
+    return conectado !== 0 ? conectado : a.nombre.localeCompare(b.nombre, "es");
+  });
 
   const recibidos = retos.filter((r) => r.retadoId === yo);
   const mandados = retos.filter((r) => r.retaId === yo);
@@ -207,18 +216,37 @@ export function Retos({
 
       <Tarjeta compacta>
         <div className="space-y-2">
-          <select
-            value={aQuien}
-            onChange={(e) => setAQuien(e.target.value)}
-            className="w-full rounded-xl border border-borde bg-tarjeta p-2.5 text-sm text-tinta"
-          >
-            <option value="">¿A quién retas?</option>
-            {socios.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.nombre}
-              </option>
-            ))}
-          </select>
+          {/* LISTA Y NO UN DESPLEGABLE, ahora que hay círculo de conectado: dentro
+              de un `select` no se puede pintar nada, y saber quién está delante es
+              justo lo que decide a quién retas. */}
+          <p className="text-xs font-semibold uppercase tracking-wide text-tinta-suave">
+            ¿A quién retas?
+          </p>
+          {porRetar.length === 0 ? (
+            <p className="text-sm text-tinta-suave">
+              Todavía no hay ningún otro socio con cuenta en la app.
+            </p>
+          ) : (
+            <ul className="max-h-48 space-y-1 overflow-y-auto">
+              {porRetar.map((s) => (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    onClick={() => setAQuien(s.id === aQuien ? "" : s.id)}
+                    aria-pressed={aQuien === s.id}
+                    className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition ${
+                      aQuien === s.id
+                        ? "bg-acento-fuerte text-sobre-acento"
+                        : "text-tinta hover:bg-tarjeta-suave"
+                    }`}
+                  >
+                    <PuntoConectado ficha={s.id} />
+                    <span className="min-w-0 flex-1 truncate">{s.nombre}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
 
           <div className="flex flex-wrap gap-1.5">
             {CADENCIAS.map((c) => (

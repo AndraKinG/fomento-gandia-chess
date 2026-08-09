@@ -8,6 +8,7 @@ import { Tablero } from "@/components/ajedrez/Tablero";
 import { Boton } from "@/components/ui/Boton";
 import { Banner } from "@/components/ui/Banner";
 import { BotonCopiar } from "@/components/ui/BotonCopiar";
+import { PuntoConectado } from "@/components/presencia/Presencia";
 import { aPgn } from "@/lib/vivo/partida";
 import { enReloj, paraPintar, trasJugada, type Reloj } from "@/lib/vivo/reloj";
 import {
@@ -412,7 +413,12 @@ export function Mesa({
               : "Sin conexión en vivo: las jugadas del rival tardan un segundo en aparecer."}
           </p>
         )}
-        <Jugador nombre={nombreArriba} ms={msArriba} corriendo={enJuego && turnoArriba} />
+        <Jugador
+          nombre={nombreArriba}
+          ficha={arriba === "blancas" ? p.blancasId : p.negrasId}
+          ms={msArriba}
+          corriendo={enJuego && turnoArriba}
+        />
         <Tablero
           filas={juego.board()}
           volteado={miColor === "b"}
@@ -432,7 +438,12 @@ export function Mesa({
           onCancelar={() => setElegida(null)}
           deshabilitado={!meToca}
         />
-        <Jugador nombre={nombreAbajo} ms={msAbajo} corriendo={enJuego && !turnoArriba} />
+        <Jugador
+          nombre={nombreAbajo}
+          ficha={arriba === "blancas" ? p.negrasId : p.blancasId}
+          ms={msAbajo}
+          corriendo={enJuego && !turnoArriba}
+        />
       </div>
 
       <div className="space-y-3">
@@ -747,16 +758,21 @@ function Confirmar({
 /** Nombre y reloj de un jugador. El reloj se resalta cuando le corre a él. */
 function Jugador({
   nombre,
+  ficha,
   ms,
   corriendo,
 }: {
   nombre: string;
+  ficha: string;
   ms: number;
   corriendo: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-borde bg-tarjeta px-3 py-2">
-      <span className="min-w-0 truncate text-sm text-tinta">{nombre}</span>
+    <div className="flex items-center gap-2 rounded-xl border border-borde bg-tarjeta px-3 py-2">
+      {/* Saber si el rival sigue ahí es lo primero que se mira cuando tarda: sin
+          esto, un abandono y un pensar largo se ven exactamente igual. */}
+      <PuntoConectado ficha={ficha} />
+      <span className="min-w-0 flex-1 truncate text-sm text-tinta">{nombre}</span>
       <span
         className={`shrink-0 rounded-lg px-2.5 py-1 font-mono text-lg tabular-nums ${
           ms <= 0
