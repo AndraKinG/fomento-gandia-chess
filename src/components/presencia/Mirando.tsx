@@ -69,13 +69,23 @@ export function Mirando({ sala, excluir = [] }: { sala: string; excluir?: string
 
   // Estar solo no es una novedad: no se enseña nada hasta que hay alguien más.
   if (otros.length === 0) return null;
+
+  // CON MUCHA GENTE, EL NÚMERO Y NO LOS NOMBRES. En una final del torneo del club
+  // pueden entrar cuarenta a mirar, y una lista de cuarenta nombres deja de ser un
+  // dato para convertirse en un párrafo. Los nombres siguen estando en el `title`.
+  if (otros.length > 4) {
+    return (
+      <p className="px-1 text-xs text-tinta-suave" title={otros.join(", ")}>
+        <span aria-hidden>👀</span> {otros.length} personas viendo esto
+      </p>
+    );
+  }
   return (
     <p
       className="px-1 text-xs text-tinta-suave"
       title={otros.join(", ")}
     >
-      <span aria-hidden>👀</span> Viendo esto: {otros.slice(0, 3).join(", ")}
-      {otros.length > 3 ? ` y ${otros.length - 3} más` : ""}
+      <span aria-hidden>👀</span> Viendo esto: {otros.join(", ")}
     </p>
   );
 }

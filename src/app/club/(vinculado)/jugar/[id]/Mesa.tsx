@@ -448,7 +448,14 @@ export function Mesa({
     // vez, cada segundo que se recorta aquí son consultas por todas ellas a la vez,
     // y el precio de un mensaje perdido es enterarse cinco segundos tarde en un caso
     // que casi no pasa.
-    const cada = 5000;
+    //
+    // QUIEN MIRA REPREGUNTA MUCHO MENOS QUE QUIEN JUEGA, y con público es lo que
+    // decide la carga: en una partida de torneo con medio club mirando, la mesa la
+    // consultan dos jugadores y cuarenta espectadores. Al que juega, quedarse
+    // colgado le cuesta la partida; al que mira, cinco segundos de retraso no le
+    // cuestan nada. Cuarenta mirones a 20 s son dos consultas por segundo en vez de
+    // ocho, y la difusión les sigue llegando igual de rápido.
+    const cada = miColor === null ? 20_000 : 5_000;
     const t = setInterval(async () => {
       const { data } = await supabase
         .from("live_games")
@@ -483,7 +490,7 @@ export function Mesa({
       }
     }, cada);
     return () => clearInterval(t);
-  }, [aplicarFila, p.id, p.resultado]);
+  }, [aplicarFila, miColor, p.id, p.resultado]);
 
   // La cuenta atrás. Cada décima porque en los últimos segundos se ven décimas; en
   // cuanto la partida acaba se para, que si no sigue restando sobre un resultado.
