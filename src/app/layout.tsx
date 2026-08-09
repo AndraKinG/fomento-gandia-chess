@@ -59,7 +59,10 @@ export default function RootLayout({
       <body className="flex min-h-full flex-col">
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{const t=localStorage.tema;const s=window.matchMedia("(prefers-color-scheme: dark)").matches;if(t==="oscuro"||(!t||t==="sistema")&&s)document.documentElement.classList.add("dark")}catch(e){}`,
+            // Sin elección guardada —o con la vieja "sistema", que ya no se ofrece— manda
+            // el sistema; con elección, manda ella. Va aquí y no en React para que no haya
+            // un parpadeo en claro antes de hidratar.
+            __html: `try{const t=localStorage.tema;const s=window.matchMedia("(prefers-color-scheme: dark)").matches;if(t==="oscuro"||(t!=="claro"&&s))document.documentElement.classList.add("dark")}catch(e){}`,
           }}
         />
         {children}

@@ -47,6 +47,7 @@ type Fila = {
   motivo: string | null;
   club_pairing_id: string | null;
   tablas_ofrecidas_por: string | null;
+  vuelta_pedida_por: string | null;
 };
 
 function aEstado(f: Fila): Estado {
@@ -78,8 +79,10 @@ function aFila(e: Estado) {
     motivo: e.motivo,
     terminada_en: e.resultado ? new Date().toISOString() : null,
     // Cualquier jugada mata una oferta de tablas viva: aceptar unas tablas que se
-    // ofrecieron hace cinco jugadas no es lo que nadie espera.
+    // ofrecieron hace cinco jugadas no es lo que nadie espera. Lo mismo con la
+    // petición de volver: si la partida ha seguido, ya no hay nada que deshacer.
     tablas_ofrecidas_por: null,
+    vuelta_pedida_por: null,
   };
 }
 
@@ -493,6 +496,75 @@ export async function aceptarTablas(partidaId: string): Promise<Respuesta> {
   });
   await cerrarEnElTorneo(mia.db, mia.fila, "1/2-1/2");
   refrescar(partidaId);
+  return {};
+}
+
+/**
+ * Pide volver la última jugada atrás.
+ *
+ * SOLO LA PUEDE PEDIR QUIEN LA HIZO, o sea el que NO tiene el turno. Es la regla que
+ * la hace justa y además la que evita el caso absurdo de pedir que se deshaga una
+ * jugada del rival.
+ *
+ * No deshace nada por sí sola: deja la petición puesta y decide el otro.
+ */
+export async function pedirVolverJugada(partidaId: string): Promise<Respuesta> {
+  const sesion = await sesionActual();
+  if (!sesion?.playerId) return { error: "No autorizado" };
+
+  const mia = await miPartida(partidaId, sesion.playerId);
+  if (!mia?.color) return { error: "Esa partida no es tuya." };
+  if (mia.fila.resultado) return { error: "Esa partida ya ha terminado." };
+  if ((mia.fila.jugadas ?? []).length === 0) return { error: "Todavía no se ha jugado nada." };
+  if (mia.fila.turno === mia.color) {
+    return { error: "Solo puedes pedir volver TU última jugada." };
+  }
+
+  await guardarYAvisar(mia.db, partidaId, { vuelta_pedida_por: sesion.playerId });
+  return {};
+}
+
+/**
+ * Responde a la petición de volver una jugada.
+ *
+ * NO PUEDE RESPONDERLA QUIEN LA PIDIÓ, igual que con las tablas: si no, cualquiera
+ * se desharía sus propias jugadas con dos clics.
+ *
+ * QUÉ PASA CON EL RELOJ al aceptar: los tiempos se quedan como están. El que pensó
+ * esos segundos los pensó, y devolvérselos abriría la puerta a ganar tiempo pidiendo
+ * volver jugadas. Lo único que se reinicia es la marca, para que el reloj empiece a
+ * correrle a quien vuelve a tener el turno.
+ */
+export async function responderVolverJugada(
+  partidaId: string,
+  acepta: boolean
+): Promise<Respuesta> {
+  const sesion = await sesionActual();
+  if (!sesion?.playerId) return { error: "No autorizado" };
+
+  const mia = await miPartida(partidaId, sesion.playerId);
+  if (!mia?.color) return { error: "Esa partida no es tuya." };
+  if (mia.fila.resultado) return { error: "Esa partida ya ha terminado." };
+
+  const quienPidio = mia.fila.vuelta_pedida_por;
+  if (!quienPidio) return { error: "Nadie ha pedido volver ninguna jugada." };
+  if (quienPidio === sesion.playerId) return { error: "La has pedido tú." };
+
+  if (!acepta) {
+    await guardarYAvisar(mia.db, partidaId, { vuelta_pedida_por: null });
+    return {};
+  }
+
+  const jugadas = [...(mia.fila.jugadas ?? [])];
+  jugadas.pop();
+  await guardarYAvisar(mia.db, partidaId, {
+    jugadas,
+    // El turno vuelve al que la hizo, que es quien la pidió.
+    turno: mia.fila.turno === "w" ? "b" : "w",
+    ultima_jugada_en: new Date().toISOString(),
+    vuelta_pedida_por: null,
+    tablas_ofrecidas_por: null,
+  });
   return {};
 }
 

@@ -16,7 +16,9 @@ import {
   aceptarTablas,
   mover,
   ofrecerTablas,
+  pedirVolverJugada,
   reclamarPorTiempo,
+  responderVolverJugada,
 } from "../actions";
 
 /**
@@ -72,6 +74,7 @@ export type Partida = {
   resultado: string | null;
   motivo: string | null;
   tablasOfrecidasPor: string | null;
+  vueltaPedidaPor: string | null;
 };
 
 export type Mensaje = { id: string; playerId: string; texto: string; creadoEn: string };
@@ -229,6 +232,7 @@ export function Mesa({
       resultado: (f.resultado as string | null) ?? null,
       motivo: (f.motivo as string | null) ?? null,
       tablasOfrecidasPor: (f.tablas_ofrecidas_por as string | null) ?? null,
+      vueltaPedidaPor: (f.vuelta_pedida_por as string | null) ?? null,
     }));
   }, []);
 
@@ -276,6 +280,7 @@ export function Mesa({
           negrasMs: tras.negrasMs,
           ultimaJugadaEn: new Date().toISOString(),
           tablasOfrecidasPor: null,
+          vueltaPedidaPor: null,
         };
       });
       setRecibidoEn(performance.now());
@@ -289,7 +294,7 @@ export function Mesa({
     const { data } = await supabase
       .from("live_games")
       .select(
-        "jugadas, turno, blancas_ms, negras_ms, ultima_jugada_en, resultado, motivo, tablas_ofrecidas_por"
+        "jugadas, turno, blancas_ms, negras_ms, ultima_jugada_en, resultado, motivo, tablas_ofrecidas_por, vuelta_pedida_por"
       )
       .eq("id", inicial.id)
       .maybeSingle();
@@ -409,7 +414,7 @@ export function Mesa({
       const { data } = await supabase
         .from("live_games")
         .select(
-          "jugadas, turno, blancas_ms, negras_ms, ultima_jugada_en, resultado, motivo, tablas_ofrecidas_por"
+          "jugadas, turno, blancas_ms, negras_ms, ultima_jugada_en, resultado, motivo, tablas_ofrecidas_por, vuelta_pedida_por"
         )
         .eq("id", p.id)
         .maybeSingle();
@@ -606,6 +611,11 @@ export function Mesa({
 
   const meOfrecenTablas =
     enJuego && p.tablasOfrecidasPor !== null && p.tablasOfrecidasPor !== yo && miColor !== null;
+  const mePidenVolver =
+    enJuego && p.vueltaPedidaPor !== null && p.vueltaPedidaPor !== yo && miColor !== null;
+  // Volver una jugada solo la pide quien la hizo, o sea el que NO tiene el turno.
+  const puedoPedirVolver =
+    enJuego && miColor !== null && !meToca && p.jugadas.length > 0 && p.vueltaPedidaPor === null;
 
   return (
     <>
@@ -672,16 +682,29 @@ export function Mesa({
         )}
 
         {meOfrecenTablas && (
-          <Banner tipo="aviso">
-            Te ofrecen tablas.{" "}
-            <button
-              type="button"
-              onClick={() => void aceptarTablas(p.id)}
-              className="font-semibold underline"
-            >
-              Aceptar
-            </button>
-          </Banner>
+          <Oferta
+            icono="½"
+            titulo="Te ofrecen tablas"
+            detalle="Si aceptas, la partida acaba en empate."
+            onAceptar={() => void aceptarTablas(p.id)}
+            onRechazar={() => void ofrecerTablas(p.id)}
+          />
+        )}
+
+        {mePidenVolver && (
+          <Oferta
+            icono="↩"
+            titulo="Quiere volver su última jugada"
+            detalle="Suele ser un dedo mal puesto. Si aceptas, se deshace y le vuelve el turno; el tiempo gastado no se devuelve."
+            onAceptar={() => void responderVolverJugada(p.id, true)}
+            onRechazar={() => void responderVolverJugada(p.id, false)}
+          />
+        )}
+
+        {p.vueltaPedidaPor === yo && enJuego && (
+          <p className="rounded-xl bg-tarjeta-suave px-3 py-2 text-sm text-tinta-suave">
+            Has pedido volver tu jugada. Esperando a que conteste.
+          </p>
         )}
         {error && <Banner tipo="error">{error}</Banner>}
 
@@ -702,6 +725,17 @@ export function Mesa({
               seguro="¿Seguro? Abandonar"
               onConfirmar={() => void abandonar(p.id)}
             />
+            {/* Volver la jugada no pide confirmación: no rompe nada, lo decide el
+                rival, y pedirla sin querer solo cuesta un "no". */}
+            {puedoPedirVolver && (
+              <Boton
+                variante="secundario"
+                className="px-3 py-1.5 text-sm"
+                onClick={() => void pedirVolverJugada(p.id)}
+              >
+                Volver jugada
+              </Boton>
+            )}
             {/* Solo cuando de verdad se le ha acabado al rival: el servidor lo
                 vuelve a comprobar, pero enseñar el botón antes de tiempo confunde. */}
             {!meToca && msArriba <= 0 && (
@@ -929,6 +963,53 @@ function Resumen({ partida, onCerrar }: { partida: Partida; onCerrar: () => void
             Ver el tablero
           </Boton>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Lo que el rival te propone: tablas, volver una jugada.
+ *
+ * TARJETA Y NO UNA LÍNEA DE TEXTO con un enlace subrayado, que es como estaba. Esto
+ * interrumpe una partida con el reloj corriendo: tiene que verse de un vistazo qué
+ * te piden y qué pasa si dices que sí, y las dos respuestas tienen que estar ahí
+ * mismo. Antes solo se podía aceptar, y para decir que no había que ignorarlo.
+ */
+function Oferta({
+  icono,
+  titulo,
+  detalle,
+  onAceptar,
+  onRechazar,
+}: {
+  icono: string;
+  titulo: string;
+  detalle: string;
+  onAceptar: () => void;
+  onRechazar: () => void;
+}) {
+  return (
+    <div className="entra-abajo rounded-2xl border border-borde-acento bg-tarjeta-suave p-3">
+      <div className="flex items-start gap-3">
+        <span
+          aria-hidden
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-acento-fuerte text-lg font-bold text-sobre-acento"
+        >
+          {icono}
+        </span>
+        <div className="min-w-0">
+          <p className="font-semibold text-tinta">{titulo}</p>
+          <p className="text-sm text-tinta-suave">{detalle}</p>
+        </div>
+      </div>
+      <div className="mt-3 flex gap-2">
+        <Boton variante="solido" className="flex-1 px-3 py-1.5 text-sm" onClick={onAceptar}>
+          Aceptar
+        </Boton>
+        <Boton variante="secundario" className="px-3 py-1.5 text-sm" onClick={onRechazar}>
+          No
+        </Boton>
       </div>
     </div>
   );

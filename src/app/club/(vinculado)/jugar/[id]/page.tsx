@@ -24,7 +24,7 @@ export default async function PartidaEnVivoPage({
   const { data: fila } = await supabase
     .from("live_games")
     .select(
-      "id, blancas_id, negras_id, jugadas, turno, blancas_ms, negras_ms, base_ms, incremento_ms, ultima_jugada_en, resultado, motivo, tablas_ofrecidas_por, origen"
+      "id, blancas_id, negras_id, jugadas, turno, blancas_ms, negras_ms, base_ms, incremento_ms, ultima_jugada_en, resultado, motivo, tablas_ofrecidas_por, vuelta_pedida_por, origen"
     )
     .eq("id", id)
     .maybeSingle();
@@ -69,6 +69,7 @@ export default async function PartidaEnVivoPage({
     resultado: fila.resultado,
     motivo: fila.motivo,
     tablasOfrecidasPor: fila.tablas_ofrecidas_por,
+    vueltaPedidaPor: fila.vuelta_pedida_por,
   };
 
   const mensajes: Mensaje[] = (chat ?? []).map((m) => ({

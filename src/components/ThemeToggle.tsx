@@ -2,70 +2,94 @@
 
 import { useSyncExternalStore } from "react";
 
-type Tema = "sistema" | "claro" | "oscuro";
-const ORDEN: Tema[] = ["sistema", "claro", "oscuro"];
-const ETIQUETA: Record<Tema, string> = {
-  sistema: "🌗 Tema: sistema",
-  claro: "☀️ Tema: claro",
-  oscuro: "🌙 Tema: oscuro",
-};
+/**
+ * Elegir tema: claro u oscuro, y nada más.
+ *
+ * SE QUITÓ "SISTEMA" por decisión del propietario. Como opción tenía un problema:
+ * quien la llevaba puesta veía cambiar la app sola al anochecer sin haber tocado
+ * nada, y eso desconcierta más de lo que ayuda en una app de club. Ahora la
+ * preferencia del sistema decide cuál se usa la PRIMERA vez, que es donde de verdad
+ * aporta, y a partir de ahí manda lo que elija el socio.
+ *
+ * DOS BOTONES Y NO UNO QUE CICLA: con tres opciones ciclar tenía sentido; con dos,
+ * ver las dos y pulsar la que quieres es más directo y dice en qué estado estás sin
+ * tener que leer la etiqueta.
+ */
+
+type Tema = "claro" | "oscuro";
 const EVENTO_TEMA = "tema-cambiado";
 
 function aplicar(tema: Tema) {
-  const oscuroSistema = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const oscuro = tema === "oscuro" || (tema === "sistema" && oscuroSistema);
-  document.documentElement.classList.toggle("dark", oscuro);
+  document.documentElement.classList.toggle("dark", tema === "oscuro");
 }
 
 // El tema vive en `localStorage` (estado externo a React), así que se lee con
-// `useSyncExternalStore`: el servidor no tiene `localStorage` y siempre
-// "ve" el snapshot `leerTemaServidor` ("sistema"); tras hidratar, React vuelve
-// a pedir el snapshot real (`leerTema`) y re-renderiza si difiere. A
-// diferencia de un `useState` con inicializador perezoso + `suppressHydrationWarning`,
-// esto sí actualiza el DOM de forma fiable (sin dejar el botón "congelado"
-// mostrando "sistema" para siempre tras recargar con un tema guardado), y sin
-// llamar a `setState` dentro de un efecto.
+// `useSyncExternalStore`: el servidor no tiene `localStorage` y siempre "ve" el
+// snapshot de servidor; tras hidratar, React vuelve a pedir el real y re-renderiza
+// si difiere. Con un `useState` + inicializador perezoso el botón se quedaba
+// congelado tras recargar con un tema guardado.
 function leerTema(): Tema {
-  return (localStorage.getItem("tema") as Tema | null) ?? "sistema";
+  const guardado = localStorage.getItem("tema");
+  if (guardado === "claro" || guardado === "oscuro") return guardado;
+  // Sin elección previa manda el sistema, que es la mejor primera impresión. En
+  // cuanto se toca un botón, se guarda y ya no cambia solo nunca más.
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "oscuro" : "claro";
 }
 
 function leerTemaServidor(): Tema {
-  return "sistema";
+  return "claro";
 }
 
 function suscribir(cb: () => void) {
-  const mediaOscuro = window.matchMedia("(prefers-color-scheme: dark)");
-  // Cuando el SO cambia de tema (modo "sistema") o cambia `localStorage`
-  // (otra pestaña / el propio ciclado), hay que reaplicar la clase `.dark`,
-  // no solo notificar a React: `leerTema()` no cambia de valor en el caso
-  // "sistema", así que `useSyncExternalStore` no re-renderizaría el botón,
-  // pero el DOM sí necesita la actualización visual.
   const notificar = () => {
     aplicar(leerTema());
     cb();
   };
+  // `storage` para cuando se cambia en otra pestaña; el evento propio para el
+  // cambio de esta misma.
   window.addEventListener("storage", notificar);
   window.addEventListener(EVENTO_TEMA, notificar);
-  mediaOscuro.addEventListener("change", notificar);
   return () => {
     window.removeEventListener("storage", notificar);
     window.removeEventListener(EVENTO_TEMA, notificar);
-    mediaOscuro.removeEventListener("change", notificar);
   };
 }
 
 export function ThemeToggle() {
   const tema = useSyncExternalStore(suscribir, leerTema, leerTemaServidor);
-  function ciclar() {
-    const siguiente = ORDEN[(ORDEN.indexOf(tema) + 1) % ORDEN.length];
-    localStorage.setItem("tema", siguiente);
-    aplicar(siguiente);
+
+  function elegir(nuevo: Tema) {
+    localStorage.setItem("tema", nuevo);
+    aplicar(nuevo);
     window.dispatchEvent(new Event(EVENTO_TEMA));
   }
+
   return (
-    <button onClick={ciclar}
-      className="rounded-xl border border-borde bg-tarjeta px-4 py-2 text-sm text-tinta">
-      {ETIQUETA[tema]}
-    </button>
+    <div
+      role="group"
+      aria-label="Tema de la aplicación"
+      className="inline-flex gap-1 rounded-xl border border-borde bg-tarjeta p-1"
+    >
+      {(
+        [
+          { valor: "claro", etiqueta: "Claro", icono: "☀️" },
+          { valor: "oscuro", etiqueta: "Oscuro", icono: "🌙" },
+        ] as const
+      ).map((o) => (
+        <button
+          key={o.valor}
+          type="button"
+          onClick={() => elegir(o.valor)}
+          aria-pressed={tema === o.valor}
+          className={`rounded-lg px-3 py-1.5 text-sm transition duration-100 ${
+            tema === o.valor
+              ? "bg-acento-fuerte font-semibold text-sobre-acento"
+              : "text-tinta hover:bg-tarjeta-suave"
+          }`}
+        >
+          <span aria-hidden>{o.icono}</span> {o.etiqueta}
+        </button>
+      ))}
+    </div>
   );
 }
