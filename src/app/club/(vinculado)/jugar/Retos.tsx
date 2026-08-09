@@ -7,6 +7,7 @@ import { Boton } from "@/components/ui/Boton";
 import { Banner } from "@/components/ui/Banner";
 import { clienteEnVivo } from "@/lib/supabase/vivo";
 import { PuntoConectado, usePresencia } from "@/components/presencia/Presencia";
+import { claveNombre } from "@/lib/import/cruzar-nombres";
 import { aceptarReto, rechazarReto, retar } from "./actions";
 
 /**
@@ -44,6 +45,7 @@ export function Retos({
   socios: { id: string; nombre: string }[];
 }) {
   const [aQuien, setAQuien] = useState("");
+  const [busca, setBusca] = useState("");
   const [cadencia, setCadencia] = useState(CADENCIAS[1]);
   const [color, setColor] = useState("azar");
   const [error, setError] = useState<string | null>(null);
@@ -53,10 +55,23 @@ export function Retos({
 
   // LOS CONECTADOS PRIMERO. Una partida en vivo con alguien que no está delante no
   // empieza nunca, así que la lista se ordena por quién puede aceptar ahora mismo.
-  const porRetar = [...socios].sort((a, b) => {
+  const ordenados = [...socios].sort((a, b) => {
     const conectado = Number(enLinea.has(b.id)) - Number(enLinea.has(a.id));
     return conectado !== 0 ? conectado : a.nombre.localeCompare(b.nombre, "es");
   });
+
+  // EL BUSCADOR SOLO CUANDO HACE FALTA. Con cuatro socios registrados estorba; con
+  // los 46 del club, bajar la lista buscando un nombre es peor que escribirlo. El
+  // corte está donde la lista deja de verse de un vistazo.
+  const conBuscador = socios.length > 8;
+  const pedido = claveNombre(busca).split(" ").filter(Boolean);
+  const porRetar =
+    pedido.length === 0
+      ? ordenados
+      : ordenados.filter((s) => {
+          const palabras = claveNombre(s.nombre).split(" ");
+          return pedido.every((q) => palabras.some((w) => w.startsWith(q)));
+        });
 
   const recibidos = retos.filter((r) => r.retadoId === yo);
   const mandados = retos.filter((r) => r.retaId === yo);
@@ -222,9 +237,21 @@ export function Retos({
           <p className="text-xs font-semibold uppercase tracking-wide text-tinta-suave">
             ¿A quién retas?
           </p>
+          {conBuscador && (
+            <input
+              type="search"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar por nombre…"
+              autoComplete="off"
+              className="w-full rounded-xl border border-borde bg-tarjeta px-3 py-2 text-sm text-tinta placeholder:text-tinta-suave"
+            />
+          )}
           {porRetar.length === 0 ? (
             <p className="text-sm text-tinta-suave">
-              Todavía no hay ningún otro socio con cuenta en la app.
+              {socios.length === 0
+                ? "Todavía no hay ningún otro socio con cuenta en la app."
+                : `Ningún nombre cuadra con «${busca}».`}
             </p>
           ) : (
             <ul className="max-h-48 space-y-1 overflow-y-auto">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Chess } from "chess.js";
 import { createClient } from "@/lib/supabase/client";
 import { clienteEnVivo } from "@/lib/supabase/vivo";
@@ -120,6 +120,29 @@ export function Mesa({
 
   // TIEMPO REAL: la fila entera llega en cada cambio (`replica identity full` en la
   // migración 0022), así que la jugada del rival aparece sola, sin recargar.
+  /**
+   * Aplica una fila que llega de fuera, venga de la difusión o del reintento.
+   *
+   * La guarda de jugadas viejas está AQUÍ y no en cada sitio: dos copias de la misma
+   * regla acaban separándose, y esta es la que impide que la pieza rebote.
+   */
+  const aplicarFila = useCallback((f: Record<string, unknown>) => {
+    const cuantas = ((f.jugadas as string[]) ?? []).length;
+    if (cuantas < jugadasFirmes.current && !f.resultado) return;
+    jugadasFirmes.current = cuantas;
+    setP((antes) => ({
+      ...antes,
+      jugadas: (f.jugadas as string[]) ?? [],
+      turno: f.turno as "w" | "b",
+      blancasMs: f.blancas_ms as number,
+      negrasMs: f.negras_ms as number,
+      ultimaJugadaEn: (f.ultima_jugada_en as string | null) ?? null,
+      resultado: (f.resultado as string | null) ?? null,
+      motivo: (f.motivo as string | null) ?? null,
+      tablasOfrecidasPor: (f.tablas_ofrecidas_por as string | null) ?? null,
+    }));
+  }, []);
+
   useEffect(() => {
     // El canal se monta DENTRO de una promesa porque hay que poner el token del
     // usuario en el socket antes de suscribir: sin él, la RLS filtra todos los
@@ -136,28 +159,18 @@ export function Mesa({
       }
       const canal = supabase
       .channel(`partida-${p.id}`)
+      // DIFUSIÓN: es la que de verdad trae las jugadas. Los avisos de tabla de más
+      // abajo se quedan por si algún día empiezan a llegar, pero no se depende de
+      // ellos — ver `src/lib/vivo/difundir.ts`.
+      .on("broadcast", { event: "cambio" }, (mensaje) => {
+        const f = (mensaje.payload as { fila?: Record<string, unknown> })?.fila;
+        if (!f) return;
+        aplicarFila(f);
+      })
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "live_games", filter: `id=eq.${p.id}` },
-        (aviso) => {
-          const f = aviso.new as Record<string, unknown>;
-          const cuantas = ((f.jugadas as string[]) ?? []).length;
-          // Un aviso con menos jugadas de las que ya damos por hechas es viejo; la
-          // única excepción es el final de la partida, que hay que atender siempre.
-          if (cuantas < jugadasFirmes.current && !f.resultado) return;
-          jugadasFirmes.current = cuantas;
-          setP((antes) => ({
-            ...antes,
-            jugadas: (f.jugadas as string[]) ?? [],
-            turno: f.turno as "w" | "b",
-            blancasMs: f.blancas_ms as number,
-            negrasMs: f.negras_ms as number,
-            ultimaJugadaEn: (f.ultima_jugada_en as string | null) ?? null,
-            resultado: (f.resultado as string | null) ?? null,
-            motivo: (f.motivo as string | null) ?? null,
-            tablasOfrecidasPor: (f.tablas_ofrecidas_por as string | null) ?? null,
-          }));
-        }
+        (aviso) => aplicarFila(aviso.new as Record<string, unknown>)
       )
       .on(
         "postgres_changes",
@@ -190,7 +203,7 @@ export function Mesa({
       cancelado = true;
       cerrar?.();
     };
-  }, [p.id]);
+  }, [aplicarFila, p.id]);
 
   // RED DE SEGURIDAD del tiempo real: se recarga la fila cada dos segundos mientras
   // la partida está viva. Si el aviso llegó, esto no cambia nada; si se perdió,
@@ -199,10 +212,10 @@ export function Mesa({
   useEffect(() => {
     if (p.resultado !== null) return;
     const supabase = createClient();
-    // MÁS RÁPIDO CUANDO ESPERAS AL RIVAL, que es cuando la tardanza se nota: son los
-    // segundos en los que estás mirando el tablero sin poder hacer nada. Cuando te
-    // toca a ti no hay prisa, porque la novedad la vas a producir tú.
-    const cada = meToca ? 2000 : 400;
+    // Con la difusión funcionando esto vuelve a ser lo que debe ser: una red, no el
+    // motor. Se deja algo más corto mientras esperas al rival por si un mensaje se
+    // pierde, pero ya no es lo que marca el ritmo de la partida.
+    const cada = meToca ? 3000 : 1500;
     const t = setInterval(async () => {
       const { data } = await supabase
         .from("live_games")
@@ -447,6 +460,14 @@ export function Mesa({
       </div>
 
       <div className="space-y-3">
+        {/* El resumen SE QUEDA en la página cuando la partida acaba. La ventana sale
+            una vez y se cierra, y sin esto una partida terminada no decía en ningún
+            sitio cómo había acabado: había que deducirlo del tablero. */}
+        {p.resultado && (
+          <div className="rounded-2xl border border-borde-acento bg-tarjeta-suave p-4">
+            <ContenidoResumen partida={p} />
+          </div>
+        )}
 
         {meOfrecenTablas && (
           <Banner tipo="aviso">

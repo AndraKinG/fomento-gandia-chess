@@ -14,6 +14,7 @@ import { relojInicial } from "@/lib/vivo/reloj";
 import { blancasEnAmistosa } from "@/lib/vivo/colores";
 import { aPgn } from "@/lib/vivo/partida";
 import { enviarPushAMuchos } from "@/lib/push/send";
+import { difundirPartida } from "@/lib/vivo/difundir";
 
 /**
  * Todo lo que cambia una partida en vivo.
@@ -183,6 +184,27 @@ async function cerrarEnElTorneo(
 function refrescar(id: string): void {
   revalidatePath("/club/jugar");
   revalidatePath(`/club/jugar/${id}`);
+}
+
+/**
+ * Guarda el cambio y AVISA a la mesa por difusión.
+ *
+ * Las dos cosas juntas y en una sola función para que no se pueda escribir un
+ * cambio sin avisarlo: cada vez que eso pasara, los dos jugadores se quedarían
+ * esperando al reintento sin saber por qué.
+ */
+async function guardarYAvisar(
+  db: ReturnType<typeof createAdminClient>,
+  partidaId: string,
+  cambio: Record<string, unknown>
+): Promise<void> {
+  const { data } = await db
+    .from("live_games")
+    .update(cambio)
+    .eq("id", partidaId)
+    .select("*")
+    .maybeSingle();
+  if (data) await difundirPartida(partidaId, data as Record<string, unknown>);
 }
 
 /** Carga la partida y dice de qué color juega esta persona, o null si no es suya. */
@@ -384,13 +406,13 @@ export async function mover(partidaId: string, jugada: Jugada): Promise<Respuest
   // bandera, la derrota se guarda igual. Por eso el estado se escribe si viene.
   if (!r.ok) {
     if (r.estado) {
-      await mia.db.from("live_games").update(aFila(r.estado)).eq("id", partidaId);
+      await guardarYAvisar(mia.db, partidaId, aFila(r.estado));
       refrescar(partidaId);
     }
     return { error: r.error };
   }
 
-  await mia.db.from("live_games").update(aFila(r.estado)).eq("id", partidaId);
+  await guardarYAvisar(mia.db, partidaId, aFila(r.estado));
   if (r.estado.resultado) {
     await cerrarEnElTorneo(
       mia.db,
@@ -412,15 +434,12 @@ export async function abandonar(partidaId: string): Promise<Respuesta> {
   if (mia.fila.resultado) return { error: "Esa partida ya ha terminado." };
 
   const fin = finPorAbandono(mia.color);
-  await mia.db
-    .from("live_games")
-    .update({
-      resultado: fin.resultado,
-      motivo: fin.motivo,
-      terminada_en: new Date().toISOString(),
-      tablas_ofrecidas_por: null,
-    })
-    .eq("id", partidaId);
+  await guardarYAvisar(mia.db, partidaId, {
+    resultado: fin.resultado,
+    motivo: fin.motivo,
+    terminada_en: new Date().toISOString(),
+    tablas_ofrecidas_por: null,
+  });
   await cerrarEnElTorneo(mia.db, mia.fila, fin.resultado);
   refrescar(partidaId);
   return {};
@@ -441,10 +460,9 @@ export async function ofrecerTablas(partidaId: string): Promise<Respuesta> {
   if (mia.fila.resultado) return { error: "Esa partida ya ha terminado." };
 
   const yaLasOfreci = mia.fila.tablas_ofrecidas_por === sesion.playerId;
-  await mia.db
-    .from("live_games")
-    .update({ tablas_ofrecidas_por: yaLasOfreci ? null : sesion.playerId })
-    .eq("id", partidaId);
+  await guardarYAvisar(mia.db, partidaId, {
+    tablas_ofrecidas_por: yaLasOfreci ? null : sesion.playerId,
+  });
   refrescar(partidaId);
   return {};
 }
@@ -467,15 +485,12 @@ export async function aceptarTablas(partidaId: string): Promise<Respuesta> {
   if (!ofrecidasPor) return { error: "Nadie ha ofrecido tablas." };
   if (ofrecidasPor === sesion.playerId) return { error: "Las has ofrecido tú." };
 
-  await mia.db
-    .from("live_games")
-    .update({
-      resultado: "1/2-1/2",
-      motivo: "tablas-acordadas",
-      terminada_en: new Date().toISOString(),
-      tablas_ofrecidas_por: null,
-    })
-    .eq("id", partidaId);
+  await guardarYAvisar(mia.db, partidaId, {
+    resultado: "1/2-1/2",
+    motivo: "tablas-acordadas",
+    terminada_en: new Date().toISOString(),
+    tablas_ofrecidas_por: null,
+  });
   await cerrarEnElTorneo(mia.db, mia.fila, "1/2-1/2");
   refrescar(partidaId);
   return {};
@@ -498,7 +513,7 @@ export async function reclamarPorTiempo(partidaId: string): Promise<Respuesta> {
   const cerrada = reclamarTiempo(aEstado(mia.fila), Date.now());
   if (!cerrada) return { error: "Al rival todavía le queda tiempo." };
 
-  await mia.db.from("live_games").update(aFila(cerrada)).eq("id", partidaId);
+  await guardarYAvisar(mia.db, partidaId, aFila(cerrada));
   if (cerrada.resultado) await cerrarEnElTorneo(mia.db, mia.fila, cerrada.resultado);
   refrescar(partidaId);
   return {};
