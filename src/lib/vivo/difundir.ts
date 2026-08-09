@@ -91,3 +91,40 @@ export async function difundirChat(partidaId: string, mensaje: Difusion): Promis
     // Silencio a propósito: el reintento del navegador lo recogerá igual.
   }
 }
+
+/**
+ * Avisar a UNA PERSONA de que algo ha pasado con un reto suyo.
+ *
+ * Mismo camino que la difusión de la mesa y por el mismo motivo: escuchar la tabla
+ * `challenges` con `postgres_changes` obligaba a esperar al reintento, y aceptar un
+ * reto es justo el momento en el que esperar cinco segundos se nota —el que aceptó
+ * ya está en el tablero y el que retó sigue mirando la lista.
+ *
+ * El canal lleva la FICHA de quien tiene que enterarse, así que un aviso solo llega
+ * a quien va dirigido. No viaja ningún dato: solo "mira otra vez, que hay novedad",
+ * y quien escucha lo consulta con su propia sesión y su propia RLS.
+ */
+export async function difundirAviso(
+  playerId: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const clave = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !clave) return;
+
+  try {
+    await fetch(`${url}/realtime/v1/api/broadcast`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        apikey: clave,
+        Authorization: `Bearer ${clave}`,
+      },
+      body: JSON.stringify({
+        messages: [{ topic: `avisos-${playerId}`, event: "reto", payload }],
+      }),
+    });
+  } catch {
+    // Silencio a propósito: el reintento del navegador lo recogerá igual.
+  }
+}

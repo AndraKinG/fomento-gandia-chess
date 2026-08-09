@@ -5,6 +5,7 @@ import { sesionActual } from "@/lib/auth/sesion";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { Avisos } from "@/components/avisos/Avisos";
 import { ProveedorPresencia } from "@/components/presencia/Presencia";
+import { ProveedorPendientes } from "@/components/avisos/Pendientes";
 import { Asistente } from "@/components/asistente/Asistente";
 
 /**
@@ -33,6 +34,9 @@ export default async function ClubLayout({
   const conNavegacion = sesion.playerId != null || sesion.esAdmin;
 
   // Retos esperándote, para el número rojo. Una consulta de conteo, sin filas.
+  // Es solo el VALOR DE PARTIDA: a partir de aquí lo lleva `Avisos`, que está
+  // escuchando. Este número lo pinta el servidor y se quedaría congelado hasta la
+  // siguiente navegación, que es por lo que el aviso aparecía tarde.
   let pendientes = 0;
   if (sesion.playerId) {
     const supabase = await createServerSupabase();
@@ -46,9 +50,10 @@ export default async function ClubLayout({
 
   return (
     <ProveedorPresencia yo={sesion.playerId} nombre={sesion.nombre}>
+    <ProveedorPendientes inicial={pendientes}>
     <div className="flex flex-1">
       <PushSubscriber />
-      {conNavegacion && <NavLateral esAdmin={sesion.esAdmin} email={sesion.email} pendientes={pendientes} />}
+      {conNavegacion && <NavLateral esAdmin={sesion.esAdmin} email={sesion.email} />}
       {/* `min-w-0` es imprescindible: sin él una tabla ancha estira el flex y
           empuja el layout, en vez de desplazarse dentro de su contenedor.
           `pb-20` deja hueco para la barra inferior, que solo existe en móvil.
@@ -56,7 +61,7 @@ export default async function ClubLayout({
       <div className={`min-w-0 flex-1 ${conNavegacion ? "pb-20 lg:pb-0" : ""}`}>
         {children}
       </div>
-      {conNavegacion && <NavInferior esAdmin={sesion.esAdmin} pendientes={pendientes} />}
+      {conNavegacion && <NavInferior esAdmin={sesion.esAdmin} />}
       {/* Los avisos van en el layout porque los retos llegan cuando llegan: si solo
           existieran en la pantalla de Jugar, quien está mirando una partida o su
           perfil no se enteraría. */}
@@ -67,6 +72,7 @@ export default async function ClubLayout({
           que quedarse sin distracciones. */}
       {sesion.playerId != null && <Asistente />}
     </div>
+    </ProveedorPendientes>
     </ProveedorPresencia>
   );
 }

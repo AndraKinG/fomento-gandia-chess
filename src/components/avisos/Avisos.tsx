@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { clienteEnVivo } from "@/lib/supabase/vivo";
 import { aceptarReto, rechazarReto } from "@/app/club/(vinculado)/jugar/actions";
+import { usePendientes } from "./Pendientes";
 
 /**
  * Avisos de la app, en una tarjeta que sale abajo.
@@ -20,21 +21,56 @@ import { aceptarReto, rechazarReto } from "@/app/club/(vinculado)/jugar/actions"
  * - Te lo cancelan o rechazan → se dice, porque antes el reto desaparecía de la
  *   lista sin explicación y parecía que se hubiera perdido.
  *
+ * POR DIFUSIÓN, NO ESCUCHANDO LA TABLA. La primera versión escuchaba `challenges`
+ * con `postgres_changes` y no llegaba nada: aplica la RLS al que escucha y algo de
+ * nuestras políticas lo dejaba fuera, así que todo se sostenía con el repaso cada
+ * cinco segundos — de ahí que aceptar un reto tardara en meter al otro en la partida
+ * y que el número rojo apareciera tarde. Ahora el servidor manda un mensaje al canal
+ * `avisos-<ficha>` y el repaso se queda de red de seguridad.
+ *
+ * LAS TARJETAS SE VAN SOLAS a los cinco segundos, también las que traen botones: lo
+ * que queda de un reto sin contestar es el número rojo del menú, y desde ahí se
+ * llega a Jugar, que es donde vive la lista entera.
+ *
  * ABAJO Y NO ARRIBA: en el móvil el pulgar vive abajo, y arriba está la cabecera.
  * Va por encima de la barra de navegación para no taparla.
  */
 
 type Aviso =
-  | { tipo: "reto"; id: string; de: string; cadencia: string }
+  | { tipo: "reto"; id: string; de: string; cadencia: string; color: string }
   | { tipo: "info"; id: string; texto: string };
+
+/** Lo que pidió quien reta, dicho para quien lo recibe. */
+function textoColor(color: string): string {
+  if (color === "blancas") return "Quiere llevar blancas.";
+  if (color === "negras") return "Quiere llevar negras.";
+  return "El color se sortea.";
+}
 
 export function Avisos({ yo }: { yo: string }) {
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [pendiente, setPendiente] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
+  const { poner } = usePendientes();
   /** Retos que ya se han anunciado, para no repetir la tarjeta en cada repaso. */
   const vistos = useRef(new Set<string>());
+
+  /**
+   * Lo que cambia y no debe volver a montar el canal.
+   *
+   * El canal se abre UNA VEZ por sesión: tenerlo colgando de `pathname` lo cerraba y
+   * lo volvía a abrir en cada navegación, y en esos milisegundos de reconexión es
+   * cuando se pierde justo el aviso que importa.
+   */
+  const donde = useRef(pathname);
+  const ir = useRef(router);
+  const anotar = useRef(poner);
+  useEffect(() => {
+    donde.current = pathname;
+    ir.current = router;
+    anotar.current = poner;
+  }, [pathname, router, poner]);
 
   function quitar(id: string) {
     setAvisos((a) => a.filter((x) => x.id !== id));
@@ -44,39 +80,74 @@ export function Avisos({ yo }: { yo: string }) {
     let cerrar: (() => void) | null = null;
     let cancelado = false;
 
-    /** Aviso que no hay que responder: se va solo, porque no hay nada que decidir
-     *  y dejarlo puesto acaba tapando media pantalla. */
+    /** Un aviso dura cinco segundos: lo que se tarda en leer una línea sin que
+     *  estorbe. Lo que tenga que quedar, queda en el menú y en Jugar. */
+    function seVaSolo(id: string) {
+      setTimeout(() => setAvisos((a) => a.filter((x) => x.id !== id)), 5000);
+    }
+
     function informar(id: string, texto: string) {
       setAvisos((a) => (a.some((x) => x.id === id) ? a : [...a, { tipo: "info", id, texto }]));
-      // Cinco segundos: lo que pidió el propietario y lo que tarda en leerse una
-      // línea sin que estorbe. Los que piden respuesta NO se van solos.
-      setTimeout(() => setAvisos((a) => a.filter((x) => x.id !== id)), 5000);
+      seVaSolo(id);
     }
 
     /** Mira si hay algo nuevo. Sirve de red de seguridad y de primer repaso. */
     async function repasar(supabase: Awaited<ReturnType<typeof clienteEnVivo>>["supabase"]) {
       const { data: paraMi } = await supabase
         .from("challenges")
-        .select("id, base_min, incremento_s, reta_id, players:reta_id(nombre)")
+        .select("id, base_min, incremento_s, color, reta_id, players:reta_id(nombre)")
         .eq("retado_id", yo)
         .eq("estado", "pendiente");
 
+      // El número rojo del menú sale de aquí: es la misma cuenta y así no puede
+      // discrepar de las tarjetas.
+      anotar.current((paraMi ?? []).length);
+
+      let novedad = false;
       for (const r of paraMi ?? []) {
         if (vistos.current.has(r.id)) continue;
         vistos.current.add(r.id);
+        novedad = true;
         const de = (r.players as unknown as { nombre: string } | null)?.nombre ?? "Un socio";
         setAvisos((a) =>
           a.some((x) => x.id === r.id)
             ? a
-            : [...a, { tipo: "reto", id: r.id, de, cadencia: `${r.base_min}+${r.incremento_s}` }]
+            : [
+                ...a,
+                {
+                  tipo: "reto",
+                  id: r.id,
+                  de,
+                  cadencia: `${r.base_min}+${r.incremento_s}`,
+                  color: r.color as string,
+                },
+              ]
         );
+        seVaSolo(r.id);
       }
 
-      // Los que se han resuelto: se quita la tarjeta y se dice qué ha pasado.
+      // Los que se han resuelto: se quita la tarjeta, que ya no lleva a ninguna parte.
       const idsEnPantalla = (paraMi ?? []).map((r) => r.id);
-      setAvisos((a) =>
-        a.filter((x) => x.tipo !== "reto" || idsEnPantalla.includes(x.id))
-      );
+      setAvisos((a) => a.filter((x) => x.tipo !== "reto" || idsEnPantalla.includes(x.id)));
+
+      // LOS QUE ME MANDARON A MÍ Y SE HAN CANCELADO. Sin esto el reto desaparecía de
+      // la pantalla sin una palabra: quien lo mandó sabe que lo ha cancelado, pero
+      // quien lo tenía delante solo veía esfumarse la tarjeta.
+      const { data: cancelados } = await supabase
+        .from("challenges")
+        .select("id, estado, players:reta_id(nombre)")
+        .eq("retado_id", yo)
+        .eq("estado", "cancelado")
+        .order("creado_en", { ascending: false })
+        .limit(3);
+
+      for (const r of cancelados ?? []) {
+        const clave = `${r.id}-cancelado`;
+        if (vistos.current.has(clave)) continue;
+        vistos.current.add(clave);
+        const quien = (r.players as unknown as { nombre: string } | null)?.nombre ?? "Un socio";
+        informar(clave, `${quien} ha retirado su reto.`);
+      }
 
       const { data: mios } = await supabase
         .from("challenges")
@@ -90,16 +161,22 @@ export function Avisos({ yo }: { yo: string }) {
         const clave = `${r.id}-${r.estado}`;
         if (vistos.current.has(clave)) continue;
         vistos.current.add(clave);
+        novedad = true;
         const quien = (r.players as unknown as { nombre: string } | null)?.nombre ?? "Tu rival";
         if (r.estado === "aceptado" && r.live_game_id) {
           // Segundo cinturón: si ya estás en esa mesa, no hay a dónde llevarte.
-          if (pathname !== `/club/jugar/${r.live_game_id}`) {
-            router.push(`/club/jugar/${r.live_game_id}`);
+          if (donde.current !== `/club/jugar/${r.live_game_id}`) {
+            ir.current.push(`/club/jugar/${r.live_game_id}`);
           }
         } else if (r.estado === "rechazado") {
           informar(clave, `${quien} no acepta el reto.`);
         }
       }
+
+      // La pantalla de Jugar tiene sus propias listas y las pinta el servidor: si ha
+      // cambiado algo, hay que rehacerlas. Solo cuando hay novedad de verdad, que
+      // esto rehace la página entera.
+      if (novedad && donde.current === "/club/jugar") ir.current.refresh();
     }
 
     /**
@@ -115,7 +192,11 @@ export function Avisos({ yo }: { yo: string }) {
       supabase: Awaited<ReturnType<typeof clienteEnVivo>>["supabase"]
     ) {
       const [{ data: paraMi }, { data: mios }] = await Promise.all([
-        supabase.from("challenges").select("id").eq("retado_id", yo).eq("estado", "pendiente"),
+        supabase
+          .from("challenges")
+          .select("id, estado")
+          .eq("retado_id", yo)
+          .in("estado", ["pendiente", "cancelado"]),
         supabase
           .from("challenges")
           .select("id, estado")
@@ -124,7 +205,9 @@ export function Avisos({ yo }: { yo: string }) {
           .order("creado_en", { ascending: false })
           .limit(10),
       ]);
-      for (const r of paraMi ?? []) vistos.current.add(r.id);
+      for (const r of paraMi ?? []) {
+        vistos.current.add(r.estado === "cancelado" ? `${r.id}-cancelado` : r.id);
+      }
       for (const r of mios ?? []) vistos.current.add(`${r.id}-${r.estado}`);
     }
 
@@ -136,25 +219,22 @@ export function Avisos({ yo }: { yo: string }) {
 
       const canal = supabase
         .channel(`avisos-${yo}`)
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "challenges", filter: `retado_id=eq.${yo}` },
-          () => void repasar(supabase)
-        )
-        .on(
-          "postgres_changes",
-          { event: "UPDATE", schema: "public", table: "challenges", filter: `reta_id=eq.${yo}` },
-          () => void repasar(supabase)
-        )
-        .on(
-          "postgres_changes",
-          { event: "UPDATE", schema: "public", table: "challenges", filter: `retado_id=eq.${yo}` },
-          () => void repasar(supabase)
-        )
+        .on("broadcast", { event: "reto" }, (aviso) => {
+          const p = (aviso.payload ?? {}) as { que?: string; partidaId?: string };
+          // Al reto aceptado se va sin pasar por la consulta: el dato ya viene en el
+          // aviso y lo que sobra aquí es precisamente ir y volver a la base.
+          if (p.que === "aceptado" && p.partidaId) {
+            if (donde.current !== `/club/jugar/${p.partidaId}`) {
+              ir.current.push(`/club/jugar/${p.partidaId}`);
+            }
+            return;
+          }
+          void repasar(supabase);
+        })
         .subscribe();
 
-      // Red de seguridad, porque el tiempo real todavía no es de fiar. Cinco
-      // segundos: esto no es una partida, un reto puede esperar.
+      // Red de seguridad: si un aviso se pierde, esto lo recoge. Cinco segundos, que
+      // un reto puede esperar; lo que no puede es no llegar nunca.
       const reloj = setInterval(() => void repasar(supabase), 5000);
 
       cerrar = () => {
@@ -167,7 +247,7 @@ export function Avisos({ yo }: { yo: string }) {
       cancelado = true;
       cerrar?.();
     };
-  }, [pathname, router, yo]);
+  }, [yo]);
 
   if (avisos.length === 0) return null;
 
@@ -185,6 +265,7 @@ export function Avisos({ yo }: { yo: string }) {
               <p className="text-sm text-tinta">
                 <b className="font-semibold">{a.de}</b> te reta a {a.cadencia}.
               </p>
+              <p className="text-xs text-tinta-suave">{textoColor(a.color)}</p>
               <div className="mt-2 flex gap-2">
                 <button
                   type="button"

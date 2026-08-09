@@ -679,7 +679,6 @@ export function Mesa({
             Sin conexión en vivo: las jugadas del rival tardan un momento en aparecer.
           </p>
         )}
-        <Mirando sala={`partida-${p.id}`} excluir={[p.blancasNombre, p.negrasNombre]} />
         <Jugador
           nombre={nombreArriba}
           ficha={arriba === "blancas" ? p.blancasId : p.negrasId}
@@ -820,6 +819,11 @@ export function Mesa({
             ))}
           </p>
         </div>
+
+        {/* Quién más está mirando, AL FINAL de la columna de al lado y no pegado al
+            tablero: ahí se metía entre el reloj y las piezas, que es justo donde no
+            debe haber nada moviéndose mientras se juega. */}
+        <Mirando sala={`partida-${p.id}`} excluir={[p.blancasNombre, p.negrasNombre]} />
 
         <div className="flex h-64 flex-col rounded-2xl border border-borde bg-tarjeta">
           <p className="border-b border-borde px-3 py-2 text-xs font-semibold uppercase tracking-wide text-tinta-suave">

@@ -3,6 +3,7 @@ import {
   banderaCaida,
   enReloj,
   paraPintar,
+  parado,
   relojInicial,
   restanteDeQuienMueve,
   trasJugada,
@@ -155,5 +156,42 @@ describe("enReloj", () => {
   it("cero es cero, y un negativo también", () => {
     expect(enReloj(0)).toBe("0:00.0");
     expect(enReloj(-5_000)).toBe("0:00.0");
+  });
+});
+
+describe("parado", () => {
+  const reloj: Reloj = {
+    blancasMs: 300_000,
+    negrasMs: 280_000,
+    ultimaJugadaEn: 1_000,
+    turno: "w",
+  };
+
+  it("descuenta lo que llevaba pensando quien tenía el turno", () => {
+    // Es el caso del abandono: si esto no se hiciera, la fila conservaría los
+    // 5:00 del instante de la última jugada y el tablero final enseñaría más
+    // tiempo del que quedaba de verdad.
+    const r = parado(reloj, 11_000);
+    expect(r.blancasMs).toBe(290_000);
+    expect(r.negrasMs).toBe(280_000);
+  });
+
+  it("deja el reloj sin correr", () => {
+    // `ultimaJugadaEn` a null es lo que le dice al navegador que deje de contar.
+    expect(parado(reloj, 11_000).ultimaJugadaEn).toBeNull();
+  });
+
+  it("no baja de cero ni cambia el turno", () => {
+    const r = parado(reloj, 999_999);
+    expect(r.blancasMs).toBe(0);
+    expect(r.turno).toBe("w");
+  });
+
+  it("antes de la primera jugada no descuenta nada", () => {
+    // Abandonar sin haber movido no debe gastarle tiempo a nadie.
+    const sinEmpezar: Reloj = { ...reloj, ultimaJugadaEn: null };
+    const r = parado(sinEmpezar, 999_999);
+    expect(r.blancasMs).toBe(300_000);
+    expect(r.negrasMs).toBe(280_000);
   });
 });

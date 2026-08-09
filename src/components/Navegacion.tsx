@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { usePendientes } from "@/components/avisos/Pendientes";
 import { Escudo } from "@/components/ui/Escudo";
 import {
   IconoAdmin,
@@ -124,17 +125,10 @@ function useSecciones(esAdmin: boolean) {
  *
  * Se oculta por debajo de `lg` (1024 px), donde toma el relevo la barra inferior.
  */
-export function NavLateral({
-  esAdmin,
-  email,
-  pendientes = 0,
-}: {
-  esAdmin: boolean;
-  email: string;
-  /** Retos esperando respuesta. Sale como número rojo sobre Jugar. */
-  pendientes?: number;
-}) {
+export function NavLateral({ esAdmin, email }: { esAdmin: boolean; email: string }) {
   const secciones = useSecciones(esAdmin);
+  // Retos esperando respuesta, en vivo. Sale como número rojo sobre Jugar.
+  const { cuantos: pendientes } = usePendientes();
 
   return (
     <aside className="hidden lg:flex lg:w-60 lg:shrink-0 lg:flex-col lg:border-r lg:border-borde lg:bg-tarjeta">
@@ -214,14 +208,9 @@ export function AccesoPerfil() {
  *
  * Se oculta a partir de `lg`, donde manda la lateral.
  */
-export function NavInferior({
-  esAdmin,
-  pendientes = 0,
-}: {
-  esAdmin: boolean;
-  pendientes?: number;
-}) {
+export function NavInferior({ esAdmin }: { esAdmin: boolean }) {
   const secciones = useSecciones(esAdmin).filter((i) => i.enMovil !== false);
+  const { cuantos: pendientes } = usePendientes();
 
   return (
     <nav

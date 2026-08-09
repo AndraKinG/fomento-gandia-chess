@@ -10,11 +10,11 @@ import {
   type Estado,
   type Jugada,
 } from "@/lib/vivo/partida";
-import { relojInicial } from "@/lib/vivo/reloj";
+import { parado, relojInicial } from "@/lib/vivo/reloj";
 import { blancasEnAmistosa } from "@/lib/vivo/colores";
 import { aPgn } from "@/lib/vivo/partida";
 import { enviarPushAMuchos } from "@/lib/push/send";
-import { difundirChat, difundirPartida } from "@/lib/vivo/difundir";
+import { difundirAviso, difundirChat, difundirPartida } from "@/lib/vivo/difundir";
 
 /**
  * Todo lo que cambia una partida en vivo.
@@ -73,8 +73,14 @@ function aFila(e: Estado) {
     turno: e.reloj.turno,
     blancas_ms: e.reloj.blancasMs,
     negras_ms: e.reloj.negrasMs,
+    // AL TERMINAR, EL RELOJ SE PARA. `ultima_jugada_en` es lo que le dice al
+    // navegador "sigue contando desde aquí": dejarla puesta en una partida acabada
+    // hacía que el tablero final enseñara los milisegundos del instante de la última
+    // jugada, o sea más tiempo del que quedaba de verdad.
     ultima_jugada_en:
-      e.reloj.ultimaJugadaEn === null ? null : new Date(e.reloj.ultimaJugadaEn).toISOString(),
+      e.resultado !== null || e.reloj.ultimaJugadaEn === null
+        ? null
+        : new Date(e.reloj.ultimaJugadaEn).toISOString(),
     resultado: e.resultado,
     motivo: e.motivo,
     terminada_en: e.resultado ? new Date().toISOString() : null,
@@ -239,6 +245,19 @@ async function guardarYAvisar(
   if (data) await difundirPartida(partidaId, data as Record<string, unknown>);
 }
 
+/**
+ * Los relojes CONGELADOS en este instante, para guardarlos al cerrar una partida
+ * que se acaba sin jugada: abandono o tablas acordadas.
+ *
+ * Sin esto la fila conserva los milisegundos del instante de la última jugada y el
+ * tablero final enseña más tiempo del que quedaba —los dos relojes daban un salto
+ * hacia arriba justo al terminar.
+ */
+function relojParado(fila: Fila) {
+  const r = parado(aEstado(fila).reloj, Date.now());
+  return { blancas_ms: r.blancasMs, negras_ms: r.negrasMs, ultima_jugada_en: null };
+}
+
 /** Nombre de una ficha, para escribirlo en el chat. */
 async function nombreDe(
   db: ReturnType<typeof createAdminClient>,
@@ -303,6 +322,7 @@ export async function retar(datos: {
     .single();
   if (error || !data) return { error: "No se ha podido mandar el reto." };
 
+  await difundirAviso(datos.aQuien, { que: "nuevo" });
   revalidatePath("/club/jugar");
   return { id: data.id };
 }
@@ -377,6 +397,11 @@ export async function aceptarReto(retoId: string): Promise<Respuesta> {
     .update({ estado: "aceptado", live_game_id: partida.id })
     .eq("id", retoId);
 
+  // AL INSTANTE Y NO EN EL SIGUIENTE REPASO: el que acepta entra en el tablero
+  // desde aquí mismo, así que cada segundo que tarde el otro es un segundo con la
+  // partida abierta y un jugador solo delante del reloj.
+  await difundirAviso(reto.reta_id, { que: "aceptado", partidaId: partida.id });
+
   // AVISO A QUIEN RETÓ, porque puede no estar mirando la pantalla de Jugar. Si
   // está, entra solo por tiempo real; si andaba en otra partida o navegando, esto
   // es lo único que le dice que su rival ya le espera con el reloj a punto.
@@ -423,10 +448,18 @@ export async function rechazarReto(retoId: string): Promise<Respuesta> {
   const esMio = [reto.reta_id, reto.retado_id].includes(sesion.playerId);
   if (!esMio) return { error: "Ese reto no es tuyo." };
 
+  const loCancelaQuienRetaba = reto.reta_id === sesion.playerId;
   await db
     .from("challenges")
-    .update({ estado: reto.reta_id === sesion.playerId ? "cancelado" : "rechazado" })
+    .update({ estado: loCancelaQuienRetaba ? "cancelado" : "rechazado" })
     .eq("id", retoId);
+
+  // Se avisa al OTRO, que es el que se queda sin saber qué ha pasado: al que cancela
+  // no hay nada que contarle. Sin esto, el reto desaparecía de la pantalla del
+  // retado sin una palabra y parecía que se hubiera perdido.
+  await difundirAviso(loCancelaQuienRetaba ? reto.retado_id : reto.reta_id, {
+    que: loCancelaQuienRetaba ? "cancelado" : "rechazado",
+  });
   revalidatePath("/club/jugar");
   return {};
 }
@@ -482,6 +515,7 @@ export async function abandonar(partidaId: string): Promise<Respuesta> {
     `${await nombreDe(mia.db, sesion.playerId)} abandona la partida.`
   );
   await guardarYAvisar(mia.db, partidaId, {
+    ...relojParado(mia.fila),
     resultado: fin.resultado,
     motivo: fin.motivo,
     terminada_en: new Date().toISOString(),
@@ -554,6 +588,7 @@ export async function aceptarTablas(partidaId: string): Promise<Respuesta> {
     `${await nombreDe(mia.db, sesion.playerId)} acepta las tablas.`
   );
   await guardarYAvisar(mia.db, partidaId, {
+    ...relojParado(mia.fila),
     resultado: "1/2-1/2",
     motivo: "tablas-acordadas",
     terminada_en: new Date().toISOString(),

@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Boton } from "@/components/ui/Boton";
 import { Banner } from "@/components/ui/Banner";
-import { clienteEnVivo } from "@/lib/supabase/vivo";
 import { PuntoConectado, usePresencia } from "@/components/presencia/Presencia";
 import { claveNombre } from "@/lib/import/cruzar-nombres";
 import { aceptarReto, rechazarReto, retar } from "./actions";
@@ -23,6 +22,19 @@ const CADENCIAS = [
   { etiqueta: "5+3", baseMin: 5, incrementoS: 3 },
   { etiqueta: "10+5", baseMin: 10, incrementoS: 5 },
 ];
+
+/**
+ * Qué se pidió de color, dicho desde el lado que lo lee.
+ *
+ * Se enseña aunque no cambie nada de lo que puedes hacer: aceptar un reto sin saber
+ * si el color está echado o se sortea es aceptarlo a ciegas, y quien reta también
+ * quiere ver que su elección se ha guardado.
+ */
+function colorPedido(color: string, esMio: boolean): string {
+  if (color === "blancas") return esMio ? "pides blancas" : "Quiere llevar blancas.";
+  if (color === "negras") return esMio ? "pides negras" : "Quiere llevar negras.";
+  return esMio ? "color al azar" : "El color se sortea.";
+}
 
 export type RetoVista = {
   id: string;
@@ -77,89 +89,14 @@ export function Retos({
   const mandados = retos.filter((r) => r.retaId === yo);
 
   /**
-   * LOS RETOS, EN VIVO, POR LOS DOS LADOS.
+   * NO HAY TIEMPO REAL AQUÍ, y es a propósito.
    *
-   * - A QUIEN RETA: en cuanto el otro acepta, se entra directo en la partida. Antes
-   *   se quedaba mirando la pantalla mientras el rival ya esperaba en el tablero.
-   * - A QUIEN LO RECIBE: el reto aparece solo. Antes había que recargar para verlo,
-   *   que es justo lo contrario de retar a alguien que está conectado.
-   *
-   * Con reintento cada tres segundos por si el aviso se pierde: llegar tarde aquí es
-   * llegar tarde a tu propia partida.
+   * Antes esta pantalla abría su propio canal y su propio reintento, en paralelo a
+   * los de `Avisos` —que está montado en el layout y por tanto también aquí—. Dos
+   * sitios escuchando lo mismo es el doble de consultas y una carrera para ver quién
+   * te lleva antes a la partida. Ahora manda `Avisos`: entra directo al aceptar y
+   * refresca esta pantalla cuando algo cambia.
    */
-  useEffect(() => {
-    const mios = mandados.map((r) => r.id);
-
-    let cerrar: (() => void) | null = null;
-    let cancelado = false;
-
-    function alAceptar(idPartida: string | null) {
-      if (idPartida) router.push(`/club/jugar/${idPartida}`);
-      else router.refresh();
-    }
-
-    void clienteEnVivo().then(({ supabase }) => {
-      if (cancelado) return;
-      const canal = supabase
-        .channel(`retos-${yo}`)
-        // Los que mando yo: me interesa cuándo los aceptan.
-        .on(
-          "postgres_changes",
-          { event: "UPDATE", schema: "public", table: "challenges", filter: `reta_id=eq.${yo}` },
-          (aviso) => {
-            const f = aviso.new as { estado?: string; live_game_id?: string | null };
-            if (f.estado === "aceptado") alAceptar(f.live_game_id ?? null);
-            else router.refresh();
-          }
-        )
-        // Los que me mandan a mí: me interesa que aparezcan sin recargar.
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "challenges", filter: `retado_id=eq.${yo}` },
-          () => router.refresh()
-        )
-        .subscribe();
-      cerrar = () => void supabase.removeChannel(canal);
-
-      // La red de seguridad mira las dos cosas: si me han aceptado alguno, y si ha
-      // entrado alguno nuevo para mí.
-      const reloj = setInterval(async () => {
-        if (mios.length > 0) {
-          const { data } = await supabase
-            .from("challenges")
-            .select("estado, live_game_id")
-            .in("id", mios)
-            .neq("estado", "pendiente");
-          const aceptado = (data ?? []).find((r) => r.estado === "aceptado");
-          if (aceptado) {
-            alAceptar(aceptado.live_game_id ?? null);
-            return;
-          }
-          if ((data ?? []).length > 0) {
-            router.refresh();
-            return;
-          }
-        }
-        const { count } = await supabase
-          .from("challenges")
-          .select("id", { count: "exact", head: true })
-          .eq("retado_id", yo)
-          .eq("estado", "pendiente");
-        if ((count ?? 0) !== recibidos.length) router.refresh();
-      }, 3000);
-
-      const anterior = cerrar;
-      cerrar = () => {
-        clearInterval(reloj);
-        anterior?.();
-      };
-    });
-
-    return () => {
-      cancelado = true;
-      cerrar?.();
-    };
-  }, [mandados, recibidos.length, router, yo]);
 
   function ejecutar(accion: () => Promise<{ error?: string; id?: string }>, aPartida = false) {
     setError(null);
@@ -190,6 +127,7 @@ export function Retos({
             <span className="font-semibold">{r.retaNombre}</span> te reta a{" "}
             {r.baseMin}+{r.incrementoS}.
           </p>
+          <p className="text-xs text-tinta-suave">{colorPedido(r.color, false)}</p>
           <div className="mt-2 flex gap-2">
             <Boton
               variante="solido"
@@ -215,7 +153,8 @@ export function Retos({
         <Tarjeta key={r.id} compacta>
           <div className="flex items-center justify-between gap-2">
             <p className="min-w-0 truncate text-sm text-tinta-suave">
-              Esperando a {r.retadoNombre} · {r.baseMin}+{r.incrementoS}
+              Esperando a {r.retadoNombre} · {r.baseMin}+{r.incrementoS} ·{" "}
+              {colorPedido(r.color, true)}
             </p>
             <button
               type="button"

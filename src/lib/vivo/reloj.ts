@@ -82,6 +82,29 @@ export function trasJugada(reloj: Reloj, cadencia: Cadencia, ahora: number): Rel
 }
 
 /**
+ * El reloj PARADO: se descuenta lo que llevaba pensando quien tenía el turno y se
+ * deja de contar.
+ *
+ * Es lo que hay que guardar cuando una partida se acaba sin jugada —abandono, tablas
+ * acordadas, bandera—, y no es un detalle: sin esto la fila conserva los
+ * milisegundos del INSTANTE DE LA ÚLTIMA JUGADA, así que al terminar la partida los
+ * dos relojes daban un salto hacia arriba y enseñaban más tiempo del que les
+ * quedaba de verdad. Pasó de verdad al abandonar.
+ *
+ * `ultimaJugadaEn` a null es lo que dice "ya no corre": es la misma marca que usa el
+ * navegador para saber si tiene que seguir la cuenta atrás.
+ */
+export function parado(reloj: Reloj, ahora: number): Reloj {
+  const restante = restanteDeQuienMueve(reloj, ahora);
+  return {
+    blancasMs: reloj.turno === "w" ? restante : reloj.blancasMs,
+    negrasMs: reloj.turno === "b" ? restante : reloj.negrasMs,
+    ultimaJugadaEn: null,
+    turno: reloj.turno,
+  };
+}
+
+/**
  * Los dos relojes tal como hay que pintarlos, con el del que mueve ya descontado.
  *
  * El navegador sigue la cuenta atrás por su cuenta entre jugada y jugada, pero

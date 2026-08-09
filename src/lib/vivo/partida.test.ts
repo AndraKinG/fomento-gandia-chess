@@ -140,6 +140,14 @@ describe("reclamarTiempo", () => {
     expect(cerrada?.motivo).toBe("tiempo");
   });
 
+  it("deja el reloj del que pierde a cero y parado", () => {
+    // Si no se para, la fila conserva los 5:00 de la última jugada y el tablero
+    // final enseña tiempo de sobra a quien acaba de perder por bandera.
+    const cerrada = reclamarTiempo(enJuego(), T0 + 400_000);
+    expect(cerrada?.reloj.blancasMs).toBe(0);
+    expect(cerrada?.reloj.ultimaJugadaEn).toBeNull();
+  });
+
   it("no cierra nada si aún queda tiempo", () => {
     // Reclamar no basta: se comprueba de verdad.
     expect(reclamarTiempo(enJuego(), T0 + 10_000)).toBeNull();

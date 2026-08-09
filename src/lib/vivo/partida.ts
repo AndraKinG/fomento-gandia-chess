@@ -1,5 +1,5 @@
 import { Chess } from "chess.js";
-import { banderaCaida, trasJugada, type Cadencia, type Reloj } from "./reloj";
+import { banderaCaida, parado, trasJugada, type Cadencia, type Reloj } from "./reloj";
 
 /**
  * Una jugada de una partida en vivo, de principio a fin.
@@ -159,7 +159,14 @@ export function reclamarTiempo(estado: Estado, ahora: number): Estado | null {
   if (estado.resultado !== null) return null;
   if (!banderaCaida(estado.reloj, ahora)) return null;
   const fin = finPorTiempo(estado.reloj.turno);
-  return { ...estado, resultado: fin.resultado, motivo: fin.motivo };
+  // El reloj se PARA al cerrar: si no, la fila se queda con los milisegundos del
+  // instante de la última jugada y al terminar se enseña más tiempo del que había.
+  return {
+    ...estado,
+    reloj: parado(estado.reloj, ahora),
+    resultado: fin.resultado,
+    motivo: fin.motivo,
+  };
 }
 
 /**
