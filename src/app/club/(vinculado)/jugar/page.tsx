@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sesionActual } from "@/lib/auth/sesion";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Contenedor } from "@/components/ui/Contenedor";
@@ -37,7 +38,13 @@ export default async function JugarPage() {
     // SOLO SE PUEDE RETAR A QUIEN TIENE CUENTA. Las 46 fichas del orden de fuerza
     // son socios del club, pero la mayoría todavía no se ha registrado: retar a una
     // de ellas creaba un reto que no podía aceptar nadie y se quedaba ahí colgado.
-    supabase.from("profiles").select("player_id").not("player_id", "is", null),
+    //
+    // CON CLIENTE DE SERVICIO, y es una excepción deliberada: la RLS de `profiles`
+    // solo te deja ver el TUYO (o todos, si eres admin). Con la sesión normal, un
+    // socio corriente veía la lista vacía y no podía retar a nadie — pasó en
+    // cuanto entró la segunda cuenta. De aquí sale solo `player_id`: qué fichas
+    // tienen cuenta, sin correos ni nada más.
+    createAdminClient().from("profiles").select("player_id").not("player_id", "is", null),
   ]);
 
   const nombre = new Map((socios ?? []).map((s) => [s.id, s.nombre as string]));
