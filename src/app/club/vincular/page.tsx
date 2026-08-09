@@ -113,6 +113,23 @@ export default async function VincularPage({
           acceso.
         </p>
 
+        {/* ARRIBA Y NO AL FINAL. La lista sale del orden de fuerza, que se cierra a
+            principio de temporada, así que un socio que entró después no está en
+            ella. Abajo del todo, detrás de 46 nombres, este aviso solo lo lee quien
+            ya ha bajado buscándose — y para entonces o se ha encontrado o ha elegido
+            una ficha que no es la suya, que es justo lo que quería evitar. */}
+        {libres.length > 0 && (
+          <Tarjeta compacta>
+            <p className="text-sm text-tinta">
+              <b className="font-semibold">¿No encuentras tu nombre?</b> La lista es
+              el orden de fuerza de esta temporada. Si acabas de entrar en el club
+              puede que todavía no estés en él:{" "}
+              <b className="font-semibold">no elijas otra ficha</b>, avisa al admin y
+              te añade.
+            </p>
+          </Tarjeta>
+        )}
+
         {libres.length === 0 ? (
           <EstadoVacio
             titulo="No queda ninguna ficha libre"
@@ -122,21 +139,6 @@ export default async function VincularPage({
           <ListaFichas fichas={libres.map((p) => ({ id: p.id, nombre: p.nombre, elo: p.elo }))} />
         )}
 
-        {/* La lista sale del orden de fuerza, que se cierra a principio de
-            temporada: un socio que se haya dado de alta después no se encontrará
-            en ella. Sin este aviso, la salida natural es reclamar la ficha de
-            otro "porque había que elegir alguna". */}
-        {libres.length > 0 && (
-          <Tarjeta compacta>
-            <p className="text-sm text-tinta">
-              <b className="font-semibold">¿No encuentras tu nombre?</b> La lista
-              es el orden de fuerza de esta temporada. Si acabas de entrar en el
-              club puede que todavía no estés en él:{" "}
-              <b className="font-semibold">no elijas otra ficha</b>, avisa al
-              admin y te añade.
-            </p>
-          </Tarjeta>
-        )}
       </Contenedor>
     </main>
   );
