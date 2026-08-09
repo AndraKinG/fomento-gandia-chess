@@ -193,47 +193,68 @@ export function Mesa({
    * regla acaban separándose, y esta es la que impide que la pieza rebote.
    */
   const aplicarFila = useCallback((f: Record<string, unknown>) => {
-    const cuantas = ((f.jugadas as string[]) ?? []).length;
-    if (cuantas < jugadasFirmes.current && !f.resultado) return;
-
-    // Nada nuevo: ni se toca. Volver a aplicar la misma fila reiniciaría la cuenta
-    // atrás y le devolvería al reloj el tiempo ya corrido.
-    const marca = (f.ultima_jugada_en as string | null) ?? null;
-    const igual =
-      marca === ultimaMarca.current &&
-      cuantas === antesJugadas.current &&
-      ((f.resultado as string | null) ?? null) === null;
-    if (igual) return;
-
     /**
-     * LA REFERENCIA SOLO SE REINICIA SI LA JUGADA ES NUEVA PARA NOSOTROS.
+     * QUÉ CUENTA COMO "ESTADO NUEVO": que cambie `ultima_jugada_en`.
      *
-     * Aquí estaba el segundo que se devolvía. Los milisegundos que manda el servidor
-     * son los del INSTANTE DE LA JUGADA, no los de ahora; entre una cosa y otra está
-     * el viaje de ida y vuelta. Si al llegar la confirmación se pone la referencia a
-     * "ahora", ese viaje se descuenta dos veces... o mejor dicho, se le regala al
-     * reloj: medido, el rival tardaba 1,9 s en bajar de 4:59 a 4:58.
+     * Esa marca la pone el SERVIDOR cada vez que la posición cambia de verdad —una
+     * jugada, o una jugada devuelta—, así que sirve de número de versión. Se compara
+     * contra la última marca DE SERVIDOR que aplicamos, no contra la que ponemos
+     * nosotros al pintar una jugada por adelantado.
      *
-     * Cuando la jugada ya la habíamos pintado nosotros, la referencia buena es la que
-     * ya teníamos —marca justo ese instante—, así que se deja como está.
+     * Con eso salen bien los tres casos a la vez:
+     *
+     * - Jugada nueva: marca distinta → se aplica, y se reinicia la cuenta atrás.
+     * - Respuesta vieja del reintento, que llega justo después de mover: trae la
+     *   marca de SIEMPRE, así que se ignora y la pieza no rebota.
+     * - Jugada devuelta: trae menos jugadas pero marca NUEVA, así que se aplica. La
+     *   versión anterior miraba solo el número de jugadas y se la tragaba por
+     *   "vieja": por eso volver una jugada no hacía nada.
      */
-    const esNueva = cuantas > antesJugadas.current;
-    ultimaMarca.current = marca;
-    antesJugadas.current = cuantas;
-    jugadasFirmes.current = cuantas;
-    if (esNueva) setRecibidoEn(performance.now());
-    setP((antes) => ({
-      ...antes,
-      jugadas: (f.jugadas as string[]) ?? [],
-      turno: f.turno as "w" | "b",
-      blancasMs: f.blancas_ms as number,
-      negrasMs: f.negras_ms as number,
-      ultimaJugadaEn: (f.ultima_jugada_en as string | null) ?? null,
-      resultado: (f.resultado as string | null) ?? null,
-      motivo: (f.motivo as string | null) ?? null,
-      tablasOfrecidasPor: (f.tablas_ofrecidas_por as string | null) ?? null,
-      vueltaPedidaPor: (f.vuelta_pedida_por as string | null) ?? null,
-    }));
+    const marca = (f.ultima_jugada_en as string | null) ?? null;
+    const esEstadoNuevo = marca !== ultimaMarca.current;
+
+    if (esEstadoNuevo) {
+      const cuantas = ((f.jugadas as string[]) ?? []).length;
+      // La referencia solo se reinicia con estado nuevo. Los milisegundos que manda
+      // el servidor son los del INSTANTE de la jugada, no los de ahora: ponerla a
+      // "ahora" en cada confirmación le regalaba al reloj el viaje de ida y vuelta.
+      ultimaMarca.current = marca;
+      antesJugadas.current = cuantas;
+      jugadasFirmes.current = cuantas;
+      setRecibidoEn(performance.now());
+    }
+
+    setP((antes) => {
+      // Las OFERTAS se atienden siempre, haya estado nuevo o no: ofrecer tablas o
+      // pedir volver una jugada no mueve ninguna pieza, así que no cambia la marca.
+      // Tragárselas por eso es lo que dejó de funcionar al arreglar el reloj.
+      const ofertas = {
+        resultado: (f.resultado as string | null) ?? null,
+        motivo: (f.motivo as string | null) ?? null,
+        tablasOfrecidasPor: (f.tablas_ofrecidas_por as string | null) ?? null,
+        vueltaPedidaPor: (f.vuelta_pedida_por as string | null) ?? null,
+      };
+
+      if (!esEstadoNuevo) {
+        const igual =
+          antes.resultado === ofertas.resultado &&
+          antes.tablasOfrecidasPor === ofertas.tablasOfrecidasPor &&
+          antes.vueltaPedidaPor === ofertas.vueltaPedidaPor;
+        // Sin novedad no se devuelve un objeto nuevo: repintaría el tablero entero
+        // varias veces por segundo para nada.
+        return igual ? antes : { ...antes, ...ofertas };
+      }
+
+      return {
+        ...antes,
+        ...ofertas,
+        jugadas: (f.jugadas as string[]) ?? [],
+        turno: f.turno as "w" | "b",
+        blancasMs: f.blancas_ms as number,
+        negrasMs: f.negras_ms as number,
+        ultimaJugadaEn: marca,
+      };
+    });
   }, []);
 
   /**
