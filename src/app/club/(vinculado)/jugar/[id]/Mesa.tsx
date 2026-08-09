@@ -17,6 +17,7 @@ import {
   mover,
   ofrecerTablas,
   pedirVolverJugada,
+  rechazarTablas,
   reclamarPorTiempo,
   responderVolverJugada,
 } from "../actions";
@@ -77,7 +78,15 @@ export type Partida = {
   vueltaPedidaPor: string | null;
 };
 
-export type Mensaje = { id: string; playerId: string; texto: string; creadoEn: string };
+export type Mensaje = {
+  id: string;
+  /** null en los eventos de la partida, que no los escribe nadie. */
+  playerId: string | null;
+  texto: string;
+  /** Qué pasó, si es un evento: tablas ofrecidas, jugada devuelta, abandono… */
+  evento: string | null;
+  creadoEn: string;
+};
 
 const MOTIVOS: Record<string, string> = {
   mate: "por mate",
@@ -218,10 +227,16 @@ export function Mesa({
       // La referencia solo se reinicia con estado nuevo. Los milisegundos que manda
       // el servidor son los del INSTANTE de la jugada, no los de ahora: ponerla a
       // "ahora" en cada confirmación le regalaba al reloj el viaje de ida y vuelta.
+      // LA REFERENCIA SOLO SE REINICIA SI LA JUGADA NO LA SABÍAMOS YA. Si la
+      // pintamos nosotros por adelantado —la nuestra, o la del rival que llegó por
+      // difusión—, la referencia buena es la que ya teníamos: marca el instante de
+      // la jugada. Ponerla a "ahora" al llegar la confirmación le devuelve al reloj
+      // el viaje de ida y vuelta, y eso es el "sube un segundo" que se veía.
+      const yaLaSabiamos = cuantas === antesJugadas.current;
       ultimaMarca.current = marca;
       antesJugadas.current = cuantas;
       jugadasFirmes.current = cuantas;
-      setRecibidoEn(performance.now());
+      if (!yaLaSabiamos) setRecibidoEn(performance.now());
     }
 
     setP((antes) => {
@@ -447,7 +462,7 @@ export function Mesa({
       // El chat va en la misma pasada: tenía el mismo problema y ninguna red.
       const { data: dichos } = await supabase
         .from("live_chat")
-        .select("id, player_id, texto, creado_en")
+        .select("id, player_id, texto, evento, creado_en")
         .eq("live_game_id", p.id)
         .order("creado_en");
       if (dichos) {
@@ -458,6 +473,7 @@ export function Mesa({
                 id: m.id,
                 playerId: m.player_id,
                 texto: m.texto,
+                evento: m.evento,
                 creadoEn: m.creado_en,
               }))
         );
@@ -605,7 +621,7 @@ export function Mesa({
     const { data, error: e } = await supabase
       .from("live_chat")
       .insert({ live_game_id: p.id, player_id: yo, texto: limpio })
-      .select("id, player_id, texto, creado_en")
+      .select("id, player_id, texto, evento, creado_en")
       .single();
     if (e || !data) {
       setError("No se ha podido mandar el mensaje.");
@@ -615,6 +631,7 @@ export function Mesa({
       id: data.id,
       playerId: data.player_id,
       texto: data.texto,
+      evento: data.evento,
       creadoEn: data.creado_en,
     };
     // Se pinta al momento en el propio chat y se difunde al rival: el mensaje lo
@@ -708,7 +725,7 @@ export function Mesa({
             titulo="Te ofrecen tablas"
             detalle="Si aceptas, la partida acaba en empate."
             onAceptar={() => void aceptarTablas(p.id)}
-            onRechazar={() => void ofrecerTablas(p.id)}
+            onRechazar={() => void rechazarTablas(p.id)}
           />
         )}
 
@@ -808,14 +825,23 @@ export function Mesa({
             {mensajes.length === 0 && (
               <p className="text-sm text-tinta-suave">Aún no habéis dicho nada.</p>
             )}
-            {mensajes.map((m) => (
-              <p key={m.id} className="text-sm">
-                <span className="font-semibold text-tinta-suave">
-                  {m.playerId === p.blancasId ? p.blancasNombre : p.negrasNombre}:{" "}
-                </span>
-                <span className="text-tinta">{m.texto}</span>
-              </p>
-            ))}
+            {/* Los eventos se pintan centrados y en gris: son la voz de la partida,
+                no la de nadie, y confundirlos con un mensaje del rival haría pensar
+                que te lo está diciendo él. */}
+            {mensajes.map((m) =>
+              m.evento ? (
+                <p key={m.id} className="py-0.5 text-center text-xs text-tinta-suave">
+                  {m.texto}
+                </p>
+              ) : (
+                <p key={m.id} className="text-sm">
+                  <span className="font-semibold text-tinta-suave">
+                    {m.playerId === p.blancasId ? p.blancasNombre : p.negrasNombre}:{" "}
+                  </span>
+                  <span className="text-tinta">{m.texto}</span>
+                </p>
+              )
+            )}
           </div>
           {miColor !== null && (
             <div className="flex gap-2 border-t border-borde p-2">

@@ -49,3 +49,45 @@ export async function difundirPartida(partidaId: string, fila: Difusion): Promis
     // Silencio a propósito: ver el comentario de arriba.
   }
 }
+
+/**
+ * Lo mismo para un mensaje del chat.
+ *
+ * Lo usan los eventos de la partida, que los escribe el servidor. Los mensajes que
+ * escribe la gente los difunde su propio navegador, que ya los tiene delante.
+ */
+export async function difundirChat(partidaId: string, mensaje: Difusion): Promise<void> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const clave = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !clave) return;
+
+  try {
+    await fetch(`${url}/realtime/v1/api/broadcast`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        apikey: clave,
+        Authorization: `Bearer ${clave}`,
+      },
+      body: JSON.stringify({
+        messages: [
+          {
+            topic: `partida-${partidaId}`,
+            event: "chat",
+            payload: {
+              mensaje: {
+                id: mensaje.id,
+                playerId: mensaje.player_id ?? null,
+                texto: mensaje.texto,
+                evento: mensaje.evento ?? null,
+                creadoEn: mensaje.creado_en,
+              },
+            },
+          },
+        ],
+      }),
+    });
+  } catch {
+    // Silencio a propósito: el reintento del navegador lo recogerá igual.
+  }
+}

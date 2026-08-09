@@ -14,7 +14,7 @@ import { relojInicial } from "@/lib/vivo/reloj";
 import { blancasEnAmistosa } from "@/lib/vivo/colores";
 import { aPgn } from "@/lib/vivo/partida";
 import { enviarPushAMuchos } from "@/lib/push/send";
-import { difundirPartida } from "@/lib/vivo/difundir";
+import { difundirChat, difundirPartida } from "@/lib/vivo/difundir";
 
 /**
  * Todo lo que cambia una partida en vivo.
@@ -184,6 +184,35 @@ async function cerrarEnElTorneo(
  * real, que para eso está. Solo se refresca cuando la partida CAMBIA DE ESTADO
  * —empieza o termina—, que es lo que ven las listas.
  */
+/**
+ * Deja constancia en el chat de algo que ha pasado en la partida.
+ *
+ * POR QUÉ SE GUARDA Y NO SE PINTA Y YA: si el rival dice que no a unas tablas, la
+ * tarjeta desaparece y sin esto no queda ni rastro — parece que el mensaje se haya
+ * perdido. Escrito en el chat, los dos ven qué se pidió y qué se contestó, y sigue
+ * ahí al volver a la partida.
+ *
+ * Lo escribe el SERVIDOR con clave de servicio, así que la política del chat no
+ * cambia: el cliente sigue sin poder escribir en nombre de nadie.
+ */
+async function apuntarEnElChat(
+  db: ReturnType<typeof createAdminClient>,
+  partidaId: string,
+  evento: string,
+  texto: string
+): Promise<void> {
+  try {
+    const { data } = await db
+      .from("live_chat")
+      .insert({ live_game_id: partidaId, player_id: null, evento, texto })
+      .select("id, player_id, texto, evento, creado_en")
+      .single();
+    if (data) await difundirChat(partidaId, data as Record<string, unknown>);
+  } catch {
+    // Que no se pueda apuntar no puede tumbar la jugada, que ya está hecha.
+  }
+}
+
 function refrescar(id: string): void {
   revalidatePath("/club/jugar");
   revalidatePath(`/club/jugar/${id}`);
@@ -208,6 +237,15 @@ async function guardarYAvisar(
     .select("*")
     .maybeSingle();
   if (data) await difundirPartida(partidaId, data as Record<string, unknown>);
+}
+
+/** Nombre de una ficha, para escribirlo en el chat. */
+async function nombreDe(
+  db: ReturnType<typeof createAdminClient>,
+  playerId: string
+): Promise<string> {
+  const { data } = await db.from("players").select("nombre").eq("id", playerId).maybeSingle();
+  return (data?.nombre as string | undefined) ?? "Un socio";
 }
 
 /** Carga la partida y dice de qué color juega esta persona, o null si no es suya. */
@@ -437,6 +475,12 @@ export async function abandonar(partidaId: string): Promise<Respuesta> {
   if (mia.fila.resultado) return { error: "Esa partida ya ha terminado." };
 
   const fin = finPorAbandono(mia.color);
+  await apuntarEnElChat(
+    mia.db,
+    partidaId,
+    "abandono",
+    `${await nombreDe(mia.db, sesion.playerId)} abandona la partida.`
+  );
   await guardarYAvisar(mia.db, partidaId, {
     resultado: fin.resultado,
     motivo: fin.motivo,
@@ -463,9 +507,24 @@ export async function ofrecerTablas(partidaId: string): Promise<Respuesta> {
   if (mia.fila.resultado) return { error: "Esa partida ya ha terminado." };
 
   const yaLasOfreci = mia.fila.tablas_ofrecidas_por === sesion.playerId;
+  // Si ya hay una oferta del RIVAL, este botón no puede pisarla: para eso están
+  // aceptar y rechazar. Sin esta guarda, ofrecer encima de una oferta ajena la
+  // convertía en tuya.
+  if (mia.fila.tablas_ofrecidas_por && !yaLasOfreci) {
+    return { error: "Tu rival ya te ha ofrecido tablas: acéptalas o dile que no." };
+  }
+
   await guardarYAvisar(mia.db, partidaId, {
     tablas_ofrecidas_por: yaLasOfreci ? null : sesion.playerId,
   });
+  if (!yaLasOfreci) {
+    await apuntarEnElChat(
+      mia.db,
+      partidaId,
+      "tablas-ofrecidas",
+      `${await nombreDe(mia.db, sesion.playerId)} ofrece tablas.`
+    );
+  }
   refrescar(partidaId);
   return {};
 }
@@ -488,6 +547,12 @@ export async function aceptarTablas(partidaId: string): Promise<Respuesta> {
   if (!ofrecidasPor) return { error: "Nadie ha ofrecido tablas." };
   if (ofrecidasPor === sesion.playerId) return { error: "Las has ofrecido tú." };
 
+  await apuntarEnElChat(
+    mia.db,
+    partidaId,
+    "tablas-aceptadas",
+    `${await nombreDe(mia.db, sesion.playerId)} acepta las tablas.`
+  );
   await guardarYAvisar(mia.db, partidaId, {
     resultado: "1/2-1/2",
     motivo: "tablas-acordadas",
@@ -521,6 +586,12 @@ export async function pedirVolverJugada(partidaId: string): Promise<Respuesta> {
   }
 
   await guardarYAvisar(mia.db, partidaId, { vuelta_pedida_por: sesion.playerId });
+  await apuntarEnElChat(
+    mia.db,
+    partidaId,
+    "vuelta-pedida",
+    `${await nombreDe(mia.db, sesion.playerId)} pide volver su última jugada.`
+  );
   return {};
 }
 
@@ -552,11 +623,25 @@ export async function responderVolverJugada(
 
   if (!acepta) {
     await guardarYAvisar(mia.db, partidaId, { vuelta_pedida_por: null });
+    await apuntarEnElChat(
+      mia.db,
+      partidaId,
+      "vuelta-rechazada",
+      `${await nombreDe(mia.db, sesion.playerId)} no acepta volver la jugada.`
+    );
     return {};
   }
 
   const jugadas = [...(mia.fila.jugadas ?? [])];
-  jugadas.pop();
+  const deshecha = jugadas.pop();
+  await apuntarEnElChat(
+    mia.db,
+    partidaId,
+    "vuelta-aceptada",
+    `${await nombreDe(mia.db, sesion.playerId)} acepta volver la jugada${
+      deshecha ? ` (${deshecha})` : ""
+    }.`
+  );
   await guardarYAvisar(mia.db, partidaId, {
     jugadas,
     // El turno vuelve al que la hizo, que es quien la pidió.
@@ -565,6 +650,36 @@ export async function responderVolverJugada(
     vuelta_pedida_por: null,
     tablas_ofrecidas_por: null,
   });
+  return {};
+}
+
+/**
+ * Dice que no a unas tablas.
+ *
+ * ES UNA ACCIÓN APARTE, y hace falta: antes el botón de "No" llamaba a
+ * `ofrecerTablas`, que alterna — así que rechazar unas tablas las OFRECÍA de vuelta
+ * en tu nombre, y el rival podía aceptarlas. Un "no" acababa en tablas. Lo cazó el
+ * propietario probando.
+ */
+export async function rechazarTablas(partidaId: string): Promise<Respuesta> {
+  const sesion = await sesionActual();
+  if (!sesion?.playerId) return { error: "No autorizado" };
+
+  const mia = await miPartida(partidaId, sesion.playerId);
+  if (!mia?.color) return { error: "Esa partida no es tuya." };
+  if (mia.fila.resultado) return { error: "Esa partida ya ha terminado." };
+
+  const ofrecidasPor = mia.fila.tablas_ofrecidas_por;
+  if (!ofrecidasPor) return { error: "Nadie ha ofrecido tablas." };
+  if (ofrecidasPor === sesion.playerId) return { error: "Las has ofrecido tú." };
+
+  await guardarYAvisar(mia.db, partidaId, { tablas_ofrecidas_por: null });
+  await apuntarEnElChat(
+    mia.db,
+    partidaId,
+    "tablas-rechazadas",
+    `${await nombreDe(mia.db, sesion.playerId)} no acepta las tablas.`
+  );
   return {};
 }
 

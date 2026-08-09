@@ -34,7 +34,7 @@ export default async function PartidaEnVivoPage({
     supabase.from("players").select("id, nombre").in("id", [fila.blancas_id, fila.negras_id]),
     supabase
       .from("live_chat")
-      .select("id, player_id, texto, creado_en")
+      .select("id, player_id, texto, evento, creado_en")
       .eq("live_game_id", id)
       .order("creado_en"),
     // El ELO oficial, para el resumen del final. De la temporada activa, que es la
@@ -76,6 +76,7 @@ export default async function PartidaEnVivoPage({
     id: m.id,
     playerId: m.player_id,
     texto: m.texto,
+    evento: m.evento,
     creadoEn: m.creado_en,
   }));
 
