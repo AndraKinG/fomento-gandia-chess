@@ -133,6 +133,11 @@ export function Mesa({
   /** Jugadas que había en el último estado aplicado, para saber si una novedad
    *  llegó por difusión o la pilló el reintento. */
   const antesJugadas = useRef(inicial.jugadas.length);
+  /** El canal, para poder difundir desde aquí lo que escribe el cliente: el chat lo
+   *  inserta el navegador, así que el aviso también sale de aquí. */
+  const canalRef = useRef<ReturnType<
+    Awaited<ReturnType<typeof clienteEnVivo>>["supabase"]["channel"]
+  > | null>(null);
   const cajaChat = useRef<HTMLDivElement | null>(null);
 
   const miColor: "w" | "b" | null =
@@ -181,51 +186,43 @@ export function Mesa({
         return;
       }
       const canal = supabase
-      .channel(`partida-${p.id}`)
-      // DIFUSIÓN: es la que de verdad trae las jugadas. Los avisos de tabla de más
-      // abajo se quedan por si algún día empiezan a llegar, pero no se depende de
-      // ellos — ver `src/lib/vivo/difundir.ts`.
-      .on("broadcast", { event: "cambio" }, (mensaje) => {
-        const f = (mensaje.payload as { fila?: Record<string, unknown> })?.fila;
-        if (!f) return;
-        // Si la difusión entrega, se dice: es la diferencia entre ir fino y ir a
-        // base de repreguntar, y hasta ahora había que adivinarlo.
-        setEnVivo("si");
-        antesJugadas.current = ((f.jugadas as string[]) ?? []).length;
-        aplicarFila(f);
-      })
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "live_games", filter: `id=eq.${p.id}` },
-        (aviso) => aplicarFila(aviso.new as Record<string, unknown>)
-      )
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "live_chat", filter: `live_game_id=eq.${p.id}` },
-        (aviso) => {
-          const f = aviso.new as Record<string, unknown>;
-          setMensajes((antes) =>
-            antes.some((m) => m.id === f.id)
-              ? antes
-              : [
-                  ...antes,
-                  {
-                    id: f.id as string,
-                    playerId: f.player_id as string,
-                    texto: f.texto as string,
-                    creadoEn: f.creado_en as string,
-                  },
-                ]
-          );
-        }
-      )
-      .subscribe((estado) => {
-        if (cancelado) return;
-        // Estar suscrito NO es estar en vivo: el canal se suscribía bien y no
-        // llegaba nada. Solo cuenta haber recibido una difusión de verdad.
-        if (estado !== "SUBSCRIBED") setEnVivo("no");
-      });
-      cerrar = () => void supabase.removeChannel(canal);
+        .channel(`partida-${p.id}`)
+        /**
+         * SOLO DIFUSIÓN EN ESTE CANAL, y esto es el arreglo de fondo.
+         *
+         * Antes escuchaba además los cambios de la tabla (`postgres_changes`) y no
+         * llegaba NADA: ni las jugadas ni el chat. Medido después: la difusión
+         * funciona sola —comprobada con clave anónima contra un canal limpio— y la
+         * presencia también, porque van en canales sin escuchas de tabla. Lo que
+         * mataba este canal era mezclar las dos cosas: si la RLS rechaza la parte de
+         * `postgres_changes`, se cae la unión entera y con ella la difusión, que no
+         * tenía ninguna culpa.
+         *
+         * Así que las escuchas de tabla se van. No se pierde nada: todo lo que la
+         * partida necesita saber lo manda la acción de servidor por difusión.
+         */
+        .on("broadcast", { event: "cambio" }, (mensaje) => {
+          const f = (mensaje.payload as { fila?: Record<string, unknown> })?.fila;
+          if (!f) return;
+          setEnVivo("si");
+          antesJugadas.current = ((f.jugadas as string[]) ?? []).length;
+          aplicarFila(f);
+        })
+        .on("broadcast", { event: "chat" }, (mensaje) => {
+          const m = (mensaje.payload as { mensaje?: Mensaje })?.mensaje;
+          if (!m) return;
+          setEnVivo("si");
+          setMensajes((antes) => (antes.some((x) => x.id === m.id) ? antes : [...antes, m]));
+        })
+        .subscribe((estado) => {
+          if (cancelado) return;
+          if (estado !== "SUBSCRIBED") setEnVivo("no");
+        });
+      canalRef.current = canal;
+      cerrar = () => {
+        canalRef.current = null;
+        void supabase.removeChannel(canal);
+      };
     });
 
     return () => {
@@ -437,10 +434,25 @@ export function Mesa({
     const supabase = createClient();
     // El chat sí lo escribe el cliente: su política solo deja escribir como uno
     // mismo y en las partidas propias (migración 0022).
-    const { error: e } = await supabase
+    const { data, error: e } = await supabase
       .from("live_chat")
-      .insert({ live_game_id: p.id, player_id: yo, texto: limpio });
-    if (e) setError("No se ha podido mandar el mensaje.");
+      .insert({ live_game_id: p.id, player_id: yo, texto: limpio })
+      .select("id, player_id, texto, creado_en")
+      .single();
+    if (e || !data) {
+      setError("No se ha podido mandar el mensaje.");
+      return;
+    }
+    const mensaje: Mensaje = {
+      id: data.id,
+      playerId: data.player_id,
+      texto: data.texto,
+      creadoEn: data.creado_en,
+    };
+    // Se pinta al momento en el propio chat y se difunde al rival: el mensaje lo
+    // escribe el navegador, así que el aviso sale de aquí y no del servidor.
+    setMensajes((antes) => (antes.some((x) => x.id === mensaje.id) ? antes : [...antes, mensaje]));
+    void canalRef.current?.send({ type: "broadcast", event: "chat", payload: { mensaje } });
   }
 
   const arriba = miColor === "b" ? "blancas" : "negras";
