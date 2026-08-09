@@ -9,6 +9,7 @@ import { Boton } from "@/components/ui/Boton";
 import { Banner } from "@/components/ui/Banner";
 import { BotonCopiar } from "@/components/ui/BotonCopiar";
 import { PuntoConectado } from "@/components/presencia/Presencia";
+import { Mirando } from "@/components/presencia/Mirando";
 import { aPgn } from "@/lib/vivo/partida";
 import { enReloj, paraPintar, trasJugada, type Reloj } from "@/lib/vivo/reloj";
 import {
@@ -435,17 +436,19 @@ export function Mesa({
     };
   }, [aplicarFila, aplicarJugadaSuelta, p.id, releerConInsistencia]);
 
-  // RED DE SEGURIDAD del tiempo real: se recarga la fila cada dos segundos mientras
-  // la partida está viva. Si el aviso llegó, esto no cambia nada; si se perdió,
-  // evita quedarte mirando un tablero que ya no es el de la partida —que es lo que
-  // obligaba a recargar a mano.
+  // RED DE SEGURIDAD del tiempo real: se vuelve a leer la fila cada pocos segundos
+  // mientras la partida está viva. Si el aviso llegó, esto no cambia nada; si se
+  // perdió, evita quedarte mirando un tablero que ya no es el de la partida —que es
+  // lo que obligaba a recargar a mano.
   useEffect(() => {
     if (p.resultado !== null) return;
     const supabase = createClient();
-    // Con la difusión funcionando esto vuelve a ser lo que debe ser: una red, no el
-    // motor. Se deja algo más corto mientras esperas al rival por si un mensaje se
-    // pierde, pero ya no es lo que marca el ritmo de la partida.
-    const cada = meToca ? 3000 : 1500;
+    // ES UNA RED, NO EL MOTOR. La difusión trae las jugadas al instante; esto solo
+    // cubre el mensaje perdido. Cinco segundos y no uno: con varias partidas a la
+    // vez, cada segundo que se recorta aquí son consultas por todas ellas a la vez,
+    // y el precio de un mensaje perdido es enterarse cinco segundos tarde en un caso
+    // que casi no pasa.
+    const cada = 5000;
     const t = setInterval(async () => {
       const { data } = await supabase
         .from("live_games")
@@ -480,7 +483,7 @@ export function Mesa({
       }
     }, cada);
     return () => clearInterval(t);
-  }, [aplicarFila, p.id, p.resultado, meToca]);
+  }, [aplicarFila, p.id, p.resultado]);
 
   // La cuenta atrás. Cada décima porque en los últimos segundos se ven décimas; en
   // cuanto la partida acaba se para, que si no sigue restando sobre un resultado.
@@ -676,6 +679,7 @@ export function Mesa({
             Sin conexión en vivo: las jugadas del rival tardan un momento en aparecer.
           </p>
         )}
+        <Mirando sala={`partida-${p.id}`} excluir={[p.blancasNombre, p.negrasNombre]} />
         <Jugador
           nombre={nombreArriba}
           ficha={arriba === "blancas" ? p.blancasId : p.negrasId}

@@ -31,16 +31,29 @@ type Presencia = {
 
 const Contexto = createContext<Presencia>({ enLinea: new Set(), listo: false });
 
+/** Quién es el que mira, para poder anunciarse en las salas. */
+type QuienSoy = { ficha: string | null; nombre: string | null };
+const ContextoYo = createContext<QuienSoy>({ ficha: null, nombre: null });
+
 export function usePresencia(): Presencia {
   return useContext(Contexto);
 }
 
+/** Ficha y nombre de quien mira. Lo usa `Mirando` para anunciarse sin tener que
+ *  pedirle esos datos a cada pantalla que lo monte. */
+export function useQuienSoy(): QuienSoy {
+  return useContext(ContextoYo);
+}
+
 export function ProveedorPresencia({
   yo,
+  nombre,
   children,
 }: {
   /** Ficha de quien mira. null = no se anuncia, pero sí ve a los demás. */
   yo: string | null;
+  /** Su nombre, para poder decir quién está mirando cada pantalla. */
+  nombre: string | null;
   children: React.ReactNode;
 }) {
   const [enLinea, setEnLinea] = useState<Set<string>>(new Set());
@@ -81,7 +94,11 @@ export function ProveedorPresencia({
     };
   }, [yo]);
 
-  return <Contexto.Provider value={{ enLinea, listo }}>{children}</Contexto.Provider>;
+  return (
+    <ContextoYo.Provider value={{ ficha: yo, nombre }}>
+      <Contexto.Provider value={{ enLinea, listo }}>{children}</Contexto.Provider>
+    </ContextoYo.Provider>
+  );
 }
 
 /**

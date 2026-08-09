@@ -7,6 +7,7 @@ import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Boton } from "@/components/ui/Boton";
 import { Banner } from "@/components/ui/Banner";
 import { jugarEmparejamiento } from "@/app/club/(vinculado)/jugar/actions";
+import { Mirando } from "@/components/presencia/Mirando";
 import {
   anotarResultado,
   borrarUltimaRonda,
@@ -82,6 +83,7 @@ export function GestionTorneo({
 
   return (
     <div className="space-y-4">
+      <Mirando sala={`torneo-${tournamentId}`} />
       {error && <Banner tipo="error">{error}</Banner>}
 
       {/* ---- Inscritos ---- */}

@@ -45,7 +45,7 @@ export default async function ClubLayout({
   }
 
   return (
-    <ProveedorPresencia yo={sesion.playerId}>
+    <ProveedorPresencia yo={sesion.playerId} nombre={sesion.nombre}>
     <div className="flex flex-1">
       <PushSubscriber />
       {conNavegacion && <NavLateral esAdmin={sesion.esAdmin} email={sesion.email} pendientes={pendientes} />}

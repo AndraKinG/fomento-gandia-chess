@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Chess } from "chess.js";
 import { Tablero } from "./Tablero";
 import { BotonCopiar } from "@/components/ui/BotonCopiar";
+import { Mirando } from "@/components/presencia/Mirando";
 import {
   BarraEvaluacion,
   BotonAnalisis,
@@ -23,10 +24,13 @@ import {
 export function VisorPartida({
   pgn,
   volteado: volteadoInicial = false,
+  sala,
 }: {
   pgn: string;
   /** Arranca desde el punto de vista del dueño de la partida. */
   volteado?: boolean;
+  /** Si se pasa, se enseña quién más está mirando esta partida. */
+  sala?: string;
 }) {
   const analisis = useMemo(() => {
     try {
@@ -93,6 +97,7 @@ export function VisorPartida({
 
   return (
     <div className="space-y-3">
+      {sala && <Mirando sala={sala} />}
       {/* La barra pegada al tablero y de su misma altura (`self-stretch`), como en
           cualquier analizador: el número suelto debajo no dice de un vistazo quién
           está mejor. */}

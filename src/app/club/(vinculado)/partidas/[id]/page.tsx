@@ -61,7 +61,7 @@ export default async function PartidaPage({
                 <Tarjeta>
                   {/* El tablero se orienta desde el punto de vista del dueño de la
                       partida: quien la consulta quiere verla como la vivió él. */}
-                  <VisorPartida pgn={p.pgn} volteado={p.color === "negras"} />
+                  <VisorPartida pgn={p.pgn} volteado={p.color === "negras"} sala={`repaso-${p.id}`} />
                 </Tarjeta>
                 <details className="px-1">
                   <summary className="cursor-pointer text-xs text-tinta-suave">
