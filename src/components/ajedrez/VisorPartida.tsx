@@ -97,7 +97,6 @@ export function VisorPartida({
 
   return (
     <div className="space-y-3">
-      {sala && <Mirando sala={sala} />}
       {/* La barra pegada al tablero y de su misma altura (`self-stretch`), como en
           cualquier analizador: el número suelto debajo no dice de un vistazo quién
           está mejor. */}
@@ -168,7 +167,10 @@ export function VisorPartida({
 
       {/* Copiar el PGN va junto a las jugadas y no escondido en un desplegable:
           es lo que se hace con una partida ajena —llevártela a Lichess a mirarla. */}
-      <div className="flex justify-end">
+      {/* Quién más está mirando, ABAJO DEL TODO y nunca encima del tablero: ahí
+          empuja las piezas hacia abajo y se mueve solo mientras se lee la partida. */}
+      <div className="flex items-center justify-between gap-2">
+        {sala ? <Mirando sala={sala} /> : <span />}
         <BotonCopiar texto={pgn} etiqueta="Copiar PGN" />
       </div>
     </div>

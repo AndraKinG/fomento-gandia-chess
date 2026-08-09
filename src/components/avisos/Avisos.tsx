@@ -55,6 +55,9 @@ export function Avisos({ yo }: { yo: string }) {
   const { poner } = usePendientes();
   /** Retos que ya se han anunciado, para no repetir la tarjeta en cada repaso. */
   const vistos = useRef(new Set<string>());
+  /** Los que estaban esperando respuesta en el repaso anterior. Sirve para notar
+   *  que uno HA DEJADO de estar: cancelarlo no crea nada nuevo que mirar. */
+  const esperando = useRef<string[]>([]);
 
   /**
    * Lo que cambia y no debe volver a montar el canal.
@@ -103,11 +106,20 @@ export function Avisos({ yo }: { yo: string }) {
       // discrepar de las tarjetas.
       anotar.current((paraMi ?? []).length);
 
-      let novedad = false;
+      // NOVEDAD ES TAMBIÉN QUE ALGO DESAPAREZCA, y esto es lo que faltaba: al
+      // cancelar un reto, al retado le llegaba el mensaje pero la tarjeta de la
+      // pantalla de Jugar seguía ahí con su botón de Aceptar, que ya no valía para
+      // nada —contestaba "ese reto ya está resuelto"—. Comparar contra el repaso
+      // anterior lo cubre en los dos sentidos.
+      const ahoraEsperan = (paraMi ?? []).map((r) => r.id);
+      let novedad =
+        ahoraEsperan.length !== esperando.current.length ||
+        ahoraEsperan.some((id) => !esperando.current.includes(id));
+      esperando.current = ahoraEsperan;
+
       for (const r of paraMi ?? []) {
         if (vistos.current.has(r.id)) continue;
         vistos.current.add(r.id);
-        novedad = true;
         const de = (r.players as unknown as { nombre: string } | null)?.nombre ?? "Un socio";
         setAvisos((a) =>
           a.some((x) => x.id === r.id)
@@ -127,8 +139,7 @@ export function Avisos({ yo }: { yo: string }) {
       }
 
       // Los que se han resuelto: se quita la tarjeta, que ya no lleva a ninguna parte.
-      const idsEnPantalla = (paraMi ?? []).map((r) => r.id);
-      setAvisos((a) => a.filter((x) => x.tipo !== "reto" || idsEnPantalla.includes(x.id)));
+      setAvisos((a) => a.filter((x) => x.tipo !== "reto" || ahoraEsperan.includes(x.id)));
 
       // LOS QUE ME MANDARON A MÍ Y SE HAN CANCELADO. Sin esto el reto desaparecía de
       // la pantalla sin una palabra: quien lo mandó sabe que lo ha cancelado, pero
@@ -208,6 +219,7 @@ export function Avisos({ yo }: { yo: string }) {
       for (const r of paraMi ?? []) {
         vistos.current.add(r.estado === "cancelado" ? `${r.id}-cancelado` : r.id);
       }
+      esperando.current = (paraMi ?? []).filter((r) => r.estado === "pendiente").map((r) => r.id);
       for (const r of mios ?? []) vistos.current.add(`${r.id}-${r.estado}`);
     }
 
