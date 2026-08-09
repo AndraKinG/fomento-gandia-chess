@@ -7,7 +7,7 @@ import { clienteEnVivo } from "@/lib/supabase/vivo";
 import { Tablero } from "@/components/ajedrez/Tablero";
 import { Boton } from "@/components/ui/Boton";
 import { Banner } from "@/components/ui/Banner";
-import { enReloj, paraPintar, type Reloj } from "@/lib/vivo/reloj";
+import { enReloj, paraPintar, trasJugada, type Reloj } from "@/lib/vivo/reloj";
 import {
   abandonar,
   aceptarTablas,
@@ -91,6 +91,17 @@ export function Mesa({
   /** Estado de la conexión en vivo, para poder enseñarlo. Un canal que se suscribe
    *  pero no recibe nada es indistinguible de uno sano y sin novedades. */
   const [enVivo, setEnVivo] = useState<"conectando" | "si" | "no">("conectando");
+  /**
+   * Cuántas jugadas damos ya por hechas.
+   *
+   * ES LA GUARDA CONTRA EL REBOTE. Al mover se pinta la jugada al momento, pero el
+   * reintento sigue preguntando por la fila: si contesta ANTES de que el servidor
+   * haya guardado —y con 600 ms de reintento pasa casi siempre—, devuelve la
+   * posición de antes y la pieza se vuelve sola a su casilla, para volver a moverse
+   * medio segundo después. Cualquier estado con menos jugadas de las que ya tenemos
+   * es viejo y se tira.
+   */
+  const jugadasFirmes = useRef(inicial.jugadas.length);
   const finChat = useRef<HTMLDivElement | null>(null);
 
   const miColor: "w" | "b" | null =
@@ -121,6 +132,11 @@ export function Mesa({
         { event: "UPDATE", schema: "public", table: "live_games", filter: `id=eq.${p.id}` },
         (aviso) => {
           const f = aviso.new as Record<string, unknown>;
+          const cuantas = ((f.jugadas as string[]) ?? []).length;
+          // Un aviso con menos jugadas de las que ya damos por hechas es viejo; la
+          // única excepción es el final de la partida, que hay que atender siempre.
+          if (cuantas < jugadasFirmes.current && !f.resultado) return;
+          jugadasFirmes.current = cuantas;
           setP((antes) => ({
             ...antes,
             jugadas: (f.jugadas as string[]) ?? [],
@@ -187,6 +203,9 @@ export function Mesa({
         .eq("id", p.id)
         .maybeSingle();
       if (!data) return;
+      const cuantas = (data.jugadas ?? []).length;
+      if (cuantas < jugadasFirmes.current && !data.resultado) return;
+      jugadasFirmes.current = cuantas;
       setP((antes) => {
         // Si no ha cambiado nada, se devuelve el mismo objeto: cambiarlo repintaría
         // el tablero entero dos veces por segundo para nada.
@@ -294,15 +313,39 @@ export function Mesa({
 
     // Se guarda la posición de antes para poder volver si el servidor dice que no.
     const antes = p;
+    const ahoraMs = Date.now();
+
+    // EL RELOJ TAMBIÉN SE ADELANTA, con la misma cuenta que hará el servidor. Sin
+    // esto, la jugada se pintaba pero los relojes seguían como estaban: el del
+    // rival empezaba a descontar desde la marca vieja y el número pegaba un salto
+    // hacia atrás en cuanto llegaba la fila de verdad.
+    const relojTrasMover = trasJugada(
+      {
+        blancasMs: antes.blancasMs,
+        negrasMs: antes.negrasMs,
+        turno: antes.turno,
+        ultimaJugadaEn: antes.ultimaJugadaEn ? Date.parse(antes.ultimaJugadaEn) : null,
+      },
+      { baseMs: antes.baseMs, incrementoMs: antes.incrementoMs },
+      ahoraMs
+    );
+
+    jugadasFirmes.current = antes.jugadas.length + 1;
     setP((estado) => ({
       ...estado,
       jugadas: [...estado.jugadas, san],
-      turno: estado.turno === "w" ? "b" : "w",
+      turno: relojTrasMover.turno,
+      blancasMs: relojTrasMover.blancasMs,
+      negrasMs: relojTrasMover.negrasMs,
+      ultimaJugadaEn: new Date(ahoraMs).toISOString(),
+      // Mover mata cualquier oferta de tablas viva, igual que en el servidor.
+      tablasOfrecidasPor: null,
     }));
 
     const r = await mover(p.id, { desde, hasta, corona });
     if (r.error) {
       // El servidor manda: se deshace lo pintado y se dice por qué.
+      jugadasFirmes.current = antes.jugadas.length;
       setP(antes);
       setError(r.error);
     }
