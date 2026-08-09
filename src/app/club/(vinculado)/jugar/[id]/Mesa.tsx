@@ -202,10 +202,23 @@ export function Mesa({
       ((f.resultado as string | null) ?? null) === null;
     if (igual) return;
 
+    /**
+     * LA REFERENCIA SOLO SE REINICIA SI LA JUGADA ES NUEVA PARA NOSOTROS.
+     *
+     * Aquí estaba el segundo que se devolvía. Los milisegundos que manda el servidor
+     * son los del INSTANTE DE LA JUGADA, no los de ahora; entre una cosa y otra está
+     * el viaje de ida y vuelta. Si al llegar la confirmación se pone la referencia a
+     * "ahora", ese viaje se descuenta dos veces... o mejor dicho, se le regala al
+     * reloj: medido, el rival tardaba 1,9 s en bajar de 4:59 a 4:58.
+     *
+     * Cuando la jugada ya la habíamos pintado nosotros, la referencia buena es la que
+     * ya teníamos —marca justo ese instante—, así que se deja como está.
+     */
+    const esNueva = cuantas > antesJugadas.current;
     ultimaMarca.current = marca;
     antesJugadas.current = cuantas;
     jugadasFirmes.current = cuantas;
-    setRecibidoEn(performance.now());
+    if (esNueva) setRecibidoEn(performance.now());
     setP((antes) => ({
       ...antes,
       jugadas: (f.jugadas as string[]) ?? [],

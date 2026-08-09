@@ -66,7 +66,13 @@ export function banderaCaida(reloj: Reloj, ahora: number): boolean {
  */
 export function trasJugada(reloj: Reloj, cadencia: Cadencia, ahora: number): Reloj {
   const restante = restanteDeQuienMueve(reloj, ahora);
-  const nuevo = restante <= 0 ? 0 : restante + cadencia.incrementoMs;
+  // LA PRIMERA JUGADA NO SUMA INCREMENTO. El reloj no arranca hasta que alguien
+  // mueve —para que nadie pierda mientras espera a que el rival entre—, así que en
+  // esa jugada no se ha gastado nada; sumarle el incremento dejaba a las blancas con
+  // MÁS tiempo del que empezaron (5:00 → 5:03 sin haber pensado), y eso se lee como
+  // un error aunque el reloj vaya bien.
+  const arrancado = reloj.ultimaJugadaEn !== null;
+  const nuevo = restante <= 0 ? 0 : restante + (arrancado ? cadencia.incrementoMs : 0);
   return {
     blancasMs: reloj.turno === "w" ? nuevo : reloj.blancasMs,
     negrasMs: reloj.turno === "b" ? nuevo : reloj.negrasMs,

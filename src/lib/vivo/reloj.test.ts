@@ -79,9 +79,19 @@ describe("trasJugada", () => {
     expect(d.ultimaJugadaEn).toBe(T0 + 10_000);
   });
 
-  it("la primera jugada no descuenta nada, pero sí suma incremento", () => {
+  it("la primera jugada ni descuenta ni suma", () => {
+    // El reloj no ha arrancado, así que no se ha gastado nada: sumar el incremento
+    // dejaba a las blancas con más tiempo del que empezaron, y eso se lee como un
+    // error aunque el reloj vaya bien.
     const d = trasJugada(relojInicial(CADENCIA), CADENCIA, T0);
-    expect(d.blancasMs).toBe(303_000);
+    expect(d.blancasMs).toBe(300_000);
+  });
+
+  it("la segunda jugada ya suma normal", () => {
+    let r: Reloj = relojInicial(CADENCIA);
+    r = trasJugada(r, CADENCIA, T0); // blancas abren, sin descuento ni incremento
+    r = trasJugada(r, CADENCIA, T0 + 10_000); // negras piensan 10 s
+    expect(r.negrasMs).toBe(293_000);
   });
 
   it("NO regala incremento a quien ya se quedó a cero", () => {
