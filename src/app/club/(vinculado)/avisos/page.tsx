@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { sesionActual } from "@/lib/auth/sesion";
 import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Contenedor } from "@/components/ui/Contenedor";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
-import { marcarLeido } from "./actions";
+import { BotonAccion } from "@/components/ui/BotonAccion";
+import { marcarLeido, marcarLeidoQuieto, marcarTodosLeidos } from "./actions";
 
 type AvisoVista = {
   id: string;
@@ -19,87 +21,131 @@ type AvisoVista = {
 /**
  * Una fila de la bandeja.
  *
- * TODA LA FILA ES UN `<form>` CON UN `<button>` A PANTALLA COMPLETA, no un
- * componente cliente con `onClick`: `marcarLeido` ya sabe navegar sola (mira
- * `actions.ts`) cuando el aviso trae `url`, así que no hace falta JavaScript
- * en el navegador para nada de esto — ni para marcar leído ni para el salto.
- * Si el aviso NO trae `url` (hoy ninguno de los 11 tipos se manda sin ella,
- * pero la columna es nullable y nada obliga a que seguirá siendo así), el
- * botón igualmente marca leído y se queda en la propia bandeja.
+ * DOS ACCIONES POR SEPARADO, no una sola pegada a la navegación (así estaba
+ * antes): "ir al aviso" e "marcarlo leído quedándose en la bandeja" son cosas
+ * distintas, y con ~100 avisos al año por socio (disponibilidad para los 46,
+ * dos veces por semana) obligarlo todo por la navegación significaba volver a
+ * entrar a la bandeja una vez por cada aviso para vaciarla. Un aviso SIN `url`
+ * (la columna es nullable) solo ofrece la segunda: no hay apertura que
+ * prometer. Y un aviso YA LEÍDO no ofrece "marcar leído" (no hay nada que
+ * marcar) — si trae `url` se deja un enlace normal para poder volver a abrirlo.
  *
- * ACCESIBILIDAD (ronda de arreglo 1, dos hallazgos "Importante"): el negrita/
- * fondo suave del no leído y el hecho de que el botón navegue son cosas que
- * solo se ven, no se oyen. Un lector de pantalla no distingue `font-semibold`
- * de `font-normal` ni un fondo de otro, así que sin más la bandeja sería una
- * lista plana donde nunca se sabe qué es nuevo; y un `<button>` sin más
- * información solo se anuncia como "botón", sin decir que puede sacarte de la
- * bandeja — se descubre cuando ya te ha movido. Se resuelve con `aria-label`
- * (estado + título + qué va a pasar, SIN prometer una apertura que no hay
- * cuando `url` es null) y `aria-describedby` apuntando al cuerpo, que sigue
- * siendo texto visible normal — nada de esto necesita JavaScript de cliente.
+ * SIGUEN SIENDO `<form>` DE SERVIDOR, sin JavaScript de cliente para la lógica:
+ * cada botón es su propio formulario (dos `<form>` hermanos, nunca uno dentro
+ * de otro, que es HTML inválido) con su propia action. El único cliente aquí
+ * es la hoja `BotonAccion` (`useFormStatus`), que solo sabe deshabilitarse y
+ * cambiar de texto mientras el envío está en marcha.
+ *
+ * ACCESIBILIDAD (heredado de la ronda de arreglo 1 y ampliado aquí): con dos
+ * controles por fila hace falta que cada uno diga QUÉ ES y QUÉ VA A PASAR sin
+ * depender de mirar el negrita o el fondo suave del no leído, que un lector de
+ * pantalla no distingue. Cada botón lleva su propio `aria-label` (empieza por
+ * "Sin leer:"/"Leído:", como antes) y su `aria-describedby` apunta al cuerpo
+ * visible del aviso.
  */
 function FilaAviso({ aviso }: { aviso: AvisoVista }) {
-  // La action de un `<form>` tiene que devolver `void`/`Promise<void>`, y
-  // `marcarLeido` devuelve `{ error? }` para quien quiera comprobarlo por
-  // código (no hace falta aquí: sin filtros ni deshacer, no hay nada que
-  // enseñar si falla salvo dejar el aviso como estaba). De ahí este envoltorio
-  // en vez de pasar `marcarLeido.bind(null, aviso.id)` directamente.
-  async function marcarEsteLeido() {
+  // Dos wrappers, uno por action: la action de un `<form>` tiene que devolver
+  // `void`/`Promise<void>`, y las dos funciones de `actions.ts` devuelven
+  // `{ error? }` para quien quiera comprobarlo por código (no hace falta aquí:
+  // sin deshacer, no hay nada que enseñar si falla salvo dejar el aviso como
+  // estaba).
+  async function irYMarcarLeido() {
     "use server";
     await marcarLeido(aviso.id);
   }
+  async function marcarEsteLeidoQuieto() {
+    "use server";
+    await marcarLeidoQuieto(aviso.id);
+  }
 
   const estado = aviso.sinLeer ? "Sin leer" : "Leído";
-  // NO PROMETER UNA APERTURA QUE NO HAY: si el aviso no trae `url`, la única
-  // acción real es marcarlo leído sin moverte de la bandeja.
-  const queHace = aviso.url
-    ? "Abre la pantalla relacionada y lo marca como leído."
-    : "Lo marca como leído.";
   const idCuerpo = `aviso-cuerpo-${aviso.id}`;
 
   return (
-    <form action={marcarEsteLeido}>
-      <button
-        type="submit"
-        aria-label={`${estado}: ${aviso.titulo}. ${queHace}`}
-        aria-describedby={idCuerpo}
-        className={`flex w-full flex-col gap-1 px-3 py-2.5 text-left transition hover:bg-tarjeta-suave sm:flex-row sm:items-start sm:gap-3 ${
-          aviso.sinLeer ? "bg-tarjeta-suave" : ""
+    <div
+      className={`flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-start sm:gap-3 ${
+        aviso.sinLeer ? "bg-tarjeta-suave" : ""
+      }`}
+    >
+      {/* El puntito es solo el refuerzo visual del estado: la distinción de
+          verdad (para quien no lo ve) va en el `aria-label` de cada botón. */}
+      <span
+        aria-hidden
+        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full sm:mt-1.5 ${
+          aviso.sinLeer ? "bg-acento-fuerte" : "bg-transparent"
         }`}
-      >
-        {/* El puntito es solo el refuerzo visual del estado: la distinción de
-            verdad (para quien no lo ve) va en el `aria-label` de arriba. */}
+      />
+      <span className="min-w-0 flex-1 space-y-0.5">
         <span
-          aria-hidden
-          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full sm:mt-1.5 ${
-            aviso.sinLeer ? "bg-acento-fuerte" : "bg-transparent"
-          }`}
-        />
-        <span className="min-w-0 flex-1 space-y-0.5">
-          <span
-            className={`block text-sm text-tinta ${aviso.sinLeer ? "font-semibold" : "font-normal"}`}
-          >
-            {aviso.titulo}
-          </span>
-          <span id={idCuerpo} className="block text-sm text-tinta-suave">
-            {aviso.cuerpo}
-          </span>
+          className={`block text-sm text-tinta ${aviso.sinLeer ? "font-semibold" : "font-normal"}`}
+        >
+          {aviso.titulo}
         </span>
-        <span className="shrink-0 pl-4 text-xs text-tinta-suave sm:pl-0 sm:pt-0.5">
-          {aviso.fecha}
+        <span id={idCuerpo} className="block text-sm text-tinta-suave">
+          {aviso.cuerpo}
         </span>
-      </button>
-    </form>
+        <span className="block text-xs text-tinta-suave">{aviso.fecha}</span>
+      </span>
+      <div className="flex shrink-0 items-center gap-2 pl-4 sm:pl-0 sm:pt-0.5">
+        {aviso.url &&
+          (aviso.sinLeer ? (
+            // Sin leer + con url: ir marca leído por el camino, como siempre.
+            <form action={irYMarcarLeido}>
+              <BotonAccion
+                variante="secundario"
+                trabajando="Abriendo…"
+                className="px-3 py-1.5 text-xs font-medium"
+                ariaLabel={`${estado}: ${aviso.titulo}. Abre la pantalla relacionada y lo marca como leído.`}
+                ariaDescribedby={idCuerpo}
+              >
+                Ir
+              </BotonAccion>
+            </form>
+          ) : (
+            // Ya leído: no hay ninguna escritura que hacer, así que es un
+            // enlace normal y no una action — puedes volver a abrirlo cuantas
+            // veces quieras sin que esto sea una "acción" con estado pendiente.
+            <Link
+              href={aviso.url}
+              aria-label={`${estado}: ${aviso.titulo}. Abre la pantalla relacionada.`}
+              aria-describedby={idCuerpo}
+              className="rounded-xl border border-borde bg-tarjeta px-3 py-1.5 text-xs font-medium text-tinta transition hover:bg-tarjeta-suave"
+            >
+              Ir
+            </Link>
+          ))}
+        {aviso.sinLeer && (
+          <form action={marcarEsteLeidoQuieto}>
+            <BotonAccion
+              variante="secundario"
+              trabajando="Marcando…"
+              className="px-3 py-1.5 text-xs font-medium"
+              ariaLabel={`${estado}: ${aviso.titulo}. Lo marca como leído sin salir de la bandeja.`}
+              ariaDescribedby={idCuerpo}
+            >
+              Marcar leído
+            </BotonAccion>
+          </form>
+        )}
+      </div>
+    </div>
   );
 }
 
 /**
  * Bandeja de avisos del socio.
  *
- * SIN FILTROS, SIN BUSCADOR, SIN "MARCAR TODOS COMO LEÍDOS" — decisión de la
- * spec (YAGNI): con un puñado de avisos por semana, una lista sola ya es
- * suficiente y cualquiera de esos tres controles es una pantalla que mantener
- * para un problema que todavía no existe.
+ * SIGUE SIN FILTROS Y SIN BUSCADOR — eso lo descartó la spec original y sigue
+ * descartado. Lo que sí se añadió después (2026-08-10): "marcar todos como
+ * leídos" e "ir al aviso" separado de "marcarlo leído". La spec original
+ * también descartaba esto apoyándose en un volumen bajo ("un puñado de avisos
+ * por semana"); al arreglar un agujero real, los dos avisos de disponibilidad
+ * pasaron a guardarse para los 46 socios dos veces por semana (antes solo para
+ * quien tenía push activado), unos ~100 avisos al año por socio. Con ese
+ * volumen un badge siempre encendido deja de significar nada, y como todos los
+ * tipos de aviso llevaban `url`, marcar uno leído sacaba de la bandeja: vaciar
+ * 30 avisos pedía entrar 30 veces. Ver `FilaAviso` para las dos acciones
+ * separadas por fila.
  *
  * UNA CAJA CON FILAS, no una columna de tarjetas: es el mismo patrón que el
  * calendario de un equipo en `/club/equipos/[id]` (`div` con borde +
@@ -138,6 +184,15 @@ export default async function AvisosPage() {
     sinLeer: f.leido_en == null,
   }));
 
+  const hayAlgoSinLeer = avisos.some((a) => a.sinLeer);
+
+  // La action de un `<form>` tiene que devolver `void`/`Promise<void>`, igual
+  // que en `FilaAviso`.
+  async function marcarTodosLeidosAction() {
+    "use server";
+    await marcarTodosLeidos();
+  }
+
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       {/* `medida="panel"` en la Cabecera Y en el Contenedor de abajo: si no
@@ -151,15 +206,32 @@ export default async function AvisosPage() {
             detalle="Aquí irá apareciendo lo que te vaya avisando el club"
           />
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-borde bg-tarjeta">
-            <ul className="divide-y divide-borde">
-              {avisos.map((a) => (
-                <li key={a.id}>
-                  <FilaAviso aviso={a} />
-                </li>
-              ))}
-            </ul>
-          </div>
+          <>
+            {/* Solo tiene sentido si hay algo que limpiar: un botón que no hace
+                nada es peor que no tenerlo. */}
+            {hayAlgoSinLeer && (
+              <div className="mb-3 flex justify-end">
+                <form action={marcarTodosLeidosAction}>
+                  <BotonAccion
+                    variante="secundario"
+                    trabajando="Marcando…"
+                    className="px-3 py-1.5 text-sm font-medium"
+                  >
+                    Marcar todos como leídos
+                  </BotonAccion>
+                </form>
+              </div>
+            )}
+            <div className="overflow-hidden rounded-2xl border border-borde bg-tarjeta">
+              <ul className="divide-y divide-borde">
+                {avisos.map((a) => (
+                  <li key={a.id}>
+                    <FilaAviso aviso={a} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </>
         )}
       </Contenedor>
     </main>

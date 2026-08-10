@@ -20,16 +20,28 @@ export function BotonAccion({
   trabajando = "Trabajando…",
   variante = "degradado",
   className = "",
+  ariaLabel,
+  ariaDescribedby,
 }: {
   children: React.ReactNode;
   /** Texto mientras la acción está en marcha. */
   trabajando?: string;
   variante?: "degradado" | "solido" | "secundario";
   className?: string;
+  /** Igual que en `Boton`: para cuando el texto visible no dice qué va a pasar. */
+  ariaLabel?: string;
+  ariaDescribedby?: string;
 }) {
   const { pending } = useFormStatus();
   return (
-    <Boton variante={variante} type="submit" disabled={pending} className={className}>
+    <Boton
+      variante={variante}
+      type="submit"
+      disabled={pending}
+      className={className}
+      ariaLabel={ariaLabel}
+      ariaDescribedby={ariaDescribedby}
+    >
       {pending ? trabajando : children}
     </Boton>
   );

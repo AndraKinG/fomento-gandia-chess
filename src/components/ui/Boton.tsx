@@ -20,6 +20,7 @@ type Variante = keyof typeof VARIANTES;
  */
 export function Boton({
   variante = "solido", className = "", children, href, onClick, type, disabled,
+  ariaLabel, ariaDescribedby,
 }: {
   variante?: Variante;
   className?: string;
@@ -28,11 +29,20 @@ export function Boton({
   onClick?: MouseEventHandler<HTMLButtonElement>;
   type?: "button" | "submit";
   disabled?: boolean;
+  /** Para botones cuyo texto visible ("Ir", "Marcar leído"...) no basta para
+   *  un lector de pantalla: qué es y qué va a pasar, en una frase. */
+  ariaLabel?: string;
+  ariaDescribedby?: string;
 }) {
   const base = `rounded-xl p-3 font-semibold transition duration-100 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 ${VARIANTES[variante]}`;
   if (href) {
     return (
-      <Link href={href} className={`${base} inline-flex items-center justify-center text-center ${className}`.trim()}>
+      <Link
+        href={href}
+        aria-label={ariaLabel}
+        aria-describedby={ariaDescribedby}
+        className={`${base} inline-flex items-center justify-center text-center ${className}`.trim()}
+      >
         {children}
       </Link>
     );
@@ -42,6 +52,8 @@ export function Boton({
       type={type ?? (onClick ? "button" : "submit")}
       onClick={onClick}
       disabled={disabled}
+      aria-label={ariaLabel}
+      aria-describedby={ariaDescribedby}
       className={`${base} ${className}`.trim()}
     >
       {children}
