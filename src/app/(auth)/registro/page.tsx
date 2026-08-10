@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { registro } from "../actions";
 import { Banner } from "@/components/ui/Banner";
 import { Boton } from "@/components/ui/Boton";
@@ -11,6 +12,15 @@ export default async function RegistroPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+
+  // SI YA HAY SESIÓN, PARA DENTRO. El "Entrar (socios)" de la portada apunta
+  // aquí, y a quien ya está logueado volver a verle el formulario le dice que
+  // la app le ha olvidado — no le había olvidado, solo no miraba.
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) redirect("/club");
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-fondo p-6">
       <div className="flex w-full max-w-sm flex-col gap-6">

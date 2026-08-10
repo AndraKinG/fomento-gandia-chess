@@ -8,20 +8,15 @@ import { Banner } from "@/components/ui/Banner";
 import { PuntoConectado, usePresencia } from "@/components/presencia/Presencia";
 import { claveNombre } from "@/lib/import/cruzar-nombres";
 import { aceptarReto, rechazarReto, retar } from "./actions";
+import { ElegirCadencia, type Cadencia } from "@/components/ajedrez/Cadencia";
 
 /**
  * Los retos: los que te han mandado, los que has mandado tú, y el formulario.
  *
- * LAS CADENCIAS SON BOTONES Y NO UN CAMPO LIBRE. Nadie escribe "7+2": se juega a lo
- * de siempre, y tres botones se tocan en un segundo desde el móvil. El servidor
- * admite cualquier valor razonable por si algún día hace falta.
+ * La cadencia se elige con el selector compartido (`ElegirCadencia`): las tres
+ * de siempre como botones y "Otra" para ponerla a mano — petición del
+ * propietario del 2026-08-10, para las lentas del club que no están en la lista.
  */
-
-const CADENCIAS = [
-  { etiqueta: "3+2", baseMin: 3, incrementoS: 2 },
-  { etiqueta: "5+3", baseMin: 5, incrementoS: 3 },
-  { etiqueta: "10+5", baseMin: 10, incrementoS: 5 },
-];
 
 /**
  * Qué se pidió de color, dicho desde el lado que lo lee.
@@ -58,7 +53,7 @@ export function Retos({
 }) {
   const [aQuien, setAQuien] = useState("");
   const [busca, setBusca] = useState("");
-  const [cadencia, setCadencia] = useState(CADENCIAS[1]);
+  const [cadencia, setCadencia] = useState<Cadencia>({ baseMin: 5, incrementoS: 3 });
   const [color, setColor] = useState("azar");
   const [error, setError] = useState<string | null>(null);
   const [pendiente, empezar] = useTransition();
@@ -214,22 +209,8 @@ export function Retos({
             </ul>
           )}
 
-          <div className="flex flex-wrap gap-1.5">
-            {CADENCIAS.map((c) => (
-              <button
-                key={c.etiqueta}
-                type="button"
-                onClick={() => setCadencia(c)}
-                aria-pressed={cadencia.etiqueta === c.etiqueta}
-                className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition duration-100 ${
-                  cadencia.etiqueta === c.etiqueta
-                    ? "bg-acento-fuerte text-sobre-acento"
-                    : "border border-borde bg-tarjeta text-tinta-suave"
-                }`}
-              >
-                {c.etiqueta}
-              </button>
-            ))}
+          <div className="space-y-2">
+            <ElegirCadencia valor={cadencia} onCambiar={setCadencia} />
             <select
               value={color}
               onChange={(e) => setColor(e.target.value)}

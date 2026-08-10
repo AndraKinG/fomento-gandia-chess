@@ -6,10 +6,12 @@ import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Boton } from "@/components/ui/Boton";
 import { Banner } from "@/components/ui/Banner";
 import { crearTorneoInterno } from "../actions";
+import { ElegirCadencia, type Cadencia } from "@/components/ajedrez/Cadencia";
 
 export function FormularioTorneoInterno() {
   const [error, setError] = useState<string | null>(null);
   const [sistema, setSistema] = useState("suizo");
+  const [cadencia, setCadencia] = useState<Cadencia>({ baseMin: 10, incrementoS: 5 });
   const [pendiente, startTransition] = useTransition();
   const router = useRouter();
 
@@ -28,6 +30,8 @@ export function FormularioTorneoInterno() {
             const r = await crearTorneoInterno({
               nombre: String(fd.get("nombre") ?? ""),
               sistema: String(fd.get("sistema") ?? ""),
+              baseMin: cadencia.baseMin,
+              incrementoS: cadencia.incrementoS,
               fechaInicio: String(fd.get("fechaInicio") ?? ""),
               notas: String(fd.get("notas") ?? ""),
             });
@@ -73,6 +77,14 @@ export function FormularioTorneoInterno() {
             {sistema === "suizo"
               ? "Las rondas se calculan según los inscritos, y se puede parar cuando quieras."
               : "El calendario sale entero al generar la primera ronda: N−1 rondas con N jugadores."}
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium text-tinta">Ritmo de juego</span>
+          <ElegirCadencia valor={cadencia} onCambiar={setCadencia} />
+          <p className="text-xs text-tinta-suave">
+            Todas las partidas del torneo se juegan a este ritmo.
           </p>
         </div>
 

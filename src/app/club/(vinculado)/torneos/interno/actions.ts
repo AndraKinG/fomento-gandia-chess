@@ -26,6 +26,8 @@ export async function crearTorneoInterno(datos: {
   sistema: string;
   fechaInicio?: string;
   notas?: string;
+  baseMin?: number;
+  incrementoS?: number;
 }): Promise<Resultado> {
   const sesion = await sesionActual();
   if (!sesion?.esJunta) return { error: "No autorizado" };
@@ -34,6 +36,15 @@ export async function crearTorneoInterno(datos: {
   if (!nombre) return { error: "Ponle un nombre al torneo." };
   if (datos.sistema !== "liguilla" && datos.sistema !== "suizo") {
     return { error: "Elige el sistema de juego." };
+  }
+  // La cadencia con los mismos topes que los retos y que el CHECK de la base
+  // (0023). Se valida aquí y no solo en el selector: lo que llega del cliente
+  // no es de fiar, y el CHECK contestaría con un error de Postgres ilegible.
+  const baseMin = Math.round(datos.baseMin ?? 10);
+  const incrementoS = Math.round(datos.incrementoS ?? 5);
+  if (!(baseMin >= 1 && baseMin <= 180)) return { error: "El tiempo va de 1 a 180 minutos." };
+  if (!(incrementoS >= 0 && incrementoS <= 60)) {
+    return { error: "El incremento va de 0 a 60 segundos." };
   }
 
   const supabase = await createServerSupabase();
@@ -45,6 +56,8 @@ export async function crearTorneoInterno(datos: {
       fecha_inicio: datos.fechaInicio?.trim() || null,
       notas: datos.notas?.trim() || null,
       creado_por: sesion.userId,
+      base_min: baseMin,
+      incremento_s: incrementoS,
     })
     .select("id")
     .single();
