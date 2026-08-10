@@ -27,8 +27,11 @@ export type TemaTablero = {
 };
 
 export const TEMAS_TABLERO: readonly TemaTablero[] = [
-  // El de siempre: el blanquiazul del club. Primero porque es el default.
-  { clave: "gandiblues", nombre: "Gandiblues", clara: "#e9f2fb", oscura: "#6b9dc9" },
+  // El de siempre: el blanquiazul del club. Primero porque es el default. En
+  // pantalla se llama "Club" (decisión del propietario: "gandiblues" es un
+  // concepto interno suyo, no un nombre para la interfaz); la CLAVE se queda
+  // como está porque ya vive en la base como default de la 0030.
+  { clave: "gandiblues", nombre: "Club", clara: "#e9f2fb", oscura: "#6b9dc9" },
   { clave: "verde", nombre: "Verde torneo", clara: "#ebecd0", oscura: "#739552" },
   { clave: "madera", nombre: "Madera", clara: "#f0d9b5", oscura: "#b58863" },
   { clave: "gris", nombre: "Piedra", clara: "#dee3e6", oscura: "#8ca2ad" },
