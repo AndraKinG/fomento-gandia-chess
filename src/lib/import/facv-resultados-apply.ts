@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizaNombre, URL_CALENDARIO } from "@/lib/import/facv-calendario";
+import { esUrlDeChessResults } from "@/lib/import/red";
 import {
   parseClasificacionFACV,
   parseEnlacesClasificacionFACV,
@@ -322,6 +323,13 @@ export async function sincronizarResultadosFACVCore(): Promise<ResultadoSyncResu
       const sufijo = grupoToSufijo.get(enlace.grupo);
       const equipo = sufijo ? equipoIdPorSufijo.get(sufijo) : undefined;
       if (!equipo) continue;
+
+      // El enlace viene del HTML de la FACV, no de nosotros: solo se sigue si de
+      // verdad apunta a chess-results (ver esUrlDeChessResults).
+      if (!esUrlDeChessResults(enlace.url)) {
+        avisos.push(`${equipo.nombre}: el enlace de clasificación no apunta a chess-results (${enlace.url})`);
+        continue;
+      }
 
       let paginaClasif: Response;
       try {

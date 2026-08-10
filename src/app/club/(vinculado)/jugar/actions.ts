@@ -156,7 +156,7 @@ async function cerrarEnElTorneo(
     evento: nombreTorneo,
   });
 
-  const { data: guardada } = await db
+  const { data: guardada, error: errorPgn } = await db
     .from("games")
     .insert({
       player_id: fila.blancas_id,
@@ -171,6 +171,19 @@ async function cerrarEnElTorneo(
     })
     .select("id")
     .single();
+
+  // EL RESULTADO SE APUNTA AUNQUE EL PGN FALLE: la clasificación del torneo no
+  // puede quedarse esperando a que el repositorio funcione. Pero el fallo se
+  // TRAZA — antes se tragaba en silencio ("Importante — Silencios" de la
+  // auditoría del 2026-08-10) y "el torneo tiene resultado pero no partida" era
+  // indistinguible de un torneo al que nadie subió nada.
+  if (errorPgn || !guardada) {
+    console.error(
+      "[torneo] el resultado quedó apuntado pero el PGN no entró en el repositorio",
+      fila.club_pairing_id,
+      errorPgn?.message ?? "insert sin fila devuelta"
+    );
+  }
 
   await db
     .from("club_pairings")

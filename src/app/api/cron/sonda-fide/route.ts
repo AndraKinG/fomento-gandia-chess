@@ -28,7 +28,13 @@ import { NextResponse, type NextRequest } from "next/server";
 const LISTA_FIDE = "https://ratings.fide.com/download/standard_rating_list_xml.zip";
 
 export async function GET(request: NextRequest) {
-  if (request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
+  // La comprobación de secreto VACÍO es parte del guard, no un adorno: sin ella,
+  // con CRON_SECRET sin definir la cabecera "Bearer undefined" (literal) pasaría.
+  // Es la misma guarda que llevan las otras rutas de cron.
+  if (
+    !process.env.CRON_SECRET ||
+    request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`
+  ) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

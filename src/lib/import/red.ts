@@ -72,3 +72,23 @@ export async function enParalelo<T>(
   );
   return resultados;
 }
+
+/**
+ * ¿Es una URL de chess-results de verdad?
+ *
+ * Los enlaces a las clasificaciones y a las actas NO los escribimos nosotros: se
+ * extraen del HTML de la web de la FACV. Si esa página cambiara —o alguien
+ * lograra colarle contenido—, el cron seguiría los enlaces CON PRIVILEGIO DE
+ * SERVIDOR hacia donde apuntaran. Comprobar el host antes de seguirlos convierte
+ * ese escenario en un aviso en el resultado de la sync en vez de en una petición
+ * a un sitio desconocido (hallazgo "SSRF de baja probabilidad" de la auditoría
+ * del 2026-08-10).
+ */
+export function esUrlDeChessResults(url: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(url);
+    return protocol === "https:" && (hostname === "chess-results.com" || hostname === "www.chess-results.com");
+  } catch {
+    return false;
+  }
+}

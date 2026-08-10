@@ -9,6 +9,7 @@ import {
 } from "@/lib/import/chessresults";
 import {
   enParalelo,
+  esUrlDeChessResults,
   fetchConLimite,
   LIMITE_PAGINA_GRANDE_MS,
 } from "@/lib/import/red";
@@ -146,7 +147,14 @@ export async function sincronizarActasCore(): Promise<ResumenSyncActas> {
         const tnr = tnrDeUrl(e.url);
         // Se reconstruye la URL en vez de usar la del enlace tal cual: así se
         // garantiza que va sin `&rd=` y con los parámetros que espera el parser.
+        // Y si no se pudo reconstruir (sin tnr), la del enlace solo se sigue si
+        // apunta de verdad a chess-results: viene del HTML de la FACV, no de
+        // nosotros, y el cron la seguiría con privilegio de servidor.
         const url = tnr ? urlAlineaciones(tnr) : e.url;
+        if (!tnr && !esUrlDeChessResults(url)) {
+          avisos.push(`${e.grupo}: el enlace del acta no apunta a chess-results (${url})`);
+          return [] as EncuentroChessResults[];
+        }
         const res = await fetchConLimite(url, { limiteMs: LIMITE_PAGINA_GRANDE_MS });
         if (!res.ok) {
           avisos.push(`${e.grupo}: no se pudo descargar el acta (HTTP ${res.status})`);
