@@ -409,7 +409,12 @@ export function Mesa({
         return;
       }
       const canal = supabase
-        .channel(`partida-${p.id}`)
+        // PRIVADO (migración 0033): al unirse se comprueban las policies de
+        // realtime.messages — solo socios vinculados (o el admin) pueden escuchar
+        // o difundir en una mesa. Antes cualquiera con la clave pública y el id
+        // de la partida podía escuchar las jugadas y el chat. Exige que el socket
+        // lleve el token (clienteEnVivo ya lo pone antes de suscribir).
+        .channel(`partida-${p.id}`, { config: { private: true } })
         /**
          * SOLO DIFUSIÓN EN ESTE CANAL, y esto es el arreglo de fondo.
          *

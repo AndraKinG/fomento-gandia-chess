@@ -37,10 +37,12 @@ export async function difundirPartida(partidaId: string, fila: Difusion): Promis
       body: JSON.stringify({
         messages: [
           {
-            // El nombre del canal es el mismo que abre la mesa.
+            // El nombre del canal es el mismo que abre la mesa. `private` desde
+            // la 0033: un mensaje sin la marca no entra en un canal privado.
             topic: `partida-${partidaId}`,
             event: "cambio",
             payload: { fila },
+            private: true,
           },
         ],
       }),
@@ -74,6 +76,7 @@ export async function difundirChat(partidaId: string, mensaje: Difusion): Promis
           {
             topic: `partida-${partidaId}`,
             event: "chat",
+            private: true,
             payload: {
               mensaje: {
                 id: mensaje.id,
