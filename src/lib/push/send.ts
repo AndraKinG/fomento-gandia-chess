@@ -1,6 +1,11 @@
 import webpush from "web-push";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { tratarFallo } from "@/lib/avisos/politica";
+import { tratarFallo, type ResultadoDispositivo } from "@/lib/avisos/politica";
+
+// Re-exportado con el nombre histórico de este módulo: la forma del dato vive
+// en `politica.ts` (junto a `estadoPushDeAviso`, que es quien la consume),
+// pero quien ya importaba `ResultadoSuscripcion` desde aquí no tiene que cambiar.
+export type { ResultadoDispositivo as ResultadoSuscripcion };
 
 let vapidConfigurado = false;
 
@@ -15,21 +20,20 @@ function asegurarVapidConfigurado(): void {
   vapidConfigurado = true;
 }
 
-/** Qué pasó al mandar el push a UNA suscripción (un dispositivo/navegador). */
-export type ResultadoSuscripcion =
-  | { entregado: true }
-  | { entregado: false; estado: "fallido" | "no_tocaba" };
-
 /**
  * Manda el push a TODOS los dispositivos de un usuario e informa qué pasó
- * con cada uno.
+ * con cada uno. NUNCA rechaza (ver el `try/catch` de fuera): quien la llama
+ * (`avisar()`, en particular) necesita SIEMPRE una respuesta con la que
+ * decidir qué guardar, nunca una promesa rota que la deje sin saber si debe
+ * marcar el aviso como fallido.
  *
  * Existe separada de `enviarPushAUsuario` porque esa (la usa el botón de
  * prueba del admin y hay tests que dependen de su firma) solo necesita
  * "se ha intentado"; `avisar()` (src/lib/avisos/enviar.ts) sí necesita saber
  * el resultado de cada suscripción para decidir si el aviso queda
- * `entregado`, `fallido` o `no_tocaba`. Comparten la misma llamada a
- * `webpush.sendNotification`; solo cambia qué se hace con el resultado.
+ * `entregado`, `fallido` o `no_tocaba` (`estadoPushDeAviso` en `politica.ts`).
+ * Comparten la misma llamada a `webpush.sendNotification`; solo cambia qué se
+ * hace con el resultado.
  *
  * La decisión de qué hacer con un fallo (reintentar o borrar la suscripción)
  * es de `tratarFallo` (política), no de este módulo: así el mismo criterio
@@ -38,16 +42,32 @@ export type ResultadoSuscripcion =
 export async function intentarPush(
   userId: string,
   payload: { title: string; body: string; url?: string }
-): Promise<ResultadoSuscripcion[]> {
-  asegurarVapidConfigurado();
-  const admin = createAdminClient();
-  const { data: subs } = await admin
-    .from("push_subscriptions")
-    .select("endpoint, p256dh, auth")
-    .eq("user_id", userId);
+): Promise<ResultadoDispositivo[]> {
+  // Todo lo de aquí arriba (configurar VAPID, leer las suscripciones) es
+  // preparación común a TODOS los dispositivos, no un envío concreto: si
+  // falla (claves VAPID con formato inválido, un fallo de red de verdad al
+  // consultar Supabase desde una función serverless...) no hay ningún
+  // `endpoint` al que echarle la culpa. Se informa como UN fallo genérico en
+  // vez de dejar que la promesa rechace, para que quien llama pueda tratarlo
+  // igual que cualquier otro fallo — la alternativa (dejar que reviente) es
+  // la fila de `notifications` que se queda en `pendiente` para siempre,
+  // porque nadie llega a marcarla `fallido` y el cron solo busca fallidos.
+  let admin: ReturnType<typeof createAdminClient>;
+  let subs: { endpoint: string; p256dh: string; auth: string }[];
+  try {
+    asegurarVapidConfigurado();
+    admin = createAdminClient();
+    const respuesta = await admin
+      .from("push_subscriptions")
+      .select("endpoint, p256dh, auth")
+      .eq("user_id", userId);
+    subs = respuesta.data ?? [];
+  } catch {
+    return [{ entregado: false, estado: "fallido" }];
+  }
 
   return Promise.all(
-    (subs ?? []).map(async (s): Promise<ResultadoSuscripcion> => {
+    subs.map(async (s): Promise<ResultadoDispositivo> => {
       try {
         await webpush.sendNotification(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
@@ -61,7 +81,13 @@ export async function intentarPush(
             : undefined;
         const resultado = tratarFallo(statusCode);
         if (resultado.borrarSuscripcion) {
-          await admin.from("push_subscriptions").delete().eq("endpoint", s.endpoint);
+          try {
+            await admin.from("push_subscriptions").delete().eq("endpoint", s.endpoint);
+          } catch {
+            // Si el borrado en sí falla, no perdemos el resultado de ESTE
+            // dispositivo por eso: la suscripción muerta se reintentará
+            // borrar la próxima vez que un envío choque con ella.
+          }
         }
         return { entregado: false, estado: resultado.estado };
       }

@@ -4,6 +4,7 @@ import {
   NO_SILENCIABLES,
   debePush,
   debeReintentar,
+  estadoPushDeAviso,
   tratarFallo,
   type TipoAviso,
 } from "./politica";
@@ -115,5 +116,35 @@ describe("debeReintentar", () => {
 
   it("no_tocaba no se reintenta", () => {
     expect(debeReintentar({ push: "no_tocaba", push_intentos: 0 })).toBe(false);
+  });
+});
+
+describe("estadoPushDeAviso", () => {
+  it("al menos un dispositivo entregado es entregado, aunque otro haya fallado", () => {
+    expect(
+      estadoPushDeAviso([{ entregado: true }, { entregado: false, estado: "fallido" }])
+    ).toBe("entregado");
+  });
+
+  it("ninguno entregado pero alguno fallido de verdad es fallido (se reintenta)", () => {
+    expect(
+      estadoPushDeAviso([
+        { entregado: false, estado: "no_tocaba" },
+        { entregado: false, estado: "fallido" },
+      ])
+    ).toBe("fallido");
+  });
+
+  it("todos no_tocaba (suscripciones muertas) es no_tocaba", () => {
+    expect(
+      estadoPushDeAviso([
+        { entregado: false, estado: "no_tocaba" },
+        { entregado: false, estado: "no_tocaba" },
+      ])
+    ).toBe("no_tocaba");
+  });
+
+  it("lista vacía (sin ningún dispositivo al mandar) es no_tocaba, no fallido", () => {
+    expect(estadoPushDeAviso([])).toBe("no_tocaba");
   });
 });

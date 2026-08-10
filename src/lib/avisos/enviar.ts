@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { intentarPush } from "@/lib/push/send";
-import { debePush, GRUPO_DE, type TipoAviso } from "@/lib/avisos/politica";
+import { debePush, estadoPushDeAviso, GRUPO_DE, type TipoAviso } from "@/lib/avisos/politica";
 
 /**
  * Guarda el aviso para cada destinatario y LUEGO intenta el push. Nunca lanza.
@@ -89,27 +89,34 @@ export async function avisar(
     await Promise.all(
       pendientes.map(async (fila) => {
         try {
+          // Cómo se agrega el resultado de varios dispositivos en un único
+          // estado de la fila (entregado si alguno lo recibió, fallido si
+          // ninguno pero alguno era reintentable, no_tocaba en el resto de
+          // casos) es política, no I/O: vive en `estadoPushDeAviso`, no aquí.
           const resultados = await intentarPush(fila.profile_id, payload);
-          const entregado = resultados.some((r) => r.entregado);
-          if (entregado) {
-            pushEnviados++;
-            await admin.from("notifications").update({ push: "entregado" }).eq("id", fila.id);
-            return;
-          }
-          // Ninguna suscripción lo recibió. Si al menos una falló "de verdad"
-          // (no un 404/410 ya limpiado por `intentarPush`), se deja "fallido"
-          // para que el cron lo reintente (una vez, por `debeReintentar`); si
-          // todas acabaron en "no_tocaba" (o no había ninguna suscripción ya
-          // en el momento de mandar), no hay nada que reintentar.
-          const falloTemporal = resultados.some(
-            (r) => !r.entregado && r.estado === "fallido"
-          );
-          await admin
-            .from("notifications")
-            .update({ push: falloTemporal ? "fallido" : "no_tocaba" })
-            .eq("id", fila.id);
+          const estado = estadoPushDeAviso(resultados);
+          if (estado === "entregado") pushEnviados++;
+          // OJO: `push_intentos` se queda a propósito en su valor por
+          // defecto (0) en este primer intento. Cuenta los REINTENTOS que
+          // hace el cron, no los intentos totales (`debeReintentar` solo
+          // tiene sentido leído así: ver sus tests). Si este primer intento
+          // ya lo incrementara, el cron jamás podría reintentar ni una vez.
+          // Le toca incrementarlo a quien construya ese reintento.
+          await admin.from("notifications").update({ push: estado }).eq("id", fila.id);
         } catch {
-          // El push de UN destinatario no debe impedir intentar con los demás.
+          // Último recurso: `intentarPush` está blindado para no rechazar
+          // nunca, pero si algo de este bloque falla de todos modos (p. ej.
+          // el propio `update` de arriba), la fila se queda en "pendiente"
+          // salvo que se intente aquí, aparte, dejarla en "fallido" — así el
+          // cron la recoge (busca solo push='fallido', índice parcial de la
+          // 0028) en vez de que el aviso se pierda en silencio para siempre.
+          // Try/catch anidado para que ni este último intento pueda lanzar.
+          try {
+            await admin.from("notifications").update({ push: "fallido" }).eq("id", fila.id);
+          } catch {
+            // Si ni esto se puede escribir, no queda nada más que hacer sin
+            // arriesgar la operación que disparó el aviso.
+          }
         }
       })
     );

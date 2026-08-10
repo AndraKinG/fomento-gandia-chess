@@ -76,3 +76,37 @@ export function tratarFallo(
 export function debeReintentar(aviso: { push: string; push_intentos: number }): boolean {
   return aviso.push === "fallido" && aviso.push_intentos < 1;
 }
+
+/**
+ * Qué pasó al mandar el push a UN dispositivo concreto de un socio (ver
+ * `intentarPush` en `src/lib/push/send.ts`, que es quien produce estos
+ * valores). Vive aquí y no en `send.ts` porque es la forma de dato que
+ * `estadoPushDeAviso` decide, y las dos deben cambiar juntas.
+ */
+export type ResultadoDispositivo =
+  | { entregado: true }
+  | { entregado: false; estado: "fallido" | "no_tocaba" };
+
+/**
+ * Agrega el resultado de mandar el push a TODOS los dispositivos de un socio
+ * (0, 1 o varios: la suscripción es por dispositivo y navegador) en el
+ * estado único que se guarda en la fila de `notifications`.
+ *
+ * Reglas:
+ * - Si al menos un dispositivo lo recibió, el aviso llegó: da igual que otro
+ *   dispositivo del mismo socio haya fallado. `entregado`.
+ * - Si no llegó a ninguno pero al menos uno fue un fallo "de verdad" (no una
+ *   suscripción muerta que `tratarFallo` ya limpió), hay algo que reintentar:
+ *   `fallido`, y el cron lo recoge (una vez, ver `debeReintentar`).
+ * - Si todos acabaron en `no_tocaba` (suscripciones muertas, 404/410) o no
+ *   había NINGÚN dispositivo en el momento de mandar (lista vacía: pudo
+ *   borrarse justo entre comprobar `tieneSuscripcion` y intentar el push), no
+ *   queda nada que reintentar: `no_tocaba`.
+ */
+export function estadoPushDeAviso(
+  resultados: ResultadoDispositivo[]
+): "entregado" | "fallido" | "no_tocaba" {
+  if (resultados.some((r) => r.entregado)) return "entregado";
+  if (resultados.some((r) => !r.entregado && r.estado === "fallido")) return "fallido";
+  return "no_tocaba";
+}
