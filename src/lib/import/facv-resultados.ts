@@ -198,8 +198,16 @@ function parseEnlacesPorGrupoFACV(
 // celda de bandera, "Equipo", "Partidas", +, =, -, y 4 columnas de
 // desempate ("Des N"). "Des 1" es "Matchpoints" (2 por victoria de equipo, 1
 // por empate): es el valor que se usa como "puntos" de la clasificación.
+//
+// EL DIV DE LA BANDERA SE ACEPTA CON `[^>]*`, NO CON `class="[^"]*"`, y no es
+// un descuido: chess-results mete el nombre del equipo DENTRO del atributo
+// class SIN ESCAPAR LAS COMILLAS. Con "Manuel &quot;Eduardo Pérez&quot; B"
+// sirve literalmente `<div class="tn_MANUEL "ED"></div>` — un atributo roto —
+// y exigir un class bien formado descartaba la fila entera: el equipo 9
+// desaparecía de la clasificación sin ningún aviso. Visto en producción el
+// 2026-08-10 (grupo 2ª Prov. 8T Valencia Sur 1).
 const FILA_CLASIFICACION_RE =
-  /<tr class="CRg[12]b?">\s*<td class="CRc">(\d+)<\/td><td class="CRc">\d+<\/td><td class="CR"><div class="[^"]*"><\/div><\/td><td class="CR">([^<]+)<\/td><td class="CRc">\d+<\/td><td class="CRc">\d+<\/td><td class="CRc">\d+<\/td><td class="CRc">\d+<\/td><td class="CRc">([\d,]+)<\/td>/g;
+  /<tr class="CRg[12]b?">\s*<td class="CRc">(\d+)<\/td><td class="CRc">\d+<\/td><td class="CR"><div class=[^>]*><\/div><\/td><td class="CR">([^<]+)<\/td><td class="CRc">\d+<\/td><td class="CRc">\d+<\/td><td class="CRc">\d+<\/td><td class="CRc">\d+<\/td><td class="CRc">([\d,]+)<\/td>/g;
 
 /** Parsea la tabla de clasificación de una página de chess-results (art=46). */
 export function parseClasificacionFACV(html: string): FilaClasificacionFACV[] {

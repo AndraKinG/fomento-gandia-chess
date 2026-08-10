@@ -282,12 +282,17 @@ export default async function EquipoDetallePage({
               Clasificación
             </h2>
             <div className="overflow-hidden rounded-2xl border border-borde bg-tarjeta">
-              <table className="w-full text-sm">
+              {/* `table-fixed` con anchos en # y Ptos: sin él, la columna del club
+                  se ensancha hasta que quepa el nombre más largo ("Xeraco Costasol
+                  Inmobiliaria D") y empuja Ptos fuera de la tarjeta — el `truncate`
+                  de la celda no recorta nada si la tabla puede crecer. Fijada la
+                  tabla, el club se queda con el hueco que sobra y ahí sí trunca. */}
+              <table className="w-full table-fixed text-sm">
                 <thead>
                   <tr className="border-b border-borde text-xs text-tinta-suave">
-                    <th className="px-3 py-2 text-left font-medium">#</th>
+                    <th className="w-10 px-3 py-2 text-left font-medium">#</th>
                     <th className="px-3 py-2 text-left font-medium">Club</th>
-                    <th className="px-3 py-2 text-right font-medium">Ptos</th>
+                    <th className="w-14 px-3 py-2 text-right font-medium">Ptos</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-borde">

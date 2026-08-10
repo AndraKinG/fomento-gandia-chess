@@ -153,18 +153,33 @@ describe("parseClasificacionFACV", () => {
     });
   });
 
-  it("grupo C: Fomento de Gandía C 3º con 13 puntos, con hueco de posición (equipo retirado)", () => {
+  it("grupo C: Fomento de Gandía C 3º con 13 puntos y los DIEZ equipos", () => {
     const filas = parseClasificacionFACV(htmlClasifC);
     expect(filas.find((f) => f.club === "Fomento de Gandía C")).toEqual({
       posicion: 3,
       club: "Fomento de Gandía C",
       puntos: 13,
     });
-    // El equipo retirado salta de la posición 8 a la 10 (sin 9ª posición):
-    // el parser debe respetar la posición tal cual la da chess-results, no
-    // renumerar.
-    expect(filas.some((f) => f.posicion === 9)).toBe(false);
-    expect(filas.some((f) => f.posicion === 10)).toBe(true);
+    // Este grupo son diez equipos y los diez tienen que salir. La versión
+    // anterior de este test daba por bueno que faltara la posición 9 ("hueco
+    // del equipo retirado"): era una lectura equivocada del propio bug — el
+    // retirado es el 10 (Xeraco), y la 9 la perdía el parser.
+    expect(filas).toHaveLength(10);
+  });
+
+  it("grupo C: no pierde al equipo cuyo nombre lleva comillas", () => {
+    // chess-results incrusta el nombre del equipo DENTRO del atributo class
+    // del div de la bandera sin escapar las comillas: con este equipo sirve
+    // literalmente `<div class="tn_MANUEL "ED"></div>`, un atributo roto.
+    // Exigir un class bien formado descartaba la fila entera y el equipo
+    // desaparecía de la clasificación sin ningún aviso (visto en producción
+    // el 2026-08-10). El fixture trae esa fila tal cual la sirve la web.
+    const filas = parseClasificacionFACV(htmlClasifC);
+    expect(filas.find((f) => f.posicion === 9)).toEqual({
+      posicion: 9,
+      club: 'Manuel "Eduardo Pérez" B',
+      puntos: 2,
+    });
   });
 
   it("devuelve [] con HTML vacío", () => {
