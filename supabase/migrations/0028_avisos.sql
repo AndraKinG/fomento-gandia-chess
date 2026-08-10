@@ -60,15 +60,19 @@ create index notifications_a_reintentar on public.notifications (push) where pus
 -- ---------------------------------------------------------------------------
 --
 -- QUÉ ES: columna en `profiles` que enumera qué grupos de avisos el socio
--- tiene silenciados. Array y no cuatro columnas boleanas: (a) añadir un grupo
+-- tiene silenciados. Array y no cuatro columnas booleanas: (a) añadir un grupo
 -- nuevo no obliga a migración, solo cambiar el check de la tabla principal;
 -- (b) el default (array vacío) es lo que queremos — quien no toca nada recibe
 -- lo de siempre.
 --
--- RANGO MÍNIMO: un socio normal (rango 'jugador') puede silenciar/recuperar
--- sus propios grupos. No hay policy en `profiles` porque la tabla ya permite
--- que cada uno edite su fila. Se asume que solo las acciones que escriben
--- la columna (p. ej. `/api/avisos/silenciar`) comprueban rangos.
+-- ESCRITURA: `profiles` tiene una sola policy de update (`"perfil escribe admin"`,
+-- 0001) que exige `is_admin()`. Un socio normal NO puede escribir ninguna
+-- columna de su fila, incluida esta. Guardar `avisos_silenciados` se hace
+-- desde una server action que comprueba la sesión y escribe con `service_role`
+-- — el patrón de todas las acciones de la app (20 acciones hoy, todas comprueban
+-- identidad antes de escribir). No se abre policy nueva aquí: una policy de
+-- update limitada a una columna necesitaría un trigger que bloquee las demás,
+-- más superficie de ataque para algo que la action ya resuelve.
 --
 alter table public.profiles
   add column if not exists avisos_silenciados text[] not null default '{}';
@@ -80,7 +84,7 @@ alter table public.profiles
 -- QUÉ CIERRA: el acceso a la bandeja de avisos. No hay mucho que cerrar (solo
 -- lectura y "marcar leído"), pero se cierra igual: un `select` sin RLS sería
 -- una vía para que la API pública sacara el nombre de los socios (los avisos
--- tienen profile_id) sin autenticate.
+-- tienen profile_id) sin estar autenticado.
 --
 alter table public.notifications enable row level security;
 
