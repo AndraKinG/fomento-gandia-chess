@@ -26,6 +26,17 @@ type AvisoVista = {
  * Si el aviso NO trae `url` (hoy ninguno de los 11 tipos se manda sin ella,
  * pero la columna es nullable y nada obliga a que seguirá siendo así), el
  * botón igualmente marca leído y se queda en la propia bandeja.
+ *
+ * ACCESIBILIDAD (ronda de arreglo 1, dos hallazgos "Importante"): el negrita/
+ * fondo suave del no leído y el hecho de que el botón navegue son cosas que
+ * solo se ven, no se oyen. Un lector de pantalla no distingue `font-semibold`
+ * de `font-normal` ni un fondo de otro, así que sin más la bandeja sería una
+ * lista plana donde nunca se sabe qué es nuevo; y un `<button>` sin más
+ * información solo se anuncia como "botón", sin decir que puede sacarte de la
+ * bandeja — se descubre cuando ya te ha movido. Se resuelve con `aria-label`
+ * (estado + título + qué va a pasar, SIN prometer una apertura que no hay
+ * cuando `url` es null) y `aria-describedby` apuntando al cuerpo, que sigue
+ * siendo texto visible normal — nada de esto necesita JavaScript de cliente.
  */
 function FilaAviso({ aviso }: { aviso: AvisoVista }) {
   // La action de un `<form>` tiene que devolver `void`/`Promise<void>`, y
@@ -37,17 +48,27 @@ function FilaAviso({ aviso }: { aviso: AvisoVista }) {
     "use server";
     await marcarLeido(aviso.id);
   }
+
+  const estado = aviso.sinLeer ? "Sin leer" : "Leído";
+  // NO PROMETER UNA APERTURA QUE NO HAY: si el aviso no trae `url`, la única
+  // acción real es marcarlo leído sin moverte de la bandeja.
+  const queHace = aviso.url
+    ? "Abre la pantalla relacionada y lo marca como leído."
+    : "Lo marca como leído.";
+  const idCuerpo = `aviso-cuerpo-${aviso.id}`;
+
   return (
     <form action={marcarEsteLeido}>
       <button
         type="submit"
+        aria-label={`${estado}: ${aviso.titulo}. ${queHace}`}
+        aria-describedby={idCuerpo}
         className={`flex w-full flex-col gap-1 px-3 py-2.5 text-left transition hover:bg-tarjeta-suave sm:flex-row sm:items-start sm:gap-3 ${
           aviso.sinLeer ? "bg-tarjeta-suave" : ""
         }`}
       >
-        {/* El puntito solo existe para el no leído: es el destaque, no un
-            adorno fijo. `aria-hidden` porque lo mismo ya lo dice el peso de
-            la fuente del título para quien usa lector de pantalla. */}
+        {/* El puntito es solo el refuerzo visual del estado: la distinción de
+            verdad (para quien no lo ve) va en el `aria-label` de arriba. */}
         <span
           aria-hidden
           className={`mt-1.5 h-2 w-2 shrink-0 rounded-full sm:mt-1.5 ${
@@ -60,7 +81,9 @@ function FilaAviso({ aviso }: { aviso: AvisoVista }) {
           >
             {aviso.titulo}
           </span>
-          <span className="block text-sm text-tinta-suave">{aviso.cuerpo}</span>
+          <span id={idCuerpo} className="block text-sm text-tinta-suave">
+            {aviso.cuerpo}
+          </span>
         </span>
         <span className="shrink-0 pl-4 text-xs text-tinta-suave sm:pl-0 sm:pt-0.5">
           {aviso.fecha}
