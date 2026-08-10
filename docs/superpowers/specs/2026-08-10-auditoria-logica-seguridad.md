@@ -108,6 +108,38 @@ servidor), y que la mesa distinga por `player_id === null`, no por `evento` pres
   los límites de `validarPartida`.
 - El freno por IP confía en el primer valor de `x-forwarded-for`.
 
+## Estado de los arreglos (2026-08-10)
+
+**Migración 0027 aplicada y VERIFICADA EN VIVO.** Se montó un capitán temporal (ficha
+libre + capitanía del equipo C, ambas retiradas al terminar) y se atacó desde su propia
+sesión una jornada jugada real. Resultado:
+
+| Ataque desde sesión de capitán | Antes | Ahora |
+|---|---|---|
+| Reabrir la jornada jugada (`jugado → pendiente`) | posible | **bloqueado** |
+| Escribir el marcador a mano | posible | **bloqueado** |
+| Cambiar la ronda (identidad de la jornada) | posible | **bloqueado** |
+| Cambiar la sede (debe seguir pudiendo) | permitido | **permitido** ✔ |
+| Mensaje normal en su propia partida (debe poder) | permitido | **permitido** ✔ |
+| El MISMO mensaje pero con `evento` (aviso falso) | posible | **bloqueado** |
+
+Las dos últimas filas son la prueba aislada de que actúa la regla nueva y no otra
+condición: mismo autor, misma partida, solo cambia `evento`.
+
+**Lo que no se pudo probar en vivo**: los triggers de `lineup_boards`/`board_results`, porque
+hoy no hay ninguna convocatoria en la base (0 filas). Su lógica es idéntica a la del
+trigger de `matches` ya verificado y quedó revisada línea a línea; conviene repetir la
+prueba con la primera convocatoria real de la 2027.
+
+**Aviso falso por difusión** (la cara "en vivo" del hallazgo del chat): cerrado también en
+el cliente — un mensaje difundido sin autor ya no se pinta, dispara una relectura de la
+base, que es donde solo escribe el servidor. De paso se arregló que el servidor difunde
+`player_id` y el navegador `playerId`, y solo se miraba una de las dos formas.
+
+**Pendiente de decisión del propietario**: canales de tiempo real privados (hoy cualquiera
+con la clave pública puede ESCUCHAR una partida; escribir no altera nada). Y los menores
+de la lista de abajo, para la pasada de pulido.
+
 ## Informes completos
 
 `.superpowers/auditoria/` (gitignorado): `rls.md`, `acciones.md`, `auth-rangos.md`,
