@@ -34,10 +34,25 @@ export async function avisar(
     // Dos lecturas en paralelo: preferencias de silencio (de `profiles`) y
     // quién tiene al menos un dispositivo suscrito (de `push_subscriptions`).
     // Ninguna de las dos decide nada por sí sola: eso es trabajo de `debePush`.
-    const [{ data: perfiles }, { data: subs }] = await Promise.all([
+    const [
+      { data: perfiles, error: perfilesError },
+      { data: subs, error: subsError },
+    ] = await Promise.all([
       admin.from("profiles").select("id, avisos_silenciados").in("id", destinatarios),
       admin.from("push_subscriptions").select("user_id").in("user_id", destinatarios),
     ]);
+
+    // Si cualquiera de las dos lecturas falla, `data` viene `null` y hoy se
+    // descartaba sin dejar rastro: "esta tanda no se guardó" y "no había
+    // nada que guardar" quedaban indistinguibles en los logs de Vercel, que
+    // es la única observabilidad que tiene el propietario. Se traza aquí,
+    // antes de que cada `?? []` de abajo borre la diferencia.
+    if (perfilesError) {
+      console.error("[avisos] no se pudo leer profiles (silenciados)", aviso.tipo, perfilesError.message);
+    }
+    if (subsError) {
+      console.error("[avisos] no se pudo leer push_subscriptions", aviso.tipo, subsError.message);
+    }
 
     const silenciadosPorId = new Map<string, string[]>(
       (perfiles ?? []).map((p) => [p.id as string, (p.avisos_silenciados ?? []) as string[]])
@@ -48,8 +63,25 @@ export async function avisar(
     // en `profiles` rompería el INSERT completo (la fila viola la FK), y eso
     // se llevaría por delante el aviso de TODOS los demás destinatarios
     // válidos. Mejor descartar el que no cuadra que perder el resto.
+    //
+    // Si `perfilesError` ha saltado, este filtro rechaza a TODO el mundo
+    // (el mapa queda vacío) y la función se va sin guardar nada — igual que
+    // antes de este arreglo. Se deja así a propósito y no se trata como el
+    // caso (b) de abajo: esta lectura no es solo el dato de entrada de
+    // `debePush`, es también la única forma de confirmar que el id es un
+    // socio real antes de insertar, así que no hay un "pendiente" seguro al
+    // que degradar — insertar a ciegas es arriesgar la FK de la tanda
+    // entera. Lo único que se podía arreglar aquí era el silencio del log
+    // de arriba, y ya está hecho.
     const destinatariosValidos = destinatarios.filter((id) => silenciadosPorId.has(id));
-    if (destinatariosValidos.length === 0) return { guardados: 0, pushEnviados: 0 };
+    if (destinatariosValidos.length === 0) {
+      console.error(
+        "[avisos] sin destinatarios válidos tras cruzar con profiles",
+        aviso.tipo,
+        `(${destinatarios.length} solicitados)`
+      );
+      return { guardados: 0, pushEnviados: 0 };
+    }
 
     const grupo = GRUPO_DE[aviso.tipo];
 
@@ -63,9 +95,31 @@ export async function avisar(
       // "pendiente" si toca intentar el push ahora mismo; "no_tocaba" si el
       // socio lo tiene silenciado o no tiene ningún dispositivo — la bandeja
       // recibe la fila igual, solo cambia si además se intenta el push.
+      //
+      // Si `push_subscriptions` no se pudo leer (`subsError`), NO se le pasa
+      // `tieneSuscripcion: false` a `debePush`: eso sería mentirle — no es
+      // que no tenga suscripción, es que no lo sabemos — y esa mentira
+      // colaría por su primera guarda ("sin suscripción no hay dónde
+      // mandarlo") directa a `no_tocaba`, el estado que el cron NUNCA
+      // vuelve a mirar (ver reintentar.ts): la tanda entera se quedaría sin
+      // push para siempre y en la base parecería una decisión a propósito.
+      // Se le pasa `true` (optimista) en su lugar, para que `debePush` — que
+      // sigue siendo el único juez, aquí no se repite ni una línea de su
+      // lógica — decida solo con el dato que SÍ es firme pase lo que pase
+      // con la suscripción: si el socio silenció el grupo. Con eso:
+      //   - Silenciado → `debePush` da `false` igual, con dato fiable:
+      //     `no_tocaba` sigue siendo verdad, no una suposición.
+      //   - No silenciado (o convocatoria, que no se silencia nunca) →
+      //     `debePush` da `true` → `pendiente`. Si de verdad no había
+      //     ningún dispositivo, el intento de más abajo lo va a descubrir
+      //     por su cuenta (`intentarPush` hace su propia lectura, no reusa
+      //     `conSuscripcion`) y la fila acabará en `no_tocaba` de todos
+      //     modos — mismo resultado, por el camino honesto. Y si ese
+      //     intento también tropieza con el mismo fallo de lectura, queda
+      //     en `fallido`, que el barrido de huérfanos SÍ recoge.
       push: debePush(aviso.tipo, {
         silenciados: silenciadosPorId.get(profileId) ?? [],
-        tieneSuscripcion: conSuscripcion.has(profileId),
+        tieneSuscripcion: subsError ? true : conSuscripcion.has(profileId),
       })
         ? "pendiente"
         : "no_tocaba",
