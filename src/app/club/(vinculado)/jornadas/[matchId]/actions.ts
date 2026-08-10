@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { esAdmin } from "@/lib/auth/es-admin";
 import { esCapitanDeMatch } from "@/lib/auth/es-capitan";
 import { calcularMarcador, type Marcador } from "@/lib/marcador";
@@ -10,6 +11,18 @@ import { calcularMarcador, type Marcador } from "@/lib/marcador";
 // permiso ANTES de tocar BD (capitán del equipo de la jornada o admin), igual
 // que `equipos/[id]/convocatoria/actions.ts` — la RLS de `board_results`
 // (migración 0005) es la barrera DURA que no depende de este chequeo.
+//
+// Auditoría 2026-08-10 ("Crítico 1"): tras la migración 0027, los triggers
+// `blindaje_lineup_boards`/`blindaje_board_results`/`blindaje_matches`
+// congelan `board_results` y `matches.estado` de una jornada 'jugada' para
+// cualquier conexión que NO sea `service_role`. La comprobación de permisos
+// de arriba (`esCapitanDeMatch`/`esAdmin`) ya ha pasado en este punto, así que
+// el upsert de `board_results` y, si hace falta, el update de `matches` se
+// hacen con `createAdminClient()`: esta action de servidor es la ÚNICA puerta
+// que le queda al capitán para corregir un resultado de una jornada cerrada
+// (typo, tablero equivocado) sin tener que reabrir la convocatoria — bloquear
+// esto en el trigger sin dar esta salida habría roto esa corrección, que el
+// propietario quiere conservar.
 
 type ResultadoGuardar = { ok?: boolean; error?: string; marcador?: Marcador; jugado?: boolean; guardado?: boolean };
 
@@ -28,9 +41,12 @@ const RESULTADOS_VALIDOS = [1, 0.5, 0];
  * de convocatoria, que congelan la jornada jugada). Es una decisión
  * DELIBERADA, no un descuido: los capitanes necesitan poder corregir un
  * resultado mal anotado (typo, tablero equivocado) después de que el
- * encuentro se cierre, sin tener que reabrir la convocatoria entera. La
- * migración 0007 (blindaje BD) tampoco lo restringe: solo congela la tabla
- * `lineups` (estructura de la convocatoria), nunca `board_results`.
+ * encuentro se cierre, sin tener que reabrir la convocatoria entera. Desde la
+ * migración 0027 esto SÍ está restringido a nivel de BD para cualquier
+ * escritura que no sea `service_role` (ver comentario de cabecera): esta
+ * action sigue funcionando igual porque escribe con la clave de servicio tras
+ * comprobar el permiso, que es precisamente la puerta que el trigger deja
+ * abierta.
  */
 export async function guardarResultado(
   matchId: string,
@@ -69,7 +85,15 @@ export async function guardarResultado(
     return { error: "El tablero no pertenece a la convocatoria publicada de esta jornada" };
   }
 
-  const { error: upsertError } = await supabase
+  // Migración 0027: el trigger `blindaje_board_results` congela la tabla para
+  // una jornada 'jugada' salvo `service_role`. El permiso ya se ha comprobado
+  // arriba (capitán del equipo o admin), así que se escribe con el cliente
+  // admin — es la única forma de que esta corrección siga funcionando tras
+  // aplicar la migración, tanto la primera vez que se anota un resultado como
+  // cuando se corrige uno de una jornada ya cerrada.
+  const admin = createAdminClient();
+
+  const { error: upsertError } = await admin
     .from("board_results")
     .upsert(
       { lineup_board_id: lineupBoardId, resultado, updated_at: new Date().toISOString() },
@@ -90,7 +114,13 @@ export async function guardarResultado(
   const completo = idsTablero.length > 0 && marcador.completos === marcador.total;
 
   if (completo) {
-    const { error: matchUpdateError } = await supabase
+    // Mismo motivo que el upsert de arriba: el trigger `blindaje_matches`
+    // (0027) rechaza la transición 'jugado' -> distinto de 'jugado' desde una
+    // sesión normal, pero la de 'pendiente' -> 'jugado' la deja pasar; se usa
+    // igualmente el cliente admin aquí para no depender de esa distinción y
+    // para que la escritura del estado tenga la misma puerta que el resultado
+    // que la provoca.
+    const { error: matchUpdateError } = await admin
       .from("matches")
       .update({ estado: "jugado" })
       .eq("id", matchId);

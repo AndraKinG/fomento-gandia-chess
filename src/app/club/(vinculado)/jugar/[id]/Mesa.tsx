@@ -842,9 +842,14 @@ export function Mesa({
             )}
             {/* Los eventos se pintan centrados y en gris: son la voz de la partida,
                 no la de nadie, y confundirlos con un mensaje del rival haría pensar
-                que te lo está diciendo él. */}
+                que te lo está diciendo él. Se distingue por `playerId === null`, NO
+                por `evento` truthy: un mensaje con autor no puede ser un evento del
+                sistema aunque traiga texto en `evento` (auditoría 2026-08-10 —
+                un jugador podía fabricar un "el rival abandona" con su propio
+                player_id y un evento inventado). El autor nulo es lo único que la
+                policy del chat (migración 0027) reserva al servidor. */}
             {mensajes.map((m) =>
-              m.evento ? (
+              m.playerId === null ? (
                 <p key={m.id} className="py-0.5 text-center text-xs text-tinta-suave">
                   {m.texto}
                 </p>
