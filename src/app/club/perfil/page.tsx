@@ -14,6 +14,10 @@ import { logout } from "@/app/(auth)/actions";
 import { Contenedor } from "@/components/ui/Contenedor";
 import { BotonAccion } from "@/components/ui/BotonAccion";
 import { PreferenciasAvisos } from "./PreferenciasAvisos";
+import { FotoPerfil } from "./FotoPerfil";
+import { Aperturas } from "./Aperturas";
+import { EligeTablero } from "./EligeTablero";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { GrupoAviso } from "@/lib/avisos/politica";
 
 export default async function PerfilPage() {
@@ -23,7 +27,7 @@ export default async function PerfilPage() {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "email, player_id, avisos_silenciados, players(nombre, elo_fide, elo_feda, elo_otro, fide_id, feda_id)"
+      "email, player_id, avisos_silenciados, tema_tablero, players(nombre, elo_fide, elo_feda, elo_otro, fide_id, feda_id, foto_url, aperturas)"
     )
     .eq("id", user!.id)
     .single();
@@ -58,7 +62,18 @@ export default async function PerfilPage() {
   const p = profile?.players as unknown as {
     nombre: string; elo_fide: number | null; elo_feda: number | null;
     elo_otro: number | null; fide_id: string | null; feda_id: string | null;
+    foto_url: string | null; aperturas: string | null;
   } | null;
+
+  // La URL firmada de la foto, si hay: el bucket es privado (migración 0030) y
+  // firmar aquí con la clave de servicio es lo que la hace visible una hora.
+  let fotoFirmada: string | null = null;
+  if (p?.foto_url) {
+    const { data: firma } = await createAdminClient()
+      .storage.from("fotos")
+      .createSignedUrl(p.foto_url, 3600);
+    fotoFirmada = firma?.signedUrl ?? null;
+  }
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
@@ -147,6 +162,33 @@ export default async function PerfilPage() {
               </span>
             </Tarjeta>
           </Link>
+        )}
+
+        {/* LO QUE LOS DEMÁS VEN DE TI: foto y aperturas van juntas y con el enlace
+            a la ficha pública al lado, porque la pregunta que contestan es la misma
+            — "¿cómo me ven?" — y separarlas obligaría a explicarlo dos veces. */}
+        {p && profile?.player_id && (
+          <Tarjeta className="flex flex-col gap-4">
+            <div className="flex items-baseline justify-between gap-2">
+              <p className="text-sm font-semibold text-tinta">Tu ficha de socio</p>
+              <Link
+                href={`/club/socios/${profile.player_id}`}
+                className="shrink-0 text-xs text-acento-texto underline"
+              >
+                Ver cómo te ven →
+              </Link>
+            </div>
+            <FotoPerfil fotoUrl={fotoFirmada} nombre={p.nombre} />
+            <Aperturas inicial={p.aperturas ?? ""} />
+          </Tarjeta>
+        )}
+
+        {/* El tablero a su aire y no dentro de Ajustes: es la elección más visual
+            de la pantalla y entre dos botones de texto no se ve. */}
+        {p && (
+          <Tarjeta>
+            <EligeTablero actual={(profile?.tema_tablero as string) ?? "gandiblues"} />
+          </Tarjeta>
         )}
 
         {/* Los tres ajustes juntos en una tarjeta. Sueltos eran tres barras a todo lo

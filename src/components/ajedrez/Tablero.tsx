@@ -29,6 +29,8 @@ import { useEffect, useRef, useState } from "react";
  * proposito: convertir las 64 casillas a nombres propios en cada render seria
  * trabajo por nada, y este componente consume esa estructura directamente.
  */
+import { useTemaTablero } from "./TemaTablero";
+
 export type Pieza = { type: string; color: "w" | "b" };
 /** Pieza que se está llevando con el dedo o el ratón. `lado` es el ancho de una
  *  casilla, para que la que va volando mida lo mismo que las del tablero. */
@@ -103,6 +105,9 @@ export function Tablero({
   onCancelar?: () => void;
   deshabilitado?: boolean;
 }) {
+  // El tema lo elige cada socio en su perfil; llega por contexto para que todos
+  // los tableros de la app pinten igual sin enhebrar la prop pantalla a pantalla.
+  const tema = useTemaTablero();
   const orden = volteado ? [...filas].reverse().map((f) => [...f].reverse()) : filas;
   const rejilla = useRef<HTMLDivElement | null>(null);
   const [arrastre, setArrastre] = useState<Arrastre | null>(null);
@@ -226,12 +231,13 @@ export function Tablero({
                   if (abajoEn.current === casilla) onToque?.(casilla);
                 }}
                 onPointerCancel={() => setArrastre(null)}
-                className={`relative flex aspect-square items-center justify-center ${
-                  // Colores del tablero fijos y no del tema: un tablero necesita su
-                  // propio contraste entre casillas, y heredar los tokens de fondo
-                  // lo haría ilegible en modo oscuro.
-                  clara ? "bg-[#e9f2fb]" : "bg-[#6b9dc9]"
-                } ${esSeleccionada ? "ring-4 ring-inset ring-amber-400" : ""} ${
+                // El color va en `style` y no en una clase: el tema lo elige el
+                // socio en su perfil y llega en tiempo de ejecución — Tailwind no
+                // puede generar una clase para un color que no conoce al compilar.
+                // Siguen siendo colores propios del tablero, nunca los tokens del
+                // tema claro/oscuro: un tablero es el mismo de día y de noche.
+                style={{ backgroundColor: clara ? tema.clara : tema.oscura }}
+                className={`relative flex aspect-square items-center justify-center ${esSeleccionada ? "ring-4 ring-inset ring-amber-400" : ""} ${
                   esUltimo && !esSeleccionada ? "ring-2 ring-inset ring-amber-300/70" : ""
                 } ${enJaque === casilla ? "ring-4 ring-inset ring-red-500" : ""} ${
                   deshabilitado ? "cursor-default" : "cursor-pointer"
@@ -244,9 +250,8 @@ export function Tablero({
                 {j === 0 && (
                   <span
                     aria-hidden
-                    className={`pointer-events-none absolute left-0.5 top-0 text-[0.55rem] font-semibold leading-tight sm:text-[0.65rem] ${
-                      clara ? "text-[#6b9dc9]" : "text-[#e9f2fb]"
-                    }`}
+                    style={{ color: clara ? tema.oscura : tema.clara }}
+                    className="pointer-events-none absolute left-0.5 top-0 text-[0.55rem] font-semibold leading-tight sm:text-[0.65rem]"
                   >
                     {volteado ? FILAS_NUM[7 - i] : FILAS_NUM[i]}
                   </span>
@@ -254,9 +259,8 @@ export function Tablero({
                 {i === 7 && (
                   <span
                     aria-hidden
-                    className={`pointer-events-none absolute bottom-0 right-0.5 text-[0.55rem] font-semibold leading-tight sm:text-[0.65rem] ${
-                      clara ? "text-[#6b9dc9]" : "text-[#e9f2fb]"
-                    }`}
+                    style={{ color: clara ? tema.oscura : tema.clara }}
+                    className="pointer-events-none absolute bottom-0 right-0.5 text-[0.55rem] font-semibold leading-tight sm:text-[0.65rem]"
                   >
                     {volteado ? COLUMNAS[7 - j] : COLUMNAS[j]}
                   </span>

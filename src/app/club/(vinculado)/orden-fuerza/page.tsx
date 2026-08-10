@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { sesionActual } from "@/lib/auth/sesion";
 import { Cabecera } from "@/components/ui/Cabecera";
@@ -98,7 +99,14 @@ function TablaRanking({
                       : etiquetaNumero(f.numero, f.bisIndex)}
                   </td>
                   <td className="py-1.5 pr-2 text-tinta">
-                    <span className={soyYo ? "font-semibold" : ""}>{f.nombre}</span>
+                    {/* El nombre lleva a la ficha del socio: es donde están su foto,
+                        sus aperturas y sus partidas. */}
+                    <Link
+                      href={`/club/socios/${f.ficha}`}
+                      className={`hover:text-acento-texto hover:underline ${soyYo ? "font-semibold" : ""}`}
+                    >
+                      {f.nombre}
+                    </Link>
                     {/* En el orden por ELO se enseña al lado el número de orden: es lo
                         que deja ver de un vistazo dónde los dos criterios no coinciden. */}
                     {criterio === "elo" && (

@@ -151,8 +151,10 @@ export default async function PartidaPage({
             {!esMia && (
               <p className="px-1 text-xs text-tinta-suave">
                 Subida por{" "}
+                {/* A la FICHA del socio, no a una búsqueda con su nombre: la ficha
+                    ya enlaza a sus partidas y además enseña quién es. */}
                 <Link
-                  href={`/club/partidas?q=${encodeURIComponent(duenio)}`}
+                  href={`/club/socios/${p.player_id}`}
                   className="text-acento-texto underline"
                 >
                   {duenio}

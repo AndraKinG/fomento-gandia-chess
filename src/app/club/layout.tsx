@@ -8,6 +8,8 @@ import { ProveedorPresencia } from "@/components/presencia/Presencia";
 import { ProveedorPendientes } from "@/components/avisos/Pendientes";
 import { ProveedorEnPartida } from "@/components/avisos/EnPartida";
 import { Asistente } from "@/components/asistente/Asistente";
+import { ProveedorTemaTablero } from "@/components/ajedrez/TemaTablero";
+import { temaTablero } from "@/lib/ajedrez/temas";
 
 /**
  * Zona de socios. Exige sesión y pone el cromo común (navegación y suscripción a
@@ -47,9 +49,12 @@ export default async function ClubLayout({
   // navegación, que es por lo que el aviso aparecía tarde.
   let avisosSinLeer = 0;
   let retosPendientes = 0;
+  // El tema del tablero del socio, para que TODOS los tableros de la app lo
+  // pinten sin ir cada uno a la base. Una clave desconocida cae al del club.
+  let claveTema: string | null = null;
   if (conNavegacion) {
     const supabase = await createServerSupabase();
-    const [{ count: retos }, { count: sinLeer }] = await Promise.all([
+    const [{ count: retos }, { count: sinLeer }, { data: preferencias }] = await Promise.all([
       // Sin ficha no hay retos posibles (son entre jugadores): el UUID de
       // relleno no matchea ninguna fila real y evita tener que ramificar la
       // consulta solo para este caso.
@@ -65,12 +70,15 @@ export default async function ClubLayout({
         .select("id", { count: "exact", head: true })
         .eq("profile_id", sesion.userId)
         .is("leido_en", null),
+      supabase.from("profiles").select("tema_tablero").eq("id", sesion.userId).maybeSingle(),
     ]);
     retosPendientes = retos ?? 0;
     avisosSinLeer = sinLeer ?? 0;
+    claveTema = (preferencias?.tema_tablero as string | null) ?? null;
   }
 
   return (
+    <ProveedorTemaTablero tema={temaTablero(claveTema)}>
     <ProveedorPresencia yo={sesion.playerId} nombre={sesion.nombre}>
     <ProveedorPendientes inicial={{ avisos: avisosSinLeer, retos: retosPendientes }}>
     <ProveedorEnPartida>
@@ -98,5 +106,6 @@ export default async function ClubLayout({
     </ProveedorEnPartida>
     </ProveedorPendientes>
     </ProveedorPresencia>
+    </ProveedorTemaTablero>
   );
 }
