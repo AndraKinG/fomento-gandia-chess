@@ -10,6 +10,7 @@ import { Banner } from "@/components/ui/Banner";
 import { BotonCopiar } from "@/components/ui/BotonCopiar";
 import { PuntoConectado } from "@/components/presencia/Presencia";
 import { Mirando } from "@/components/presencia/Mirando";
+import { useEnPartida } from "@/components/avisos/EnPartida";
 import { aPgn } from "@/lib/vivo/partida";
 import { enReloj, paraPintar, trasJugada, type Reloj } from "@/lib/vivo/reloj";
 import {
@@ -193,6 +194,19 @@ export function Mesa({
     yo === p.blancasId ? "w" : yo === p.negrasId ? "b" : null;
   const enJuego = p.resultado === null;
   const meToca = enJuego && miColor !== null && p.turno === miColor;
+
+  // AVISOS CALLADOS MIENTRAS SE JUEGA: `Avisos` vive en el layout y no sabe nada
+  // de partidas, así que es la mesa quien le avisa por el contexto (mismo patrón
+  // que el número rojo de `Pendientes.tsx`). Se avisa también mirando una
+  // partida ajena (`miColor === null`): el chat y el reloj ocupan la misma zona
+  // de abajo, así que un espectador tiene el mismo problema que quien juega.
+  // Al salir de la pantalla se limpia, para que las tarjetas vuelvan sin
+  // recargar nada.
+  const { marcar } = useEnPartida();
+  useEffect(() => {
+    marcar(enJuego);
+    return () => marcar(false);
+  }, [enJuego, marcar]);
 
   // TIEMPO REAL: la fila entera llega en cada cambio (`replica identity full` en la
   // migración 0022), así que la jugada del rival aparece sola, sin recargar.

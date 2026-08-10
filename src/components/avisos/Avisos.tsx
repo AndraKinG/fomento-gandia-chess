@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { clienteEnVivo } from "@/lib/supabase/vivo";
 import { aceptarReto, rechazarReto } from "@/app/club/(vinculado)/jugar/actions";
 import { usePendientes } from "./Pendientes";
+import { useEnPartida } from "./EnPartida";
 
 /**
  * Avisos de la app, en una tarjeta que sale abajo.
@@ -63,6 +64,7 @@ export function Avisos({ yo, perfilId }: { yo: string; perfilId: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const { poner } = usePendientes();
+  const { enPartida } = useEnPartida();
   /** Retos que ya se han anunciado, para no repetir la tarjeta en cada repaso. */
   const vistos = useRef(new Set<string>());
   /** Los que estaban esperando respuesta en el repaso anterior. Sirve para notar
@@ -282,7 +284,15 @@ export function Avisos({ yo, perfilId }: { yo: string; perfilId: string }) {
     };
   }, [yo, perfilId]);
 
-  if (avisos.length === 0) return null;
+  // CON UNA PARTIDA EN JUEGO DELANTE, NI UNA TARJETA. Jugando o mirando, la zona
+  // de abajo es donde están el chat, el reloj y los botones (`Mesa.tsx` avisa
+  // por este contexto en cuanto `enJuego` cambia). El aviso no desaparece: sigue
+  // en la bandeja y sumando al número rojo, solo se calla la tarjeta — perder
+  // por tiempo por leer "te reta Fulano" es peor que dejar caducar ese reto. Lo
+  // que NO es una tarjeta sigue igual: aceptar un reto ajeno te sigue llevando a
+  // la mesa aunque estés jugando otra, porque eso es una navegación, no un
+  // cartel encima del tablero.
+  if (avisos.length === 0 || enPartida) return null;
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-20 z-30 flex flex-col items-center gap-2 px-3 lg:bottom-6 lg:right-6 lg:left-auto lg:items-end lg:px-0">

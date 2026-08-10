@@ -6,6 +6,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { Avisos } from "@/components/avisos/Avisos";
 import { ProveedorPresencia } from "@/components/presencia/Presencia";
 import { ProveedorPendientes } from "@/components/avisos/Pendientes";
+import { ProveedorEnPartida } from "@/components/avisos/EnPartida";
 import { Asistente } from "@/components/asistente/Asistente";
 
 /**
@@ -69,6 +70,7 @@ export default async function ClubLayout({
   return (
     <ProveedorPresencia yo={sesion.playerId} nombre={sesion.nombre}>
     <ProveedorPendientes inicial={pendientes}>
+    <ProveedorEnPartida>
     <div className="flex flex-1">
       <PushSubscriber />
       {conNavegacion && <NavLateral esAdmin={sesion.esAdmin} email={sesion.email} />}
@@ -90,6 +92,7 @@ export default async function ClubLayout({
           que quedarse sin distracciones. */}
       {sesion.playerId != null && <Asistente />}
     </div>
+    </ProveedorEnPartida>
     </ProveedorPendientes>
     </ProveedorPresencia>
   );
