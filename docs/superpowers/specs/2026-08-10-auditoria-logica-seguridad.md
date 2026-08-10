@@ -136,6 +136,14 @@ el cliente — un mensaje difundido sin autor ya no se pinta, dispara una relect
 base, que es donde solo escribe el servidor. De paso se arregló que el servidor difunde
 `player_id` y el navegador `playerId`, y solo se miraba una de las dos formas.
 
+**Los tres "Silencios" cerrados (2026-08-10, segunda tanda)**: (1) `cerrarEnElTorneo`
+traza cuando el PGN no entra en el repositorio — el resultado se apunta igual, pero "el
+torneo tiene resultado y no partida" ya no es indistinguible de que nadie subiera nada;
+(2) los enlaces scrapeados del HTML de la FACV solo se siguen si apuntan de verdad a
+chess-results.com (`esUrlDeChessResults` en red.ts, con tests; se comprueba en la
+clasificación y en las actas); (3) `sonda-fide` lleva la misma guarda de CRON_SECRET
+vacío que las otras rutas de cron.
+
 **Pendiente de decisión del propietario**: canales de tiempo real privados (hoy cualquiera
 con la clave pública puede ESCUCHAR una partida; escribir no altera nada). Y los menores
 de la lista de abajo, para la pasada de pulido.
