@@ -13,7 +13,9 @@
 -- El estado del push (`push`, `push_intentos`) es únicamente para el
 -- reintento del cron: el servidor intenta mandar una notificación web VAPID,
 -- y si la suscripción del navegador es inválida o el navegador rechaza, pone
--- 'fallido' para reintentar hasta 3 veces.
+-- 'fallido' para reintentarlo UNA SOLA VEZ (spec). Si falla dos veces
+-- seguidas, el problema no es pasajero, y el aviso está en la bandeja igual,
+-- así que insistir solo gastaría cuota.
 --
 -- La bandeja NO filtra por grupo: si alguien tiene silenciados los retos, el
 -- aviso no se difunde por push, pero la fila existe. El cliente que abre la
@@ -28,12 +30,15 @@
 --   No va en check (la app los define) y sirve para que el cliente pinte
 --   iconos y textos distintos según qué pasó.
 -- - `push`: estado de la entrega. 'pendiente' = sin intentar; 'entregado' =
---   el navegador lo recibió; 'fallido' = el cron lo reintentó Y_SIGUE_FALLANDO;
---   'no_tocaba' = el socio tiene ese grupo silenciado, así que se saltó desde
---   el principio (es solo información, para no reintentar lo que nunca había
---   que tocar).
--- - `push_intentos`: contador para no reintentar eternamente. El cron para
---   en 3.
+--   al menos un dispositivo lo recibió; 'fallido' = ningún dispositivo lo
+--   recibió pero alguno fue un fallo reintentable (no una suscripción muerta);
+--   'no_tocaba' = no se intentó porque el socio no tiene suscripción o el grupo
+--   está silenciado, O se intentó pero todos los dispositivos fueron suscripciones
+--   muertas (404/410). En todos los casos, no hay que reintentar.
+-- - `push_intentos`: contador de REINTENTOS hechos por el cron (no intentos
+--   totales). Se deja en 0 en el primer envío (`avisar()` en enviar.ts) y
+--   solo sube si un reintento vuelve a fallar (`reintentar.ts`). El cron
+--   reintenta si `push_intentos < 1`, es decir, una sola vez.
 --
 create table public.notifications (
   id uuid primary key default gen_random_uuid(),
