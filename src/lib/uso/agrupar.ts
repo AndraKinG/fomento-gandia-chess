@@ -1,0 +1,139 @@
+/**
+ * Agrupar los datos de uso diarios en semanas y meses, para el panel de admin.
+ *
+ * MÓDULO PURO: entran filas por día y sale la misma tabla agrupada. La base
+ * solo guarda días (ver migración 0032); semanas y meses son una forma de
+ * mirarlos, no un dato, así que se calculan aquí y no se guardan.
+ *
+ * LOS SOCIOS ACTIVOS NO SE SUMAN, y es el motivo de que este módulo reciba los
+ * pares (día, cuenta) y no un número por día: quien entra el lunes y el martes
+ * es UNA persona activa esa semana, no dos. Sumar los conteos diarios es el
+ * error clásico de los paneles de uso.
+ */
+
+export type Periodo = "dia" | "semana" | "mes";
+
+/** Una fila de `uso_diario` más el recuento de actividad de ese día. */
+export type UsoDia = {
+  dia: string; // "2026-08-10"
+  visitas: number;
+  latidos: number;
+  partidasVivo: number;
+  retos: number;
+  partidasSubidas: number;
+  mensajesChat: number;
+  avisos: number;
+  pushEntregados: number;
+};
+
+export type UsoAgrupado = Omit<UsoDia, "dia"> & {
+  /** El día, el lunes de la semana o el primero del mes, según el periodo. */
+  clave: string;
+  /** Cuentas distintas vistas en el periodo (no la suma de los días). */
+  activos: number;
+};
+
+/** Cada latido son ~5 minutos con la pestaña delante (ver Latido.tsx). */
+export const MINUTOS_POR_LATIDO = 5;
+
+/** Cuántas franjas de latido tiene un día: para la media de conectados. */
+export const FRANJAS_DIA = (24 * 60) / MINUTOS_POR_LATIDO;
+
+/** El lunes de la semana de una fecha, en ISO. La semana del club empieza en
+ *  lunes, como los torneos y como el cron. */
+export function claveSemana(dia: string): string {
+  const f = new Date(`${dia}T00:00:00Z`);
+  // getUTCDay: 0=domingo... el lunes está a (dia+6)%7 días hacia atrás.
+  const atras = (f.getUTCDay() + 6) % 7;
+  f.setUTCDate(f.getUTCDate() - atras);
+  return f.toISOString().slice(0, 10);
+}
+
+export function claveMes(dia: string): string {
+  return `${dia.slice(0, 7)}-01`;
+}
+
+export function clavePeriodo(dia: string, periodo: Periodo): string {
+  if (periodo === "semana") return claveSemana(dia);
+  if (periodo === "mes") return claveMes(dia);
+  return dia;
+}
+
+/**
+ * Agrupa las filas diarias por periodo, sumando los contadores y contando los
+ * activos SIN duplicar dentro del periodo.
+ *
+ * Sale ordenado del periodo más reciente al más viejo, que es como se lee un
+ * panel: lo de hoy arriba.
+ */
+export function agruparUso(
+  dias: UsoDia[],
+  actividad: { dia: string; profileId: string }[],
+  periodo: Periodo
+): UsoAgrupado[] {
+  const grupos = new Map<string, UsoAgrupado>();
+
+  for (const d of dias) {
+    const clave = clavePeriodo(d.dia, periodo);
+    const g = grupos.get(clave) ?? {
+      clave,
+      activos: 0,
+      visitas: 0,
+      latidos: 0,
+      partidasVivo: 0,
+      retos: 0,
+      partidasSubidas: 0,
+      mensajesChat: 0,
+      avisos: 0,
+      pushEntregados: 0,
+    };
+    g.visitas += d.visitas;
+    g.latidos += d.latidos;
+    g.partidasVivo += d.partidasVivo;
+    g.retos += d.retos;
+    g.partidasSubidas += d.partidasSubidas;
+    g.mensajesChat += d.mensajesChat;
+    g.avisos += d.avisos;
+    g.pushEntregados += d.pushEntregados;
+    grupos.set(clave, g);
+  }
+
+  // Los activos, aparte y con Set por periodo: la misma cuenta en dos días de
+  // la misma semana cuenta una vez.
+  const vistos = new Map<string, Set<string>>();
+  for (const a of actividad) {
+    const clave = clavePeriodo(a.dia, periodo);
+    if (!grupos.has(clave)) continue; // actividad de un día sin fila no inventa periodos
+    const s = vistos.get(clave) ?? new Set<string>();
+    s.add(a.profileId);
+    vistos.set(clave, s);
+  }
+  for (const [clave, s] of vistos) {
+    const g = grupos.get(clave);
+    if (g) g.activos = s.size;
+  }
+
+  return [...grupos.values()].sort((a, b) => b.clave.localeCompare(a.clave));
+}
+
+/** Tiempo de uso estimado de un grupo, en texto ("3 h 25 min"). */
+export function tiempoDeUso(latidos: number): string {
+  const minutos = latidos * MINUTOS_POR_LATIDO;
+  if (minutos < 60) return `${minutos} min`;
+  const h = Math.floor(minutos / 60);
+  const m = minutos % 60;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+}
+
+/**
+ * Media de conectados a la vez en un periodo de `dias` días.
+ *
+ * Cada latido es una persona presente en una franja de 5 min: latidos partido
+ * por las franjas del periodo da la ocupación media. Con una décima basta —
+ * "0,3 personas de media" ya dice lo que tiene que decir.
+ */
+export function mediaConectados(latidos: number, dias: number): string {
+  if (dias <= 0) return "0";
+  const media = latidos / (FRANJAS_DIA * dias);
+  return media.toFixed(1).replace(".", ",");
+}

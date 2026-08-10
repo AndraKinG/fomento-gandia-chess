@@ -9,6 +9,7 @@ import { ProveedorPendientes } from "@/components/avisos/Pendientes";
 import { ProveedorEnPartida } from "@/components/avisos/EnPartida";
 import { Asistente } from "@/components/asistente/Asistente";
 import { ProveedorTemaTablero } from "@/components/ajedrez/TemaTablero";
+import { Latido } from "@/components/uso/Latido";
 import { temaTablero } from "@/lib/ajedrez/temas";
 import { juegoPiezas } from "@/lib/ajedrez/piezas";
 
@@ -87,6 +88,9 @@ export default async function ClubLayout({
     <ProveedorEnPartida>
     <div className="flex flex-1">
       <PushSubscriber />
+      {/* El latido de uso: contadores agregados del panel de admin. No pinta nada
+          y no falla hacia fuera. Qué guarda y qué no, en la migración 0032. */}
+      <Latido />
       {conNavegacion && <NavLateral esAdmin={sesion.esAdmin} email={sesion.email} />}
       {/* `min-w-0` es imprescindible: sin él una tabla ancha estira el flex y
           empuja el layout, en vez de desplazarse dentro de su contenedor.

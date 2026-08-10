@@ -48,6 +48,12 @@ const ENLACES = [
     detalle: "Actualizar el ELO FIDE y FEDA de los jugadores",
   },
   {
+    href: "/club/admin/uso",
+    icono: "📊",
+    titulo: "Datos de uso",
+    detalle: "Socios activos, visitas, tiempo de uso y actividad, por día, semana y mes",
+  },
+  {
     href: "/club/admin/push",
     icono: "🔔",
     titulo: "Notificaciones",
