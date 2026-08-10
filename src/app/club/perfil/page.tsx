@@ -13,6 +13,8 @@ import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { logout } from "@/app/(auth)/actions";
 import { Contenedor } from "@/components/ui/Contenedor";
 import { BotonAccion } from "@/components/ui/BotonAccion";
+import { PreferenciasAvisos } from "./PreferenciasAvisos";
+import type { GrupoAviso } from "@/lib/avisos/politica";
 
 export default async function PerfilPage() {
   const supabase = await createServerSupabase();
@@ -20,7 +22,9 @@ export default async function PerfilPage() {
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("email, player_id, players(nombre, elo_fide, elo_feda, elo_otro, fide_id, feda_id)")
+    .select(
+      "email, player_id, avisos_silenciados, players(nombre, elo_fide, elo_feda, elo_otro, fide_id, feda_id)"
+    )
     .eq("id", user!.id)
     .single();
 
@@ -163,6 +167,17 @@ export default async function PerfilPage() {
             </BotonAccion>
           </form>
         </Tarjeta>
+
+        {/* Por grupo, y no un único interruptor "avisos sí/no": interclubs,
+            torneos y partidas no se parecen entre sí y cada uno molesta o
+            no según a quién le llegue. "Gestión" solo se enseña a quien
+            puede recibirlo (ver `GRUPO_DE` en politica.ts): a un jugador
+            normal no le llega nunca, así que mostrárselo apagado y sin
+            efecto solo confundiría. */}
+        <PreferenciasAvisos
+          silenciadosIniciales={(profile?.avisos_silenciados ?? []) as GrupoAviso[]}
+          mostrarGestion={Boolean(sesion?.esAdmin || sesion?.esJunta)}
+        />
       </Contenedor>
     </main>
   );
