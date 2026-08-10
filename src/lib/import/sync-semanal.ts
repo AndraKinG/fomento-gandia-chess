@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { enviarPushAMuchos } from "@/lib/push/send";
+import { avisar } from "@/lib/avisos/enviar";
 import { sincronizarOrdenFuerzaFACVCore } from "@/lib/import/facv-of-apply";
 import { sincronizarResultadosFACVCore } from "@/lib/import/facv-resultados-apply";
 import { sincronizarActasCore } from "@/lib/import/chessresults-apply";
@@ -70,12 +70,14 @@ async function avisarFichasNuevas(cuantas: number): Promise<number> {
   ]);
   if (destinatarios.size === 0) return 0;
 
-  return enviarPushAMuchos([...destinatarios], {
-    title: cuantas === 1 ? "Ficha nueva en el club" : "Fichas nuevas en el club",
-    body:
+  const { guardados } = await avisar([...destinatarios], {
+    tipo: "fichas_nuevas",
+    titulo: cuantas === 1 ? "Ficha nueva en el club" : "Fichas nuevas en el club",
+    cuerpo:
       cuantas === 1
         ? "El orden de fuerza de la FACV trae una ficha que no teníamos."
         : `El orden de fuerza de la FACV trae ${cuantas} fichas que no teníamos.`,
     url: "/club/orden-fuerza",
   });
+  return guardados;
 }

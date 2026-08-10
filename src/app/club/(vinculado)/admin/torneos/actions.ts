@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { esAdmin } from "@/lib/auth/es-admin";
-import { enviarPushAMuchos } from "@/lib/push/send";
+import { avisar } from "@/lib/avisos/enviar";
 import { sincronizarTorneosFACVCore } from "@/lib/import/facv-torneos-apply";
 import { formatearRangoFechas } from "@/lib/torneos/fechas";
 import type { ResumenSyncTorneos } from "@/lib/import/facv-torneos-apply";
@@ -63,9 +63,10 @@ export async function cambiarDeInteres(
         .not("player_id", "is", null);
       const ids = (perfiles ?? []).map((p) => p.id);
       if (ids.length > 0) {
-        await enviarPushAMuchos(ids, {
-          title: `Torneo: ${torneo.nombre}`,
-          body: `${formatearRangoFechas(torneo.fecha_inicio, torneo.fecha_fin)}${torneo.lugar ? ` en ${torneo.lugar}` : ""}. ¿Vas?`,
+        await avisar(ids, {
+          tipo: "torneo_interes",
+          titulo: `Torneo: ${torneo.nombre}`,
+          cuerpo: `${formatearRangoFechas(torneo.fecha_inicio, torneo.fecha_fin)}${torneo.lugar ? ` en ${torneo.lugar}` : ""}. ¿Vas?`,
           url: `/club/torneos/facv/${tournamentId}`,
         });
       }

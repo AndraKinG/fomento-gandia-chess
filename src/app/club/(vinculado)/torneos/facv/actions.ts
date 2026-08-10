@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { enviarPushAMuchos } from "@/lib/push/send";
+import { avisar } from "@/lib/avisos/enviar";
 import { esJunta } from "@/lib/auth/es-admin";
 import { formatearRangoFechas } from "@/lib/torneos/fechas";
 import {
@@ -129,7 +129,10 @@ async function aplicar(cambios: Cambio[], tournamentId: string): Promise<string 
 }
 
 /**
- * Manda los avisos que devuelve el módulo de reglas.
+ * Manda los avisos de coches que devuelve el módulo de reglas: a quien pierde
+ * su plaza (porque otro se ha bajado) o a quien se queda sin coche (porque el
+ * conductor lo ha borrado). El nombre distingue esta función de `avisar()`
+ * (`@/lib/avisos/enviar`), que es la que de verdad guarda y envía.
  *
  * Cliente de servicio porque hay que traducir fichas a cuentas de usuario, y la
  * RLS de `profiles` no deja a un socio leer la de otro — con razón.
@@ -137,7 +140,7 @@ async function aplicar(cambios: Cambio[], tournamentId: string): Promise<string 
  * **Nunca puede hacer fallar la operación que lo dispara**: la plaza ya está
  * liberada aunque el push no salga, igual que en el aviso de vinculación.
  */
-async function avisar(avisos: Aviso[], nombreTorneo: string): Promise<void> {
+async function avisarDeCoches(avisos: Aviso[], nombreTorneo: string): Promise<void> {
   if (avisos.length === 0) return;
   try {
     const admin = createAdminClient();
@@ -154,19 +157,24 @@ async function avisar(avisos: Aviso[], nombreTorneo: string): Promise<void> {
       // Sin cuenta vinculada no hay a quién avisar: hay socios que no usan la app.
       if (!cuenta) continue;
 
+      // El tipo va SIEMPRE en la misma rama que el texto: así no pueden
+      // desparejarse (un cuerpo de "sin coche" guardado con el tipo de
+      // "plaza liberada", por ejemplo).
       const payload =
         aviso.tipo === "plaza_liberada"
           ? {
-              title: "Se ha liberado una plaza",
-              body: `${nombrePorFicha.get(aviso.pasajeroId) ?? "Un socio"} ya no va a ${nombreTorneo}.`,
+              tipo: "coche_plaza_libre" as const,
+              titulo: "Se ha liberado una plaza",
+              cuerpo: `${nombrePorFicha.get(aviso.pasajeroId) ?? "Un socio"} ya no va a ${nombreTorneo}.`,
               url: "/club/torneos/facv",
             }
           : {
-              title: "Te has quedado sin coche",
-              body: `El coche al que ibas a ${nombreTorneo} ya no está disponible.`,
+              tipo: "coche_sin_plaza" as const,
+              titulo: "Te has quedado sin coche",
+              cuerpo: `El coche al que ibas a ${nombreTorneo} ya no está disponible.`,
               url: "/club/torneos/facv",
             };
-      await enviarPushAMuchos([cuenta], payload);
+      await avisar([cuenta], payload);
     }
   } catch {
     // Silencio a propósito: ver comentario de arriba.
@@ -222,9 +230,10 @@ async function avisarPrimerApuntado(
     const ids = (perfiles ?? []).map((p) => p.id);
     if (ids.length === 0) return;
 
-    await enviarPushAMuchos(ids, {
-      title: `${yo?.nombre ?? "Un socio"} va a un torneo`,
-      body: `${torneo.nombre}, ${formatearRangoFechas(torneo.fecha_inicio, torneo.fecha_fin)}${torneo.lugar ? ` en ${torneo.lugar}` : ""}. ¿Te apuntas?`,
+    await avisar(ids, {
+      tipo: "torneo_primer_apuntado",
+      titulo: `${yo?.nombre ?? "Un socio"} va a un torneo`,
+      cuerpo: `${torneo.nombre}, ${formatearRangoFechas(torneo.fecha_inicio, torneo.fecha_fin)}${torneo.lugar ? ` en ${torneo.lugar}` : ""}. ¿Te apuntas?`,
       url: `/club/torneos/facv/${tournamentId}`,
     });
   } catch {
@@ -280,7 +289,7 @@ export async function marcarAsistencia(
   const error = await aplicar(cambios, tournamentId);
   if (error) return { error };
 
-  await avisar(avisos, await nombreTorneo(tournamentId));
+  await avisarDeCoches(avisos, await nombreTorneo(tournamentId));
   // Si acaba de abrir plan donde no había nadie, se lo cuenta al club.
   if (estado === "voy" || estado === "duda") {
     await avisarPrimerApuntado(tournamentId, yo.playerId);
@@ -363,7 +372,7 @@ export async function bajarseDeCoche(tournamentId: string): Promise<Resultado> {
   const error = await aplicar(cambios, tournamentId);
   if (error) return { error };
 
-  await avisar(avisos, await nombreTorneo(tournamentId));
+  await avisarDeCoches(avisos, await nombreTorneo(tournamentId));
   refrescar(tournamentId);
   return {};
 }
@@ -388,7 +397,7 @@ export async function borrarCoche(
 
   const { cambios, avisos } = efectosDeBorrarCoche(cocheId, estado);
   // Los avisos se mandan ANTES de borrar: después ya no se sabría a quién.
-  await avisar(avisos, await nombreTorneo(tournamentId));
+  await avisarDeCoches(avisos, await nombreTorneo(tournamentId));
 
   const error = await aplicar(cambios, tournamentId);
   if (error) return { error };

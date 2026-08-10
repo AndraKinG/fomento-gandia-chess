@@ -13,7 +13,7 @@ import {
 import { parado, relojInicial } from "@/lib/vivo/reloj";
 import { blancasEnAmistosa } from "@/lib/vivo/colores";
 import { aPgn } from "@/lib/vivo/partida";
-import { enviarPushAMuchos } from "@/lib/push/send";
+import { avisar } from "@/lib/avisos/enviar";
 import { difundirAviso, difundirChat, difundirPartida } from "@/lib/vivo/difundir";
 
 /**
@@ -418,9 +418,10 @@ export async function aceptarReto(retoId: string): Promise<Respuesta> {
       .eq("id", sesion.playerId)
       .maybeSingle();
     if (quienReta?.id) {
-      await enviarPushAMuchos([quienReta.id], {
-        title: "Te han aceptado el reto",
-        body: `${yo?.nombre ?? "Tu rival"} te espera en el tablero.`,
+      await avisar([quienReta.id], {
+        tipo: "reto_aceptado",
+        titulo: "Te han aceptado el reto",
+        cuerpo: `${yo?.nombre ?? "Tu rival"} te espera en el tablero.`,
         url: `/club/jugar/${partida.id}`,
       });
     }

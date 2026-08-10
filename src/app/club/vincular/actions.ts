@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { enviarPushAMuchos } from "@/lib/push/send";
+import { avisar } from "@/lib/avisos/enviar";
 
 /**
  * Avisa por push a los admins de que hay una solicitud esperando.
@@ -33,9 +33,10 @@ async function avisarAdminsDeSolicitud(nombreFicha: string): Promise<void> {
       ]),
     ];
     if (ids.length === 0) return;
-    await enviarPushAMuchos(ids, {
-      title: "Nueva solicitud de vinculación",
-      body: `Alguien dice ser ${nombreFicha}. Revísalo para darle acceso.`,
+    await avisar(ids, {
+      tipo: "vinculacion",
+      titulo: "Nueva solicitud de vinculación",
+      cuerpo: `Alguien dice ser ${nombreFicha}. Revísalo para darle acceso.`,
       url: "/club/admin/vinculaciones",
     });
   } catch {

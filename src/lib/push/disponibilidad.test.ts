@@ -4,11 +4,12 @@ import { calcularDestinatariosRecordatorio } from "./disponibilidad";
 // Nota de diseño: esta función pura recibe ya el conjunto de "usuarios"
 // candidatos (con player_id no nulo) — el filtro "sin ficha vinculada" ocurre
 // aguas arriba, en la consulta que arma ese array (join profiles.player_id).
-// Igualmente, la existencia de suscripción push NO se decide aquí: se
-// comprueba en la capa de envío (enviarPushAUsuario / enviarPushAMuchos), que
-// simplemente no manda nada si el usuario no tiene ninguna fila en
-// push_subscriptions. Por eso esos dos casos no aparecen como test de esta
-// función: pertenecen a otras capas.
+// Igualmente, la existencia de suscripción push y si le toca recibirla NO se
+// decide aquí: la decide `debePush()` dentro de `avisar()` (src/lib/avisos),
+// socio a socio, con las suscripciones y el silencio de cada uno. Por eso
+// esos dos casos no aparecen como test de esta función: pertenecen a otra
+// capa, y aquí basta con que un socio tenga ficha para que se le guarde el
+// aviso en la bandeja.
 
 describe("calcularDestinatariosRecordatorio", () => {
   it("excluye a un usuario que ya respondió TODAS las jornadas próximas", () => {

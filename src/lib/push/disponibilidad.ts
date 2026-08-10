@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { enviarPushAMuchos } from "./send";
+import { avisar } from "@/lib/avisos/enviar";
 
 export type JornadaVentana = { id: string; fecha_hora: string };
 export type DisponibilidadFila = { match_id: string; player_id: string };
@@ -12,9 +12,11 @@ export type UsuarioConFicha = { user_id: string; player_id: string };
  * a quien le falte al menos una jornada de la lista por responder.
  *
  * Fuera de alcance a propósito (se resuelve en otras capas):
- * - Que el usuario tenga o no suscripción push: lo decide `enviarPushAMuchos`
- *   / `enviarPushAUsuario`, que simplemente no envían nada si no hay fila en
- *   `push_subscriptions`.
+ * - Que el usuario tenga o no suscripción push, y si le toca recibirla: eso
+ *   lo decide `debePush()` dentro de `avisar()`, uno por uno, con las
+ *   suscripciones y el silencio del socio. Esta función ni lo mira: a todos
+ *   los que devuelve se les guarda el aviso en la bandeja igual, tengan o no
+ *   push.
  * - Que el usuario tenga ficha (`player_id`) vinculada: el array `usuarios`
  *   que llega aquí ya viene filtrado aguas arriba (join con `profiles`).
  */
@@ -48,32 +50,26 @@ function textoFechas(jornadas: JornadaVentana[]): string {
 }
 
 /**
- * Usuarios con ficha vinculada (`profiles.player_id`) que además tienen al
- * menos una suscripción push registrada. Devuelve ya el par (user_id,
- * player_id) que necesita `calcularDestinatariosRecordatorio`.
+ * Todos los socios con ficha vinculada (`profiles.player_id` no nulo).
+ *
+ * YA NO filtra por suscripción push: antes descartaba aquí a quien no tenía
+ * ninguna fila en `push_subscriptions`, lo que dejaba a ese socio sin ni
+ * siquiera una fila en `notifications` — perdía el aviso para siempre, que es
+ * justo lo que `avisar()` viene a arreglar. Ahora se le avisa a todo el que
+ * tiene ficha; quién recibe además el push lo decide `debePush()` dentro de
+ * `avisar()`, socio a socio.
  */
-async function usuariosConFichaYSuscripcion(
+async function usuariosConFicha(
   admin: ReturnType<typeof createAdminClient>
 ): Promise<UsuarioConFicha[]> {
   const { data: profiles } = await admin
     .from("profiles")
     .select("id, player_id")
     .not("player_id", "is", null);
-  const conFicha = (profiles ?? []) as { id: string; player_id: string }[];
-  if (conFicha.length === 0) return [];
-
-  const { data: subs } = await admin
-    .from("push_subscriptions")
-    .select("user_id")
-    .in(
-      "user_id",
-      conFicha.map((p) => p.id)
-    );
-  const conSuscripcion = new Set((subs ?? []).map((s) => s.user_id as string));
-
-  return conFicha
-    .filter((p) => conSuscripcion.has(p.id))
-    .map((p) => ({ user_id: p.id, player_id: p.player_id }));
+  return ((profiles ?? []) as { id: string; player_id: string }[]).map((p) => ({
+    user_id: p.id,
+    player_id: p.player_id,
+  }));
 }
 
 /** Jornadas pendientes cuya fecha cae en los próximos `diasVentana` días. */
@@ -95,10 +91,13 @@ async function jornadasProximas(
 }
 
 /**
- * Petición semanal de disponibilidad: a TODOS los usuarios con ficha y
- * suscripción push, para las jornadas pendientes de los próximos
- * `diasVentana` días (7 en producción; se amplía en modo de prueba desde la
- * ruta del cron).
+ * Petición semanal de disponibilidad: a TODOS los usuarios con ficha, para
+ * las jornadas pendientes de los próximos `diasVentana` días (7 en
+ * producción; se amplía en modo de prueba desde la ruta del cron).
+ *
+ * `notificados` es ahora `guardados` (a cuántos se les guardó el aviso en la
+ * bandeja), no un recuento de pushes intentados: es el número equivalente y
+ * más honesto para lo que el cron y sus tests esperan de este contorno.
  */
 export async function pedirDisponibilidadSemana(
   diasVentana = 7
@@ -107,18 +106,19 @@ export async function pedirDisponibilidadSemana(
   const jornadas = await jornadasProximas(admin, diasVentana);
   if (jornadas.length === 0) return { notificados: 0 };
 
-  const usuarios = await usuariosConFichaYSuscripcion(admin);
+  const usuarios = await usuariosConFicha(admin);
   if (usuarios.length === 0) return { notificados: 0 };
 
-  const notificados = await enviarPushAMuchos(
+  const { guardados } = await avisar(
     usuarios.map((u) => u.user_id),
     {
-      title: "¿Puedes jugar?",
-      body: `Jornada del ${textoFechas(jornadas)}: marca tu disponibilidad`,
+      tipo: "disponibilidad_peticion",
+      titulo: "¿Puedes jugar?",
+      cuerpo: `Jornada del ${textoFechas(jornadas)}: marca tu disponibilidad`,
       url: "/club/disponibilidad",
     }
   );
-  return { notificados };
+  return { notificados: guardados };
 }
 
 /**
@@ -140,7 +140,7 @@ export async function recordarPendientes(
       jornadas.map((j) => j.id)
     );
 
-  const usuarios = await usuariosConFichaYSuscripcion(admin);
+  const usuarios = await usuariosConFicha(admin);
   if (usuarios.length === 0) return { notificados: 0 };
 
   const destinatarios = calcularDestinatariosRecordatorio(
@@ -150,10 +150,11 @@ export async function recordarPendientes(
   );
   if (destinatarios.length === 0) return { notificados: 0 };
 
-  const notificados = await enviarPushAMuchos(destinatarios, {
-    title: "¿Puedes jugar?",
-    body: `Jornada del ${textoFechas(jornadas)}: marca tu disponibilidad`,
+  const { guardados } = await avisar(destinatarios, {
+    tipo: "disponibilidad_recordatorio",
+    titulo: "¿Puedes jugar?",
+    cuerpo: `Jornada del ${textoFechas(jornadas)}: marca tu disponibilidad`,
     url: "/club/disponibilidad",
   });
-  return { notificados };
+  return { notificados: guardados };
 }

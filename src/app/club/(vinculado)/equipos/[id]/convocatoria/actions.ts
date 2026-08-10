@@ -8,7 +8,7 @@ import { esCapitanDeMatch } from "@/lib/auth/es-capitan";
 import { cargarContextoValidacion, type MatchInfo } from "@/lib/convocatorias/contexto-bd";
 import { validar, type Infraccion, type TableroPropuesto } from "@/lib/validador";
 import { colorDeTablero } from "@/lib/validador/colores";
-import { enviarPushAUsuario } from "@/lib/push/send";
+import { avisar } from "@/lib/avisos/enviar";
 import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 
 // SOLO SERVIDOR: server actions de convocatoria (Task 5, Fase 1C). Cada
@@ -37,9 +37,11 @@ function revalidarJornada(teamId: string, matchId: string): void {
 }
 
 /**
- * Mapea cada tablero convocado a un push, si el jugador tiene un perfil de
- * usuario vinculado (`profiles.player_id`) y suscripción push registrada
- * (`enviarPushAUsuario` ya no hace nada si no hay suscripción). Usa el
+ * Mapea cada tablero convocado a un aviso, si el jugador tiene un perfil de
+ * usuario vinculado (`profiles.player_id`). El aviso queda SIEMPRE en su
+ * bandeja (`avisar()`); que además le llegue como push depende de si tiene
+ * suscripción y no lo tiene silenciado (`debePush()`, y la convocatoria
+ * ignora el silencio: ver `NO_SILENCIABLES` en `politica.ts`). Usa el
  * cliente ADMIN para leer `profiles` de OTROS jugadores: la RLS de
  * `profiles` solo permite a un capitán normal leer la suya propia.
  */
@@ -83,14 +85,18 @@ async function notificarConvocados(
   });
   const rivalYSede = `${match.esLocal ? "vs" : "@"} ${match.rival}${match.sede ? ` · ${match.sede}` : ""}`;
 
+  // Una llamada por destinatario, a propósito: cada uno recibe su propio
+  // tablero, color e icono en el cuerpo, así que no se puede juntar en una
+  // sola llamada en lote sin perder esa personalización.
   await Promise.allSettled(
     destinatarios.map(({ tablero, userId }) => {
       const color = colorDeTablero(tablero.tablero, match.esLocal);
       const icono = color === "blancas" ? "♙" : "♟";
       const colorTexto = color === "blancas" ? "Blancas" : "Negras";
-      return enviarPushAUsuario(userId, {
-        title: `Convocado con el ${match.equipoNombre}`,
-        body: `Tablero ${tablero.tablero} · ${icono} ${colorTexto} · ${fecha} · ${rivalYSede}`,
+      return avisar([userId], {
+        tipo: "convocatoria",
+        titulo: `Convocado con el ${match.equipoNombre}`,
+        cuerpo: `Tablero ${tablero.tablero} · ${icono} ${colorTexto} · ${fecha} · ${rivalYSede}`,
         url: `/club/jornadas/${matchId}`,
       });
     })

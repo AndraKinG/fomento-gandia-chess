@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { enviarPushAMuchos } from "@/lib/push/send";
+import { avisar } from "@/lib/avisos/enviar";
 import { validarSolicitud } from "@/lib/solicitudes/ingreso";
 
 type Resultado = { ok?: true; error?: string };
@@ -89,9 +89,10 @@ async function avisarALaJunta(nombre: string): Promise<void> {
     ];
     if (ids.length === 0) return;
 
-    await enviarPushAMuchos(ids, {
-      title: "Alguien quiere unirse al club",
-      body: `${nombre} ha enviado una solicitud de ingreso.`,
+    await avisar(ids, {
+      tipo: "alta_socio",
+      titulo: "Alguien quiere unirse al club",
+      cuerpo: `${nombre} ha enviado una solicitud de ingreso.`,
       url: "/club/solicitudes",
     });
   } catch {
