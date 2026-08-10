@@ -339,6 +339,34 @@ export function Mesa({
   }, [aplicarFila, inicial.id]);
 
   /**
+   * Va a por el chat de la base y lo aplica.
+   *
+   * Es la vía FIABLE de los eventos de la partida: en la base solo los escribe el
+   * servidor (migración 0027), así que lo que salga de aquí es verdad. La difusión de
+   * un mensaje sin autor no se pinta, solo dispara esta lectura.
+   */
+  const releerChat = useCallback(async () => {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("live_chat")
+      .select("id, player_id, texto, evento, creado_en")
+      .eq("live_game_id", inicial.id)
+      .order("creado_en");
+    if (!data) return;
+    setMensajes((antes) =>
+      antes.length === data.length
+        ? antes
+        : data.map((m) => ({
+            id: m.id,
+            playerId: m.player_id,
+            texto: m.texto,
+            evento: m.evento,
+            creadoEn: m.creado_en,
+          }))
+    );
+  }, [inicial.id]);
+
+  /**
    * Relee varias veces, separando los intentos.
    *
    * Una sola lectura tras el empujón se adelanta a menudo a que el servidor haya
@@ -413,11 +441,43 @@ export function Mesa({
           // guardado, sin dejarlo en una sola lectura que puede llegar antes.
           void releerConInsistencia();
         })
+        /**
+         * UN EVENTO DE LA PARTIDA NO SE PINTA NUNCA DESDE LA DIFUSIÓN.
+         *
+         * El canal es público y lo escribe el navegador (así el rival ve el mensaje al
+         * instante), así que quien difunde elige el contenido: un socio podía mandar un
+         * mensaje sin autor y enseñarle al rival un "el rival abandona" que nunca pasó.
+         * Falso, pero convincente durante los segundos que tarda la relectura.
+         *
+         * Los mensajes CON autor se pintan al instante, como siempre: quien escribe es
+         * quien difunde, y la policy del chat (0024) ya impide firmar por otro.
+         *
+         * Un mensaje SIN autor dice "aquí ha pasado algo del sistema", y en vez de
+         * creérselo se va a buscar la verdad a la base, que es donde solo escribe el
+         * servidor (migración 0027). Si el evento es real, aparece en esa relectura; si
+         * era inventado, no existe y no se pinta nada. Nótese que el servidor difunde la
+         * fila tal cual (`player_id`) y el navegador el mensaje ya mapeado (`playerId`):
+         * por eso se miran las dos formas.
+         */
         .on("broadcast", { event: "chat" }, (mensaje) => {
-          const m = (mensaje.payload as { mensaje?: Mensaje })?.mensaje;
+          const m = (mensaje.payload as { mensaje?: Record<string, unknown> })?.mensaje;
           if (!m) return;
           setEnVivo("si");
-          setMensajes((antes) => (antes.some((x) => x.id === m.id) ? antes : [...antes, m]));
+          const autor = (m.playerId ?? m.player_id ?? null) as string | null;
+          if (autor === null) {
+            void releerChat();
+            return;
+          }
+          const nuevo: Mensaje = {
+            id: String(m.id),
+            playerId: autor,
+            texto: String(m.texto ?? ""),
+            evento: null,
+            creadoEn: String(m.creadoEn ?? m.creado_en),
+          };
+          setMensajes((antes) =>
+            antes.some((x) => x.id === nuevo.id) ? antes : [...antes, nuevo]
+          );
         })
         .subscribe((estado) => {
           if (cancelado) return;
@@ -434,7 +494,7 @@ export function Mesa({
       cancelado = true;
       cerrar?.();
     };
-  }, [aplicarFila, aplicarJugadaSuelta, p.id, releerConInsistencia]);
+  }, [aplicarFila, aplicarJugadaSuelta, p.id, releerChat, releerConInsistencia]);
 
   // RED DE SEGURIDAD del tiempo real: se vuelve a leer la fila cada pocos segundos
   // mientras la partida está viva. Si el aviso llegó, esto no cambia nada; si se
