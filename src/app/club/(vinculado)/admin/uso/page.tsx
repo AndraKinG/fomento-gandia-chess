@@ -122,7 +122,10 @@ export default async function UsoPage({
       />
       <Contenedor medida="panel" className="space-y-4">
         <Pestanas>
-          <Pestana href="/club/admin/uso?periodo=dia" activa={periodo === "dia"}>
+          {/* "Por día" apunta a la URL LIMPIA, que ya significa día por defecto:
+              así el mismo estado tiene siempre la misma dirección, entre en el
+              panel como entre. Con ?periodo=dia había dos URLs para lo mismo. */}
+          <Pestana href="/club/admin/uso" activa={periodo === "dia"}>
             Por día
           </Pestana>
           <Pestana href="/club/admin/uso?periodo=semana" activa={periodo === "semana"}>
