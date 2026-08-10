@@ -6,6 +6,7 @@ import { usePendientes } from "@/components/avisos/Pendientes";
 import { Escudo } from "@/components/ui/Escudo";
 import {
   IconoAdmin,
+  IconoAvisos,
   IconoInicio,
   IconoInterclubs,
   IconoJugar,
@@ -79,6 +80,18 @@ const SECCIONES: Seccion[] = [
     Icono: IconoPartidas,
     rutas: ["/club/partidas"],
   },
+  // Entrada PROPIA y SIEMPRE VISIBLE de la bandeja de avisos (`/club/avisos`).
+  // Antes no existía: el único enlace a la bandeja era el número rojo de
+  // Jugar, así que "¿a mí no me llegó nada?" —justo lo que la bandeja existe
+  // para responder— solo se podía comprobar cuando ya tenías algo sin leer.
+  // Sexta pestaña del móvil: siguen cabiendo seis, como dice el comentario de
+  // Jugar más abajo.
+  {
+    href: "/club/avisos",
+    label: "Avisos",
+    Icono: IconoAvisos,
+    rutas: ["/club/avisos"],
+  },
   // Perfil NO va en la barra de abajo: vive arriba a la derecha, fijo, en
   // `AccesoPerfil`. Es de las que menos se tocan y liberar ese hueco deja que las
   // cinco que sí se usan a diario quepan sin apretarse en un teléfono.
@@ -116,6 +129,68 @@ function useSecciones(esAdmin: boolean) {
 }
 
 /**
+ * El número (si lo hay) que le toca al badge de una sección, y la frase que lo
+ * explica a quien no lo ve.
+ *
+ * SOLO DOS SECCIONES LLEVAN NÚMERO, y cada una el SUYO, no una suma: Jugar
+ * cuenta retos pendientes (te han retado, decides tú) y Avisos cuenta avisos
+ * sin leer (la bandeja). Antes era un único número —la suma de los dos— sobre
+ * Jugar, y ese número llevaba a la bandeja: tocar el único sitio rojo de la
+ * pantalla con un reto pendiente aterrizaba en "Avisos", que decía "sin
+ * avisos", porque un reto no es ningún tipo de esa tabla. Con una entrada
+ * propia para Avisos, cada número cuenta lo suyo y lleva a lo suyo.
+ */
+function contadorDe(
+  href: string,
+  pendientes: { avisos: number; retos: number }
+): { cuantos: number; etiqueta: string } | null {
+  if (href === "/club/jugar") {
+    const n = pendientes.retos;
+    return { cuantos: n, etiqueta: n === 1 ? "1 reto pendiente" : `${n} retos pendientes` };
+  }
+  if (href === "/club/avisos") {
+    const n = pendientes.avisos;
+    return { cuantos: n, etiqueta: n === 1 ? "1 aviso sin leer" : `${n} avisos sin leer` };
+  }
+  return null;
+}
+
+/**
+ * El icono de una sección con su badge encima, si le toca uno.
+ *
+ * El badge es un `<span aria-hidden>` DECORATIVO, nunca un enlace: antes lo
+ * era (llevaba a la bandeja aunque estuviera sobre Jugar) y eso eran DOS
+ * problemas juntos — un `<a>` dentro de otro `<a>` es HTML inválido y el clic
+ * dejaba de ser fiable, y encima el blanco de toque de ~14 px quedaba por
+ * debajo del mínimo de 24×24 px de WCAG 2.5.8. Ahora toda la fila es un único
+ * enlace (a Jugar o a Avisos, cada uno el suyo) y el número se entera por el
+ * `aria-label` de ESE enlace, no por el badge.
+ */
+function IconoConBadge({
+  Icono,
+  className,
+  info,
+}: {
+  Icono: (p: { className?: string }) => React.ReactElement;
+  className: string;
+  info: { cuantos: number; etiqueta: string } | null;
+}) {
+  return (
+    <span className="relative inline-flex shrink-0">
+      <Icono className={className} />
+      {info && info.cuantos > 0 && (
+        <span
+          aria-hidden
+          className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-acento-fuerte px-1 text-[10px] font-bold leading-none text-sobre-acento"
+        >
+          {info.cuantos}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/**
  * Navegación de ESCRITORIO: barra lateral fija.
  *
  * En una pantalla grande una barra abajo es la peor opción: el espacio que sobra
@@ -127,9 +202,9 @@ function useSecciones(esAdmin: boolean) {
  */
 export function NavLateral({ esAdmin, email }: { esAdmin: boolean; email: string }) {
   const secciones = useSecciones(esAdmin);
-  // Avisos sin leer + retos pendientes, en vivo (ver Pendientes.tsx). Sale
-  // como número rojo sobre Jugar, aunque lleva a la bandeja de avisos.
-  const { cuantos: pendientes } = usePendientes();
+  // Retos pendientes y avisos sin leer, en vivo (ver Pendientes.tsx). Cada uno
+  // sale sobre SU icono: retos sobre Jugar, avisos sin leer sobre Avisos.
+  const pendientes = usePendientes();
 
   return (
     <aside className="hidden lg:flex lg:w-60 lg:shrink-0 lg:flex-col lg:border-r lg:border-borde lg:bg-tarjeta">
@@ -143,37 +218,25 @@ export function NavLateral({ esAdmin, email }: { esAdmin: boolean; email: string
         </Link>
 
         <nav aria-label="Navegación principal" className="flex-1 space-y-0.5 px-3">
-          {secciones.map(({ href, label, Icono, activo }) => (
-            <div key={href} className="relative">
+          {secciones.map(({ href, label, Icono, activo }) => {
+            const info = contadorDe(href, pendientes);
+            return (
               <Link
+                key={href}
                 href={href}
                 aria-current={activo ? "page" : undefined}
+                aria-label={info && info.cuantos > 0 ? `${label}. ${info.etiqueta}` : undefined}
                 className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition duration-100 ${
                   activo
                     ? "bg-acento-fuerte font-semibold text-sobre-acento"
                     : "text-tinta hover:bg-tarjeta-suave"
                 }`}
               >
-                <Icono className="h-5 w-5 shrink-0" />
+                <IconoConBadge Icono={Icono} className="h-5 w-5 shrink-0" info={info} />
                 {label}
               </Link>
-              {/* El número cuenta avisos sin leer + retos pendientes (ver
-                  Pendientes.tsx) y va sobre Jugar porque no hay una entrada de
-                  "Avisos" propia en el menú, pero YA NO lleva a Jugar: lleva a
-                  la bandeja. Por eso es un <Link> aparte y no un <span> dentro
-                  del de arriba — un <a> anidado en otro <a> es HTML inválido,
-                  el navegador lo repara a su manera y el clic deja de fiarse. */}
-              {href === "/club/jugar" && pendientes > 0 && (
-                <Link
-                  href="/club/avisos"
-                  aria-label={`${pendientes} avisos sin leer`}
-                  className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-red-600 px-1.5 text-xs font-bold text-white"
-                >
-                  {pendientes}
-                </Link>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </nav>
 
         <p className="truncate border-t border-borde px-5 py-3.5 text-xs text-tinta-suave" title={email}>
@@ -222,48 +285,32 @@ export function AccesoPerfil() {
  */
 export function NavInferior({ esAdmin }: { esAdmin: boolean }) {
   const secciones = useSecciones(esAdmin).filter((i) => i.enMovil !== false);
-  const { cuantos: pendientes } = usePendientes();
+  const pendientes = usePendientes();
 
   return (
     <nav
       aria-label="Navegación principal"
       className="fixed inset-x-0 bottom-0 z-10 flex border-t border-borde bg-tarjeta pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
-      {secciones.map(({ href, label, Icono, activo }) => (
-        // `basis-0 grow` reparte el ancho a partes iguales sin que la etiqueta
-        // más larga se lleve más sitio que las demás. Es un `div` y no el
-        // propio `Link` porque el número de abajo es OTRO enlace (a la
-        // bandeja de avisos, no a Jugar): un <a> dentro de otro <a> es HTML
-        // inválido y el clic deja de ser fiable.
-        <div
-          key={href}
-          className={`relative flex min-w-0 basis-0 grow flex-col items-center gap-0.5 px-0.5 pb-2 pt-2 text-[10px] ${
-            activo ? "font-bold text-acento-texto" : "text-tinta-suave"
-          }`}
-        >
+      {secciones.map(({ href, label, Icono, activo }) => {
+        const info = contadorDe(href, pendientes);
+        return (
+          // `basis-0 grow` reparte el ancho a partes iguales sin que la
+          // etiqueta más larga se lleve más sitio que las demás.
           <Link
+            key={href}
             href={href}
             aria-current={activo ? "page" : undefined}
-            className="flex w-full flex-col items-center gap-0.5"
+            aria-label={info && info.cuantos > 0 ? `${label}. ${info.etiqueta}` : undefined}
+            className={`flex min-w-0 basis-0 grow flex-col items-center gap-0.5 px-0.5 pb-2 pt-2 text-[10px] ${
+              activo ? "font-bold text-acento-texto" : "text-tinta-suave"
+            }`}
           >
-            <Icono className="h-5 w-5 shrink-0" />
+            <IconoConBadge Icono={Icono} className="h-5 w-5 shrink-0" info={info} />
             <span className="w-full truncate text-center">{label}</span>
           </Link>
-          {/* El número cuenta avisos sin leer + retos pendientes (ver
-              Pendientes.tsx) y lleva a la bandeja, no a Jugar. Posicionado
-              sobre el icono con las mismas coordenadas que antes, cuando era
-              un `<span>` decorativo dentro del enlace. */}
-          {href === "/club/jugar" && pendientes > 0 && (
-            <Link
-              href="/club/avisos"
-              aria-label={`${pendientes} avisos sin leer`}
-              className="absolute left-1/2 top-0.5 z-10 ml-2 rounded-full bg-red-600 px-1 text-[10px] font-bold leading-tight text-white"
-            >
-              {pendientes}
-            </Link>
-          )}
-        </div>
-      ))}
+        );
+      })}
     </nav>
   );
 }

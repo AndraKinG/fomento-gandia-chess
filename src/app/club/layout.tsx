@@ -34,17 +34,19 @@ export default async function ClubLayout({
   // En ese caso no se pinta ninguna de las dos barras.
   const conNavegacion = sesion.playerId != null || sesion.esAdmin;
 
-  // Número rojo del menú: RETOS PENDIENTES + AVISOS SIN LEER. Son dos cosas que
-  // no tienen nada que ver entre sí — "te han retado" no es ninguno de los tipos
-  // de la tabla `notifications` (el único de partidas es `reto_aceptado`, que va
-  // a QUIEN retó, no a quien recibe el reto) — y aun así tienen que sumarse en UN
-  // solo número: si el número solo contara avisos sin leer, un reto recibido se
-  // quedaría sin marca roja, que sería una regresión de un flujo que hoy ya
-  // funciona. Es solo el VALOR DE PARTIDA: a partir de aquí manda `Avisos.tsx`
-  // (su `repasar()`), que sabe la MISMA suma y la recalcula cada pocos segundos
-  // — puesta aquí y solo en el servidor, la cifra se quedaría congelada hasta la
-  // siguiente navegación, que es por lo que el aviso aparecía tarde.
-  let pendientes = 0;
+  // Los dos números del menú: RETOS PENDIENTES (badge de "Jugar") y AVISOS SIN
+  // LEER (badge de "Avisos", la bandeja de `/club/avisos`). Son dos cosas que no
+  // tienen nada que ver entre sí —"te han retado" no es ninguno de los tipos de
+  // la tabla `notifications`, el único de partidas ahí es `reto_aceptado` y ese
+  // va a QUIEN retó, no a quien recibe el reto— y por eso YA NO se suman en un
+  // solo número (ver Pendientes.tsx: antes sí, y ese número llevaba siempre a la
+  // bandeja, así que un reto pendiente aterrizaba en "sin avisos"). Esto es solo
+  // el VALOR DE PARTIDA: a partir de aquí manda `Avisos.tsx` (su `repasar()`),
+  // que calcula LOS DOS con la MISMA fórmula cada pocos segundos — puesto aquí y
+  // solo en el servidor, la cifra se quedaría congelada hasta la siguiente
+  // navegación, que es por lo que el aviso aparecía tarde.
+  let avisosSinLeer = 0;
+  let retosPendientes = 0;
   if (conNavegacion) {
     const supabase = await createServerSupabase();
     const [{ count: retos }, { count: sinLeer }] = await Promise.all([
@@ -64,12 +66,13 @@ export default async function ClubLayout({
         .eq("profile_id", sesion.userId)
         .is("leido_en", null),
     ]);
-    pendientes = (retos ?? 0) + (sinLeer ?? 0);
+    retosPendientes = retos ?? 0;
+    avisosSinLeer = sinLeer ?? 0;
   }
 
   return (
     <ProveedorPresencia yo={sesion.playerId} nombre={sesion.nombre}>
-    <ProveedorPendientes inicial={pendientes}>
+    <ProveedorPendientes inicial={{ avisos: avisosSinLeer, retos: retosPendientes }}>
     <ProveedorEnPartida>
     <div className="flex flex-1">
       <PushSubscriber />

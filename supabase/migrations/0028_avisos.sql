@@ -17,16 +17,17 @@
 -- seguidas, el problema no es pasajero, y el aviso está en la bandeja igual,
 -- así que insistir solo gastaría cuota.
 --
--- La bandeja NO filtra por grupo: si alguien tiene silenciados los retos, el
--- aviso no se difunde por push, pero la fila existe. El cliente que abre la
--- bandeja filtra por qué grupos tiene silenciados y no los muestra (eso es
--- opcional; si alguien cambia de opinión, la fila sigue ahí).
+-- La bandeja NO filtra por grupo: silenciar un grupo apaga el PUSH al móvil de
+-- ese grupo, no la fila de la bandeja. "La bandeja siempre recibe todos los
+-- avisos" es la promesa central de todo esto, así que el cliente que abre
+-- `/club/avisos` NO filtra nada por `avisos_silenciados`: enseña todas las
+-- filas del socio tal cual, silenciado el grupo o no.
 --
 -- COLUMNAS:
 -- - `grupo`: categoría del aviso, valores fijos. Se filtra al decidir si
 --   mandar push. Cuatro son suficientes para la app; si añade uno nuevo no
 --   hace falta migración, solo cambiar el check y rellenar el default.
--- - `tipo`: el motivo exacto ('reto_aceptado', 'alta_aprobada', etc).
+-- - `tipo`: el motivo exacto ('reto_aceptado', 'alta_socio', etc).
 --   No va en check (la app los define) y sirve para que el cliente pinte
 --   iconos y textos distintos según qué pasó.
 -- - `push`: estado de la entrega. 'pendiente' = sin intentar; 'entregado' =

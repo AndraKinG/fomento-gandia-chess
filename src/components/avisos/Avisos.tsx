@@ -36,15 +36,16 @@ import { useEnPartida } from "./EnPartida";
  * ABAJO Y NO ARRIBA: en el móvil el pulgar vive abajo, y arriba está la cabecera.
  * Va por encima de la barra de navegación para no taparla.
  *
- * EL NÚMERO ROJO DEL MENÚ SUMA DOS COSAS QUE NO SE PARECEN: retos pendientes
- * (esta tabla, `challenges`) y avisos sin leer (tabla `notifications`, la
- * bandeja de `/club/avisos`). "Te han retado" NO es ningún tipo de aviso de esa
- * tabla —el único tipo de partidas que hay ahí es `reto_aceptado`, y ese va a
- * QUIEN retó, no a quien recibe el reto—, así que si el número solo contara
- * avisos sin leer, un reto recibido no movería nada: sería una regresión de un
- * flujo que hoy ya funciona y está probado. La suma se hace AQUÍ, en `repasar()`,
- * y TAMBIÉN en el valor de partida del layout (`src/app/club/layout.tsx`), con
- * la misma fórmula en los dos sitios para que nunca puedan discrepar.
+ * LOS DOS NÚMEROS DEL MENÚ SE CALCULAN AQUÍ: retos pendientes (esta tabla,
+ * `challenges`) y avisos sin leer (tabla `notifications`, la bandeja de
+ * `/club/avisos`). Son dos cosas que no se parecen —"te han retado" NO es
+ * ningún tipo de aviso de esa tabla, el único tipo de partidas que hay ahí es
+ * `reto_aceptado` y ese va a QUIEN retó, no a quien recibe el reto— y por eso
+ * YA NO SE SUMAN: cada uno lleva su propio badge en su propia entrada del menú
+ * ("Jugar" y "Avisos", ver `Navegacion.tsx`), y sumarlos escondía el reto
+ * detrás de un número que llevaba a la bandeja equivocada. Este cálculo se
+ * repite, con la MISMA fórmula, en el valor de partida del layout
+ * (`src/app/club/layout.tsx`), para que nunca puedan discrepar.
  */
 
 type Aviso =
@@ -81,11 +82,23 @@ export function Avisos({ yo, perfilId }: { yo: string; perfilId: string }) {
   const donde = useRef(pathname);
   const ir = useRef(router);
   const anotar = useRef(poner);
+  // Mismo motivo que los de arriba: hace falta el valor FRESCO de `enPartida`
+  // dentro del efecto sin meterlo en sus dependencias (ver el comentario del
+  // `useEffect` de más abajo). Se lee en las dos navegaciones a una mesa
+  // nueva: con una partida delante, esa navegación NO se hace (fallo
+  // encontrado en la revisión: aceptar un reto viejo mientras juegas otra
+  // partida te sacaba de ella con el reloj corriendo, y una navegación forzada
+  // es peor que una tarjeta que no se ve — el mismo argumento que ya
+  // justificaba callar las tarjetas en `EnPartida.tsx`, aplicado aquí con más
+  // fuerza). El aviso no se pierde: la partida a la que llevaría sigue
+  // accesible desde `/club/jugar` y desde la bandeja.
+  const enJuego = useRef(enPartida);
   useEffect(() => {
     donde.current = pathname;
     ir.current = router;
     anotar.current = poner;
-  }, [pathname, router, poner]);
+    enJuego.current = enPartida;
+  }, [pathname, router, poner, enPartida]);
 
   function quitar(id: string) {
     setAvisos((a) => a.filter((x) => x.id !== id));
@@ -124,10 +137,10 @@ export function Avisos({ yo, perfilId }: { yo: string; perfilId: string }) {
           .is("leido_en", null),
       ]);
 
-      // El número rojo del menú sale de aquí: es la misma suma que calcula el
-      // layout como valor de partida, así que no puede discrepar de las
+      // Los dos números del menú salen de aquí: la misma fórmula que calcula
+      // el layout como valor de partida, así que no pueden discrepar de las
       // tarjetas ni de la bandeja de `/club/avisos`.
-      anotar.current((paraMi ?? []).length + (sinLeer ?? 0));
+      anotar.current({ retos: (paraMi ?? []).length, avisos: sinLeer ?? 0 });
 
       // NOVEDAD ES TAMBIÉN QUE ALGO DESAPAREZCA, y esto es lo que faltaba: al
       // cancelar un reto, al retado le llegaba el mensaje pero la tarjeta de la
@@ -198,8 +211,12 @@ export function Avisos({ yo, perfilId }: { yo: string; perfilId: string }) {
         novedad = true;
         const quien = (r.players as unknown as { nombre: string } | null)?.nombre ?? "Tu rival";
         if (r.estado === "aceptado" && r.live_game_id) {
-          // Segundo cinturón: si ya estás en esa mesa, no hay a dónde llevarte.
-          if (donde.current !== `/club/jugar/${r.live_game_id}`) {
+          // CON UNA PARTIDA DELANTE, NO. Si el reto se acaba de aceptar
+          // mientras estás jugando (o mirando) otra, esta navegación te
+          // sacaría de ella con el reloj corriendo — perder por tiempo por
+          // esto es peor que no entrar solo a la mesa nueva. Sigue accesible
+          // desde `/club/jugar` en cuanto salgas de la que tienes abierta.
+          if (!enJuego.current && donde.current !== `/club/jugar/${r.live_game_id}`) {
             ir.current.push(`/club/jugar/${r.live_game_id}`);
           }
         } else if (r.estado === "rechazado") {
@@ -258,8 +275,9 @@ export function Avisos({ yo, perfilId }: { yo: string; perfilId: string }) {
           const p = (aviso.payload ?? {}) as { que?: string; partidaId?: string };
           // Al reto aceptado se va sin pasar por la consulta: el dato ya viene en el
           // aviso y lo que sobra aquí es precisamente ir y volver a la base.
+          // CON UNA PARTIDA DELANTE, NO: mismo motivo que en `repasar()` más abajo.
           if (p.que === "aceptado" && p.partidaId) {
-            if (donde.current !== `/club/jugar/${p.partidaId}`) {
+            if (!enJuego.current && donde.current !== `/club/jugar/${p.partidaId}`) {
               ir.current.push(`/club/jugar/${p.partidaId}`);
             }
             return;
@@ -287,11 +305,16 @@ export function Avisos({ yo, perfilId }: { yo: string; perfilId: string }) {
   // CON UNA PARTIDA EN JUEGO DELANTE, NI UNA TARJETA. Jugando o mirando, la zona
   // de abajo es donde están el chat, el reloj y los botones (`Mesa.tsx` avisa
   // por este contexto en cuanto `enJuego` cambia). El aviso no desaparece: sigue
-  // en la bandeja y sumando al número rojo, solo se calla la tarjeta — perder
-  // por tiempo por leer "te reta Fulano" es peor que dejar caducar ese reto. Lo
-  // que NO es una tarjeta sigue igual: aceptar un reto ajeno te sigue llevando a
-  // la mesa aunque estés jugando otra, porque eso es una navegación, no un
-  // cartel encima del tablero.
+  // en la bandeja y en su badge del menú, solo se calla la tarjeta — perder por
+  // tiempo por leer "te reta Fulano" es peor que dejar caducar ese reto.
+  //
+  // Y ESTO YA NO ES SOLO DE LAS TARJETAS: aceptar un reto ajeno TAMPOCO te
+  // lleva a la mesa nueva si ya estás en otra partida (ver los dos `if
+  // (!enJuego.current ...)` de más arriba). Antes se dejaba pasar razonando
+  // "eso es una navegación, no un cartel encima del tablero", pero es al
+  // revés: que te saquen de la partida que estás jugando con el reloj corriendo
+  // es peor que cualquier tarjeta — el mismo argumento de "perder por tiempo
+  // es peor que dejar caducar un reto", con más fuerza todavía.
   if (avisos.length === 0 || enPartida) return null;
 
   return (

@@ -71,10 +71,24 @@ export async function avisar(
         : "no_tocaba",
     }));
 
-    const { data: insertadas } = await admin
+    const { data: insertadas, error: insertError } = await admin
       .from("notifications")
       .insert(filas)
       .select("id, profile_id, push");
+
+    // Traza para el propietario: el silencio de fuera es a propósito (ver
+    // cabecera), pero sin esto "el aviso nunca se guardó" y "se guardó pero el
+    // push falló" son indistinguibles en los logs de Vercel, y la bandeja se
+    // vende justo como la herramienta para ver qué ha fallado. `insertadas`
+    // puede venir `null` sin que Postgrest marque `error` (p. ej. si el
+    // `.select()` posterior al insert no devuelve filas); se avisa igual.
+    if (insertError || !insertadas) {
+      console.error(
+        "[avisos] no se pudo guardar la notificación",
+        aviso.tipo,
+        insertError?.message ?? "insert sin filas devueltas"
+      );
+    }
 
     const guardadas = (insertadas ?? []) as unknown as Array<{
       id: string;
@@ -122,9 +136,12 @@ export async function avisar(
     );
 
     return { guardados: guardadas.length, pushEnviados };
-  } catch {
+  } catch (err) {
     // Ver cabecera del fichero: guardar o mandar el push nunca tumba la
-    // operación que disparó el aviso.
+    // operación que disparó el aviso, pero sin esta traza el propietario no
+    // tiene forma de distinguir "no se guardó nada" de "se guardó y el push
+    // falló" — y en Vercel esto sí llega a los logs, que es donde se mira.
+    console.error("[avisos] avisar() ha fallado por completo", aviso.tipo, err);
     return { guardados: 0, pushEnviados: 0 };
   }
 }

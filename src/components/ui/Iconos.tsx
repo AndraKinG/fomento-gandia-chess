@@ -94,6 +94,16 @@ export function IconoPerfil({ className }: Props) {
   );
 }
 
+/** Avisos: campana, la bandeja de `/club/avisos`. */
+export function IconoAvisos({ className }: Props) {
+  return (
+    <svg {...COMUN} className={className}>
+      <path d="M6 17h12l-1.6-2.4c-.3-.4-.4-.9-.4-1.4V9.5a4 4 0 0 0-4-4 4 4 0 0 0-4 4v3.7c0 .5-.1 1-.4 1.4L6 17Z" />
+      <path d="M10.5 20a1.7 1.7 0 0 0 3 0" />
+    </svg>
+  );
+}
+
 /** Admin: engranaje. */
 export function IconoAdmin({ className }: Props) {
   return (

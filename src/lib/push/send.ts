@@ -28,12 +28,12 @@ function asegurarVapidConfigurado(): void {
  * marcar el aviso como fallido.
  *
  * Existe separada de `enviarPushAUsuario` porque esa (la usa el botón de
- * prueba del admin y hay tests que dependen de su firma) solo necesita
- * "se ha intentado"; `avisar()` (src/lib/avisos/enviar.ts) sí necesita saber
- * el resultado de cada suscripción para decidir si el aviso queda
- * `entregado`, `fallido` o `no_tocaba` (`estadoPushDeAviso` en `politica.ts`).
- * Comparten la misma llamada a `webpush.sendNotification`; solo cambia qué se
- * hace con el resultado.
+ * prueba del admin, en `src/app/club/(vinculado)/admin/push/actions.ts`) solo
+ * necesita "se ha intentado"; `avisar()` (src/lib/avisos/enviar.ts) sí
+ * necesita saber el resultado de cada suscripción para decidir si el aviso
+ * queda `entregado`, `fallido` o `no_tocaba` (`estadoPushDeAviso` en
+ * `politica.ts`). Comparten la misma llamada a `webpush.sendNotification`;
+ * solo cambia qué se hace con el resultado.
  *
  * La decisión de qué hacer con un fallo (reintentar o borrar la suscripción)
  * es de `tratarFallo` (política), no de este módulo: así el mismo criterio
@@ -100,19 +100,4 @@ export async function enviarPushAUsuario(
   payload: { title: string; body: string; url?: string }
 ): Promise<void> {
   await intentarPush(userId, payload);
-}
-
-/**
- * Envía el mismo push a varios usuarios en paralelo (batch). Devuelve
- * cuántos envíos se intentaron sin lanzar excepción (`enviarPushAUsuario` ya
- * absorbe internamente los fallos de entrega individuales).
- */
-export async function enviarPushAMuchos(
-  userIds: string[],
-  payload: { title: string; body: string; url?: string }
-): Promise<number> {
-  const resultados = await Promise.allSettled(
-    userIds.map((userId) => enviarPushAUsuario(userId, payload))
-  );
-  return resultados.filter((r) => r.status === "fulfilled").length;
 }

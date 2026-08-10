@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { intentarPush } from "@/lib/push/send";
-import { debeReintentar, estadoPushDeAviso } from "@/lib/avisos/politica";
+import { debePush, debeReintentar, estadoPushDeAviso, type TipoAviso } from "@/lib/avisos/politica";
 
 /**
  * A partir de cuántos minutos un `pendiente` deja de poder ser "uno en
@@ -22,6 +22,7 @@ const MINUTOS_PENDIENTE_HUERFANO = 10;
 type FilaNotificacion = {
   id: string;
   profile_id: string;
+  tipo: string;
   titulo: string;
   cuerpo: string;
   url: string | null;
@@ -56,6 +57,18 @@ type FilaNotificacion = {
  * se borró entre medias), el aviso no se va a volver a mirar por dejar de
  * estar en `fallido`/`pendiente`, así que gastar el contador no aporta nada.
  *
+ * LA POLÍTICA VUELVE A DECIDIR AQUÍ, no solo en el primer envío (`avisar()`).
+ * Entre el fallo original y este barrido puede haber pasado un día entero:
+ * si el socio silenció el grupo mientras tanto (o se quedó sin ningún
+ * dispositivo suscrito), mandarle el push de todos modos es justo lo que
+ * pidió que no pasara. `debePush` es el único juez tanto aquí como en
+ * `enviar.ts`, para que las dos puertas de entrada al push nunca puedan
+ * discrepar.
+ *
+ * Y SE SALTA LO YA LEÍDO: si el socio ya vio el aviso en la bandeja antes de
+ * que el cron pasara, mandarle un push al día siguiente es avisarle de algo
+ * que ya sabe. Se filtra con `leido_en is null` en las DOS consultas.
+ *
  * Nunca lanza: la llama el cron TODOS los días (es barata: índice parcial,
  * normalmente 0 filas) y un fallo aquí no puede tumbar el resto de lo que
  * hace ese cron ese día (pedir disponibilidad, recordar, sincronizar FACV).
@@ -64,15 +77,16 @@ export async function reintentarAvisosFallidos(): Promise<{ reintentados: number
   try {
     const admin = createAdminClient();
     const limite = new Date(Date.now() - MINUTOS_PENDIENTE_HUERFANO * 60_000).toISOString();
-    const columnas = "id, profile_id, titulo, cuerpo, url, push, push_intentos";
+    const columnas = "id, profile_id, tipo, titulo, cuerpo, url, push, push_intentos";
 
     const [{ data: fallidos }, { data: huerfanos }] = await Promise.all([
-      admin.from("notifications").select(columnas).eq("push", "fallido"),
+      admin.from("notifications").select(columnas).eq("push", "fallido").is("leido_en", null),
       admin
         .from("notifications")
         .select(columnas)
         .eq("push", "pendiente")
-        .lt("creado_en", limite),
+        .lt("creado_en", limite)
+        .is("leido_en", null),
     ]);
 
     const candidatos: FilaNotificacion[] = [
@@ -82,9 +96,33 @@ export async function reintentarAvisosFallidos(): Promise<{ reintentados: number
 
     if (candidatos.length === 0) return { reintentados: 0 };
 
+    // Preferencias de silencio y suscripciones de los destinatarios de ESTOS
+    // candidatos (no de todo el club): lo mismo que lee `avisar()` antes de
+    // decidir, para que `debePush` tenga con qué juzgar también en el reintento.
+    const perfilIds = Array.from(new Set(candidatos.map((f) => f.profile_id)));
+    const [{ data: perfiles }, { data: subs }] = await Promise.all([
+      admin.from("profiles").select("id, avisos_silenciados").in("id", perfilIds),
+      admin.from("push_subscriptions").select("user_id").in("user_id", perfilIds),
+    ]);
+    const silenciadosPorId = new Map<string, string[]>(
+      (perfiles ?? []).map((p) => [p.id as string, (p.avisos_silenciados ?? []) as string[]])
+    );
+    const conSuscripcion = new Set((subs ?? []).map((s) => s.user_id as string));
+
     await Promise.all(
       candidatos.map(async (fila) => {
         try {
+          const tocaEnviar = debePush(fila.tipo as TipoAviso, {
+            silenciados: silenciadosPorId.get(fila.profile_id) ?? [],
+            tieneSuscripcion: conSuscripcion.has(fila.profile_id),
+          });
+          if (!tocaEnviar) {
+            // Ya no toca: silenció el grupo o se quedó sin dispositivos entre
+            // medias. No es un fallo nuevo, así que `push_intentos` no sube.
+            await admin.from("notifications").update({ push: "no_tocaba" }).eq("id", fila.id);
+            return;
+          }
+
           const resultados = await intentarPush(fila.profile_id, {
             title: fila.titulo,
             body: fila.cuerpo,
