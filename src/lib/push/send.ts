@@ -1,5 +1,6 @@
 import webpush from "web-push";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { tratarFallo } from "@/lib/avisos/politica";
 
 let vapidConfigurado = false;
 
@@ -14,37 +15,65 @@ function asegurarVapidConfigurado(): void {
   vapidConfigurado = true;
 }
 
-export async function enviarPushAUsuario(
+/** Qué pasó al mandar el push a UNA suscripción (un dispositivo/navegador). */
+export type ResultadoSuscripcion =
+  | { entregado: true }
+  | { entregado: false; estado: "fallido" | "no_tocaba" };
+
+/**
+ * Manda el push a TODOS los dispositivos de un usuario e informa qué pasó
+ * con cada uno.
+ *
+ * Existe separada de `enviarPushAUsuario` porque esa (la usa el botón de
+ * prueba del admin y hay tests que dependen de su firma) solo necesita
+ * "se ha intentado"; `avisar()` (src/lib/avisos/enviar.ts) sí necesita saber
+ * el resultado de cada suscripción para decidir si el aviso queda
+ * `entregado`, `fallido` o `no_tocaba`. Comparten la misma llamada a
+ * `webpush.sendNotification`; solo cambia qué se hace con el resultado.
+ *
+ * La decisión de qué hacer con un fallo (reintentar o borrar la suscripción)
+ * es de `tratarFallo` (política), no de este módulo: así el mismo criterio
+ * 404/410 vive en un único sitio.
+ */
+export async function intentarPush(
   userId: string,
   payload: { title: string; body: string; url?: string }
-): Promise<void> {
+): Promise<ResultadoSuscripcion[]> {
   asegurarVapidConfigurado();
   const admin = createAdminClient();
   const { data: subs } = await admin
     .from("push_subscriptions")
     .select("endpoint, p256dh, auth")
     .eq("user_id", userId);
-  await Promise.allSettled(
-    (subs ?? []).map((s) =>
-      webpush
-        .sendNotification(
+
+  return Promise.all(
+    (subs ?? []).map(async (s): Promise<ResultadoSuscripcion> => {
+      try {
+        await webpush.sendNotification(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
           JSON.stringify(payload)
-        )
-        .catch(async (err: unknown) => {
-          const statusCode =
-            typeof err === "object" && err !== null && "statusCode" in err
-              ? (err as { statusCode?: number }).statusCode
-              : undefined;
-          if (statusCode === 404 || statusCode === 410) {
-            await admin
-              .from("push_subscriptions")
-              .delete()
-              .eq("endpoint", s.endpoint);
-          }
-        })
-    )
+        );
+        return { entregado: true };
+      } catch (err: unknown) {
+        const statusCode =
+          typeof err === "object" && err !== null && "statusCode" in err
+            ? (err as { statusCode?: number }).statusCode
+            : undefined;
+        const resultado = tratarFallo(statusCode);
+        if (resultado.borrarSuscripcion) {
+          await admin.from("push_subscriptions").delete().eq("endpoint", s.endpoint);
+        }
+        return { entregado: false, estado: resultado.estado };
+      }
+    })
   );
+}
+
+export async function enviarPushAUsuario(
+  userId: string,
+  payload: { title: string; body: string; url?: string }
+): Promise<void> {
+  await intentarPush(userId, payload);
 }
 
 /**
