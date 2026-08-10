@@ -29,7 +29,8 @@ import { useEffect, useRef, useState } from "react";
  * proposito: convertir las 64 casillas a nombres propios en cada render seria
  * trabajo por nada, y este componente consume esa estructura directamente.
  */
-import { useTemaTablero } from "./TemaTablero";
+import { useJuegoPiezas, useTemaTablero } from "./TemaTablero";
+import { rutaPieza } from "@/lib/ajedrez/piezas";
 
 export type Pieza = { type: string; color: "w" | "b" };
 /** Pieza que se está llevando con el dedo o el ratón. `lado` es el ancho de una
@@ -42,21 +43,11 @@ const COLUMNAS = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 
 const FILAS_NUM = ["8", "7", "6", "5", "4", "3", "2", "1"] as const;
 
-/**
- * Ruta del SVG de una pieza.
- *
- * ANTES ERAN CARACTERES UNICODE (♞) y por eso el tablero se veía mal: el dibujo lo
- * ponía la fuente del sistema, así que cambiaba de un aparato a otro, en Windows
- * salía plano y las blancas había que fingirlas con el glifo negro y una sombra.
- * Ahora son SVG de verdad, que es lo que hacen Lichess y Chess.com.
- *
- * El nombre sale directo de lo que devuelve `chess.js` (`color` + `type`), así que
- * cambiar de juego de piezas es cambiar los ficheros de `public/piezas/` — ver el
- * LICENCIA.md de esa carpeta.
- */
-function rutaPieza(pieza: Pieza): string {
-  return `/piezas/${pieza.color}${pieza.type.toUpperCase()}.svg`;
-}
+// LAS PIEZAS SON SVG, NO CARACTERES UNICODE (♞), y no es un capricho: el glifo lo
+// ponía la fuente del sistema, así que cambiaba de un aparato a otro, en Windows
+// salía plano y las blancas había que fingirlas con el glifo negro y una sombra.
+// El juego lo elige cada socio en su perfil y llega por contexto; la ruta la monta
+// `rutaPieza` (src/lib/ajedrez/piezas.ts) con el formato de chess.js.
 
 const NOMBRE_PIEZA: Record<string, string> = {
   k: "rey",
@@ -108,6 +99,7 @@ export function Tablero({
   // El tema lo elige cada socio en su perfil; llega por contexto para que todos
   // los tableros de la app pinten igual sin enhebrar la prop pantalla a pantalla.
   const tema = useTemaTablero();
+  const juego = useJuegoPiezas();
   const orden = volteado ? [...filas].reverse().map((f) => [...f].reverse()) : filas;
   const rejilla = useRef<HTMLDivElement | null>(null);
   const [arrastre, setArrastre] = useState<Arrastre | null>(null);
@@ -271,7 +263,7 @@ export function Tablero({
                      desde `public/`, y el optimizador de Next no toca los SVG. */
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={rutaPieza(pieza)}
+                    src={rutaPieza(juego.clave, pieza.color, pieza.type)}
                     alt=""
                     aria-hidden
                     draggable={false}
@@ -306,7 +298,7 @@ export function Tablero({
       {arrastre && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={rutaPieza(arrastre.pieza)}
+          src={rutaPieza(juego.clave, arrastre.pieza.color, arrastre.pieza.type)}
           alt=""
           aria-hidden
           draggable={false}

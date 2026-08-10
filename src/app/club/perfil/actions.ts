@@ -5,6 +5,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sesionActual } from "@/lib/auth/sesion";
 import { esTemaValido } from "@/lib/ajedrez/temas";
+import { esJuegoValido } from "@/lib/ajedrez/piezas";
 import type { GrupoAviso } from "@/lib/avisos/politica";
 
 /** Los únicos cuatro valores válidos. Cualquier otra cosa que llegue del
@@ -188,5 +189,26 @@ export async function quitarFoto(): Promise<{ error?: string }> {
 
   revalidatePath("/club/perfil");
   revalidatePath(`/club/socios/${sesion.playerId}`);
+  return {};
+}
+
+/** Guarda el juego de piezas. Espejo exacto de `elegirTablero`, y por los
+ *  mismos motivos (ver su comentario). */
+export async function elegirPiezas(clave: string): Promise<{ error?: string }> {
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "No autenticado" };
+  if (!esJuegoValido(clave)) return { error: "Ese juego no existe." };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("profiles")
+    .update({ juego_piezas: clave })
+    .eq("id", user.id);
+  if (error) return { error: "No se pudo guardar el juego" };
+
+  revalidatePath("/club", "layout");
   return {};
 }

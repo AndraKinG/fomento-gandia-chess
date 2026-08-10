@@ -10,6 +10,7 @@ import { ProveedorEnPartida } from "@/components/avisos/EnPartida";
 import { Asistente } from "@/components/asistente/Asistente";
 import { ProveedorTemaTablero } from "@/components/ajedrez/TemaTablero";
 import { temaTablero } from "@/lib/ajedrez/temas";
+import { juegoPiezas } from "@/lib/ajedrez/piezas";
 
 /**
  * Zona de socios. Exige sesión y pone el cromo común (navegación y suscripción a
@@ -52,6 +53,7 @@ export default async function ClubLayout({
   // El tema del tablero del socio, para que TODOS los tableros de la app lo
   // pinten sin ir cada uno a la base. Una clave desconocida cae al del club.
   let claveTema: string | null = null;
+  let clavePiezas: string | null = null;
   if (conNavegacion) {
     const supabase = await createServerSupabase();
     const [{ count: retos }, { count: sinLeer }, { data: preferencias }] = await Promise.all([
@@ -70,15 +72,16 @@ export default async function ClubLayout({
         .select("id", { count: "exact", head: true })
         .eq("profile_id", sesion.userId)
         .is("leido_en", null),
-      supabase.from("profiles").select("tema_tablero").eq("id", sesion.userId).maybeSingle(),
+      supabase.from("profiles").select("tema_tablero, juego_piezas").eq("id", sesion.userId).maybeSingle(),
     ]);
     retosPendientes = retos ?? 0;
     avisosSinLeer = sinLeer ?? 0;
     claveTema = (preferencias?.tema_tablero as string | null) ?? null;
+    clavePiezas = (preferencias?.juego_piezas as string | null) ?? null;
   }
 
   return (
-    <ProveedorTemaTablero tema={temaTablero(claveTema)}>
+    <ProveedorTemaTablero tema={temaTablero(claveTema)} piezas={juegoPiezas(clavePiezas)}>
     <ProveedorPresencia yo={sesion.playerId} nombre={sesion.nombre}>
     <ProveedorPendientes inicial={{ avisos: avisosSinLeer, retos: retosPendientes }}>
     <ProveedorEnPartida>

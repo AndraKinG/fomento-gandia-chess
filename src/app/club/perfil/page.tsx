@@ -17,6 +17,7 @@ import { PreferenciasAvisos } from "./PreferenciasAvisos";
 import { FotoPerfil } from "./FotoPerfil";
 import { Aperturas } from "./Aperturas";
 import { EligeTablero } from "./EligeTablero";
+import { EligePiezas } from "./EligePiezas";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { GrupoAviso } from "@/lib/avisos/politica";
 
@@ -27,7 +28,7 @@ export default async function PerfilPage() {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "email, player_id, avisos_silenciados, tema_tablero, players(nombre, elo_fide, elo_feda, elo_otro, fide_id, feda_id, foto_url, aperturas)"
+      "email, player_id, avisos_silenciados, tema_tablero, juego_piezas, players(nombre, elo_fide, elo_feda, elo_otro, fide_id, feda_id, foto_url, aperturas)"
     )
     .eq("id", user!.id)
     .single();
@@ -186,8 +187,11 @@ export default async function PerfilPage() {
         {/* El tablero a su aire y no dentro de Ajustes: es la elección más visual
             de la pantalla y entre dos botones de texto no se ve. */}
         {p && (
-          <Tarjeta>
+          <Tarjeta className="flex flex-col gap-4">
             <EligeTablero actual={(profile?.tema_tablero as string) ?? "gandiblues"} />
+            <div className="border-t border-borde pt-4">
+              <EligePiezas actual={(profile?.juego_piezas as string) ?? "celtic"} />
+            </div>
           </Tarjeta>
         )}
 
