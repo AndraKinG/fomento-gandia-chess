@@ -124,12 +124,13 @@ export default async function PerfilPage() {
             </Link>
           </p>
         )}
-        {/* Puerta a la administración SOLO en móvil: Admin salió de la barra
-            inferior porque siete pestañas no caben en un teléfono, y en escritorio
-            ya está en la barra lateral. Sin esto, en el móvil no habría forma de
-            llegar. */}
+        {/* Puerta a la administración SIEMPRE visible (petición del propietario,
+            2026-08-10). Nació solo para móvil —en escritorio Admin ya está en la
+            barra lateral— pero el perfil es donde se busca "lo mío", y que la
+            tarjeta aparezca y desaparezca según el ancho de pantalla despista más
+            de lo que ahorra. */}
         {sesion?.esAdmin && (
-          <Link href="/club/admin" className="block lg:hidden">
+          <Link href="/club/admin" className="block">
             <Tarjeta className="flex items-center justify-between gap-3 transition hover:border-borde-acento">
               <div>
                 <p className="font-semibold text-tinta">Administración</p>
