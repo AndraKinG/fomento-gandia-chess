@@ -34,6 +34,16 @@ import { usePendientes } from "./Pendientes";
  *
  * ABAJO Y NO ARRIBA: en el móvil el pulgar vive abajo, y arriba está la cabecera.
  * Va por encima de la barra de navegación para no taparla.
+ *
+ * EL NÚMERO ROJO DEL MENÚ SUMA DOS COSAS QUE NO SE PARECEN: retos pendientes
+ * (esta tabla, `challenges`) y avisos sin leer (tabla `notifications`, la
+ * bandeja de `/club/avisos`). "Te han retado" NO es ningún tipo de aviso de esa
+ * tabla —el único tipo de partidas que hay ahí es `reto_aceptado`, y ese va a
+ * QUIEN retó, no a quien recibe el reto—, así que si el número solo contara
+ * avisos sin leer, un reto recibido no movería nada: sería una regresión de un
+ * flujo que hoy ya funciona y está probado. La suma se hace AQUÍ, en `repasar()`,
+ * y TAMBIÉN en el valor de partida del layout (`src/app/club/layout.tsx`), con
+ * la misma fórmula en los dos sitios para que nunca puedan discrepar.
  */
 
 type Aviso =
@@ -47,7 +57,7 @@ function textoColor(color: string): string {
   return "El color se sortea.";
 }
 
-export function Avisos({ yo }: { yo: string }) {
+export function Avisos({ yo, perfilId }: { yo: string; perfilId: string }) {
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [pendiente, setPendiente] = useState<string | null>(null);
   const router = useRouter();
@@ -96,15 +106,26 @@ export function Avisos({ yo }: { yo: string }) {
 
     /** Mira si hay algo nuevo. Sirve de red de seguridad y de primer repaso. */
     async function repasar(supabase: Awaited<ReturnType<typeof clienteEnVivo>>["supabase"]) {
-      const { data: paraMi } = await supabase
-        .from("challenges")
-        .select("id, base_min, incremento_s, color, reta_id, players:reta_id(nombre)")
-        .eq("retado_id", yo)
-        .eq("estado", "pendiente");
+      const [{ data: paraMi }, { count: sinLeer }] = await Promise.all([
+        supabase
+          .from("challenges")
+          .select("id, base_min, incremento_s, color, reta_id, players:reta_id(nombre)")
+          .eq("retado_id", yo)
+          .eq("estado", "pendiente"),
+        // `notifications.profile_id` es el id de la CUENTA, no el de la ficha:
+        // por eso esta consulta usa `perfilId` y no `yo`. Ver cabecera del
+        // fichero: el número rojo del menú es la suma de esto y los retos.
+        supabase
+          .from("notifications")
+          .select("id", { count: "exact", head: true })
+          .eq("profile_id", perfilId)
+          .is("leido_en", null),
+      ]);
 
-      // El número rojo del menú sale de aquí: es la misma cuenta y así no puede
-      // discrepar de las tarjetas.
-      anotar.current((paraMi ?? []).length);
+      // El número rojo del menú sale de aquí: es la misma suma que calcula el
+      // layout como valor de partida, así que no puede discrepar de las
+      // tarjetas ni de la bandeja de `/club/avisos`.
+      anotar.current((paraMi ?? []).length + (sinLeer ?? 0));
 
       // NOVEDAD ES TAMBIÉN QUE ALGO DESAPAREZCA, y esto es lo que faltaba: al
       // cancelar un reto, al retado le llegaba el mensaje pero la tarjeta de la
@@ -259,7 +280,7 @@ export function Avisos({ yo }: { yo: string }) {
       cancelado = true;
       cerrar?.();
     };
-  }, [yo]);
+  }, [yo, perfilId]);
 
   if (avisos.length === 0) return null;
 

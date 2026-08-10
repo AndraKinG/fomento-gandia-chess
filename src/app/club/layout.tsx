@@ -33,19 +33,37 @@ export default async function ClubLayout({
   // En ese caso no se pinta ninguna de las dos barras.
   const conNavegacion = sesion.playerId != null || sesion.esAdmin;
 
-  // Retos esperándote, para el número rojo. Una consulta de conteo, sin filas.
-  // Es solo el VALOR DE PARTIDA: a partir de aquí lo lleva `Avisos`, que está
-  // escuchando. Este número lo pinta el servidor y se quedaría congelado hasta la
+  // Número rojo del menú: RETOS PENDIENTES + AVISOS SIN LEER. Son dos cosas que
+  // no tienen nada que ver entre sí — "te han retado" no es ninguno de los tipos
+  // de la tabla `notifications` (el único de partidas es `reto_aceptado`, que va
+  // a QUIEN retó, no a quien recibe el reto) — y aun así tienen que sumarse en UN
+  // solo número: si el número solo contara avisos sin leer, un reto recibido se
+  // quedaría sin marca roja, que sería una regresión de un flujo que hoy ya
+  // funciona. Es solo el VALOR DE PARTIDA: a partir de aquí manda `Avisos.tsx`
+  // (su `repasar()`), que sabe la MISMA suma y la recalcula cada pocos segundos
+  // — puesta aquí y solo en el servidor, la cifra se quedaría congelada hasta la
   // siguiente navegación, que es por lo que el aviso aparecía tarde.
   let pendientes = 0;
-  if (sesion.playerId) {
+  if (conNavegacion) {
     const supabase = await createServerSupabase();
-    const { count } = await supabase
-      .from("challenges")
-      .select("id", { count: "exact", head: true })
-      .eq("retado_id", sesion.playerId)
-      .eq("estado", "pendiente");
-    pendientes = count ?? 0;
+    const [{ count: retos }, { count: sinLeer }] = await Promise.all([
+      // Sin ficha no hay retos posibles (son entre jugadores): el UUID de
+      // relleno no matchea ninguna fila real y evita tener que ramificar la
+      // consulta solo para este caso.
+      supabase
+        .from("challenges")
+        .select("id", { count: "exact", head: true })
+        .eq("retado_id", sesion.playerId ?? "00000000-0000-0000-0000-000000000000")
+        .eq("estado", "pendiente"),
+      // `notifications.profile_id` es el id de la CUENTA (auth.uid()), no el de
+      // la ficha, así que esto cuenta también para un admin sin ficha propia.
+      supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("profile_id", sesion.userId)
+        .is("leido_en", null),
+    ]);
+    pendientes = (retos ?? 0) + (sinLeer ?? 0);
   }
 
   return (
@@ -65,7 +83,7 @@ export default async function ClubLayout({
       {/* Los avisos van en el layout porque los retos llegan cuando llegan: si solo
           existieran en la pantalla de Jugar, quien está mirando una partida o su
           perfil no se enteraría. */}
-      {sesion.playerId && <Avisos yo={sesion.playerId} />}
+      {sesion.playerId && <Avisos yo={sesion.playerId} perfilId={sesion.userId} />}
       {/* El asistente va en el layout y no en cada pantalla: la gracia es poder
           preguntar sin salir de donde estás. Solo para quien ya tiene ficha: sin
           ella no hay nada del club que consultar y la pantalla de vincular tiene
