@@ -1,0 +1,122 @@
+-- Esquema de avisos (notificaciones) y preferencias de silencio por grupo.
+--
+-- GATE USUARIO: este fichero NO se aplica automáticamente. Copiar al SQL Editor de
+-- Supabase y ejecutarlo a mano, como 0001-0027.
+
+-- ---------------------------------------------------------------------------
+-- Tabla de avisos: bandeja del socio.
+-- ---------------------------------------------------------------------------
+--
+-- QUÉ ES: cada acción importante en el club (reto aceptado, alta de socio,
+-- fichas nuevas del orden de fuerza) genera una fila aquí. El servidor escribe
+-- con clave de servicio; el socio solo ve las suyas y puede marcar "leído".
+-- El estado del push (`push`, `push_intentos`) es únicamente para el
+-- reintento del cron: el servidor intenta mandar una notificación web VAPID,
+-- y si la suscripción del navegador es inválida o el navegador rechaza, pone
+-- 'fallido' para reintentar hasta 3 veces.
+--
+-- La bandeja NO filtra por grupo: si alguien tiene silenciados los retos, el
+-- aviso no se difunde por push, pero la fila existe. El cliente que abre la
+-- bandeja filtra por qué grupos tiene silenciados y no los muestra (eso es
+-- opcional; si alguien cambia de opinión, la fila sigue ahí).
+--
+-- COLUMNAS:
+-- - `grupo`: categoría del aviso, valores fijos. Se filtra al decidir si
+--   mandar push. Cuatro son suficientes para la app; si añade uno nuevo no
+--   hace falta migración, solo cambiar el check y rellenar el default.
+-- - `tipo`: el motivo exacto ('reto_aceptado', 'alta_aprobada', etc).
+--   No va en check (la app los define) y sirve para que el cliente pinte
+--   iconos y textos distintos según qué pasó.
+-- - `push`: estado de la entrega. 'pendiente' = sin intentar; 'entregado' =
+--   el navegador lo recibió; 'fallido' = el cron lo reintentó Y_SIGUE_FALLANDO;
+--   'no_tocaba' = el socio tiene ese grupo silenciado, así que se saltó desde
+--   el principio (es solo información, para no reintentar lo que nunca había
+--   que tocar).
+-- - `push_intentos`: contador para no reintentar eternamente. El cron para
+--   en 3.
+--
+create table public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  grupo text not null check (grupo in ('interclubs', 'torneos', 'partidas', 'gestion')),
+  tipo text not null,
+  titulo text not null,
+  cuerpo text not null,
+  url text,
+  creado_en timestamptz not null default now(),
+  leido_en timestamptz,
+  push text not null default 'pendiente'
+    check (push in ('pendiente', 'entregado', 'fallido', 'no_tocaba')),
+  push_intentos int not null default 0
+);
+
+-- La bandeja se lee siempre igual: los míos, los más nuevos primero.
+create index notifications_bandeja on public.notifications (profile_id, creado_en desc);
+-- El reintento del cron busca solo fallidos, que son pocos: índice parcial.
+create index notifications_a_reintentar on public.notifications (push) where push = 'fallido';
+
+-- ---------------------------------------------------------------------------
+-- Preferencias de silencio por grupo.
+-- ---------------------------------------------------------------------------
+--
+-- QUÉ ES: columna en `profiles` que enumera qué grupos de avisos el socio
+-- tiene silenciados. Array y no cuatro columnas boleanas: (a) añadir un grupo
+-- nuevo no obliga a migración, solo cambiar el check de la tabla principal;
+-- (b) el default (array vacío) es lo que queremos — quien no toca nada recibe
+-- lo de siempre.
+--
+-- RANGO MÍNIMO: un socio normal (rango 'jugador') puede silenciar/recuperar
+-- sus propios grupos. No hay policy en `profiles` porque la tabla ya permite
+-- que cada uno edite su fila. Se asume que solo las acciones que escriben
+-- la columna (p. ej. `/api/avisos/silenciar`) comprueban rangos.
+--
+alter table public.profiles
+  add column if not exists avisos_silenciados text[] not null default '{}';
+
+-- ---------------------------------------------------------------------------
+-- Row Level Security.
+-- ---------------------------------------------------------------------------
+--
+-- QUÉ CIERRA: el acceso a la bandeja de avisos. No hay mucho que cerrar (solo
+-- lectura y "marcar leído"), pero se cierra igual: un `select` sin RLS sería
+-- una vía para que la API pública sacara el nombre de los socios (los avisos
+-- tienen profile_id) sin autenticate.
+--
+alter table public.notifications enable row level security;
+
+-- Cada uno ve los suyos; el admin todos (para diagnosticar "a mí no me llegó nada").
+-- CUALIFICAR SIEMPRE: `notifications.profile_id`, no `profile_id` a secas —
+-- el bug de la 0024 fue un `p.player_id = player_id` dentro de un `exists`,
+-- donde `player_id` sin cualificar se resolvía contra la subconsulta, no la
+-- tabla exterior. Aquí no hay subconsulta, pero el patrón es la costumbre.
+create policy "avisos: leo los mios" on public.notifications
+  for select to authenticated
+  using (notifications.profile_id = auth.uid() or public.is_admin());
+
+-- Marcar leído es lo ÚNICO que puede hacer el socio, y solo sobre los suyos.
+-- El `with check` repite la condición para que no pueda reasignarse un aviso a otro.
+create policy "avisos: marco leidos los mios" on public.notifications
+  for update to authenticated
+  using (notifications.profile_id = auth.uid())
+  with check (notifications.profile_id = auth.uid());
+
+-- NO hay policy de INSERT ni DELETE a propósito: los avisos los escribe el servidor
+-- con clave de servicio. Sin esto, un socio podría fabricarse un aviso (o fabricárselo
+-- a otro), que es exactamente el agujero que se cerró en el chat en la 0027.
+
+-- ---------------------------------------------------------------------------
+-- Verificación
+-- ---------------------------------------------------------------------------
+select 'tabla notifications creada' as comprobacion, count(*)::text as valor
+  from information_schema.tables
+  where table_schema = 'public' and table_name = 'notifications'
+union all
+select 'columna avisos_silenciados añadida', count(*)::text
+  from information_schema.columns
+  where table_schema = 'public' and table_name = 'profiles'
+    and column_name = 'avisos_silenciados'
+union all
+select 'policies de avisos creadas (esperado 2)', count(*)::text
+  from pg_policies
+  where schemaname = 'public' and tablename = 'notifications'
+    and policyname in ('avisos: leo los mios', 'avisos: marco leidos los mios');
