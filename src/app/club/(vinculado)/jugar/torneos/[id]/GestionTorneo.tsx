@@ -12,6 +12,7 @@ import { Mirando } from "@/components/presencia/Mirando";
 import { diaYHora } from "@/lib/torneos/hora-de-ronda";
 import {
   anotarResultado,
+  borrarTorneoInterno,
   borrarUltimaRonda,
   cambiarEstadoTorneo,
   cambiarInscripcion,
@@ -65,6 +66,7 @@ export function GestionTorneo({
   rondasTotales,
   socios,
   esJunta,
+  puedeBorrar,
 }: {
   tournamentId: string;
   estado: "inscripcion" | "en_curso" | "terminado";
@@ -73,9 +75,13 @@ export function GestionTorneo({
   rondasTotales: number | null;
   socios: SocioVista[];
   esJunta: boolean;
+  /** Lo creó quien está mirando (o es admin): puede borrarlo si se equivocó. */
+  puedeBorrar: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [abriendoInscritos, setAbriendoInscritos] = useState(false);
+  /** Borrar pide una segunda pulsación: se lleva el torneo entero. */
+  const [confirmandoBorrar, setConfirmandoBorrar] = useState(false);
   // Guarda el NÚMERO de ronda, no la posición, y null significa "la última". Así
   // generar una ronda nueva la enseña sola, y borrar la última no deja el selector
   // apuntando a una ronda que ya no existe.
@@ -485,6 +491,52 @@ export function GestionTorneo({
         >
           Reabrir el torneo
         </Boton>
+      )}
+
+      {/* BORRAR EL TORNEO: solo quien lo creó (o un admin), y solo si no se ha jugado
+          nada — el ELO del club se recalcula de las partidas, así que borrar un torneo
+          jugado reescribiría el ranking sin forma de deshacerlo. El servidor lo
+          comprueba igual; esto solo evita ofrecer un botón que va a decir no. */}
+      {puedeBorrar && (
+        <div className="border-t border-borde pt-3">
+          {confirmandoBorrar ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="min-w-0 flex-1 text-sm text-tinta">
+                ¿Borrar el torneo con sus rondas? No se puede deshacer.
+              </p>
+              <Boton
+                variante="secundario"
+                className="text-sm"
+                disabled={pendiente}
+                onClick={() =>
+                  ejecutar(async () => {
+                    const r = await borrarTorneoInterno(tournamentId);
+                    if (!r.error) router.push("/club/jugar/torneos");
+                    return r;
+                  })
+                }
+              >
+                Sí, borrar
+              </Boton>
+              <Boton
+                variante="secundario"
+                className="text-sm"
+                disabled={pendiente}
+                onClick={() => setConfirmandoBorrar(false)}
+              >
+                No
+              </Boton>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmandoBorrar(true)}
+              className="text-sm text-tinta-suave underline"
+            >
+              Borrar el torneo
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

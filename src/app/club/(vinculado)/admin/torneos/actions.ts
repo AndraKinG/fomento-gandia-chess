@@ -111,10 +111,32 @@ export async function editarFichaTorneo(
   return {};
 }
 
-/** Borra un torneo. Solo tiene sentido para los creados a mano. */
+/**
+ * Borra un torneo creado a mano, desde el panel.
+ *
+ * Es el camino de admin; el de quien lo creó está en `borrarTorneoManual`
+ * (`torneos/facv/actions.ts`), que es donde vive el botón del propio torneo.
+ *
+ * SOLO LOS CREADOS A MANO, y ahora se comprueba en el servidor: el botón ya se
+ * pintaba solo para esos (`t.esManual`), pero la acción se lo creía. Borrar uno del
+ * calendario de la FACV no arregla nada porque la sincronización del viernes lo
+ * vuelve a traer — para quitarlo de la lista está el interruptor "de interés".
+ */
 export async function borrarTorneo(tournamentId: string): Promise<Resultado> {
   if (!(await esAdmin())) return { error: "No autorizado" };
   const admin = createAdminClient();
+  const { data: torneo } = await admin
+    .from("tournaments")
+    .select("origen")
+    .eq("id", tournamentId)
+    .maybeSingle();
+  if (!torneo) return { error: "Ese torneo ya no existe." };
+  if (torneo.origen !== "manual") {
+    return {
+      error:
+        "Este torneo viene del calendario de la FACV: la sincronización lo traería otra vez. Quítale 'de interés'.",
+    };
+  }
   const { error } = await admin.from("tournaments").delete().eq("id", tournamentId);
   if (error) return { error: error.message };
   refrescar();

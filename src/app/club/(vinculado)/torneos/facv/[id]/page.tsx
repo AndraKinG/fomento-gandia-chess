@@ -8,6 +8,7 @@ import { estaEnCurso, formatearRangoFechas, haTerminado } from "@/lib/torneos/fe
 import { plazasLibres, resumenTransporte, type Estado } from "@/lib/torneos/coches";
 import { SelectorAsistencia } from "../SelectorAsistencia";
 import { BloqueCoches, type CocheVista } from "../BloqueCoches";
+import { BorrarTorneo } from "../BorrarTorneo";
 import { Contenedor } from "@/components/ui/Contenedor";
 
 type Asistencia = "voy" | "no_voy" | "duda";
@@ -23,7 +24,9 @@ export default async function TorneoPage({
 
   const { data: torneo } = await supabase
     .from("tournaments")
-    .select("id, nombre, fecha_inicio, fecha_fin, lugar, organizador, hora, ritmo, info_extra, url_bases")
+    .select(
+      "id, nombre, fecha_inicio, fecha_fin, lugar, organizador, hora, ritmo, info_extra, url_bases, origen, creado_por"
+    )
     .eq("id", id)
     .maybeSingle();
   if (!torneo) redirect("/club/torneos/facv");
@@ -97,6 +100,14 @@ export default async function TorneoPage({
   const resumen = resumenTransporte(estado);
   const terminado = haTerminado(torneo.fecha_fin);
   const enCurso = estaEnCurso(torneo.fecha_inicio, torneo.fecha_fin);
+
+  // Borrar es para deshacer una equivocación, así que solo lo ve quien lo creó (o un
+  // admin) y solo en los creados a mano: los del calendario de la FACV los trae la
+  // sincronización y volverían el viernes. El servidor lo comprueba igual.
+  const puedeBorrar =
+    Boolean(sesion?.esJunta) &&
+    torneo.origen === "manual" &&
+    (Boolean(sesion?.esAdmin) || torneo.creado_por === sesion?.userId);
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
@@ -228,6 +239,14 @@ export default async function TorneoPage({
         )}
         </div>
         </div>
+
+        {/* Abajo y sin destacar: es para deshacer una equivocación, no una acción del
+            día a día del torneo. */}
+        {puedeBorrar && (
+          <div className="border-t border-borde pt-3">
+            <BorrarTorneo tournamentId={torneo.id} cuantosVan={van.length + dudan.length} />
+          </div>
+        )}
       </Contenedor>
     </main>
   );

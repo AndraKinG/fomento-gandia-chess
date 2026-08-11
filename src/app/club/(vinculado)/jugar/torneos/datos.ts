@@ -13,6 +13,8 @@ export type TorneoInterno = {
   rondasTotales: number | null;
   fechaInicio: string | null;
   notas: string | null;
+  /** Cuenta que lo creó (0015). null si esa cuenta ya no existe. */
+  creadoPor: string | null;
   inscritos: { ficha: string; nombre: string; eloInicial: number }[];
   rondas: (RondaJugada & {
     id: string;
@@ -35,7 +37,7 @@ export async function leerTorneo(
 ): Promise<TorneoInterno | null> {
   const { data: t } = await supabase
     .from("club_tournaments")
-    .select("id, nombre, sistema, estado, rondas_totales, fecha_inicio, notas")
+    .select("id, nombre, sistema, estado, rondas_totales, fecha_inicio, notas, creado_por")
     .eq("id", id)
     .maybeSingle();
   if (!t) return null;
@@ -71,6 +73,7 @@ export async function leerTorneo(
     rondasTotales: t.rondas_totales,
     fechaInicio: t.fecha_inicio,
     notas: t.notas,
+    creadoPor: t.creado_por ?? null,
     inscritos: (inscritos ?? []).map((i) => ({
       ficha: i.player_id,
       nombre: (i.players as unknown as { nombre: string } | null)?.nombre ?? "Socio",

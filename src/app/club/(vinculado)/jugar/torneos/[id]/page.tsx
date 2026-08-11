@@ -102,6 +102,15 @@ export default async function TorneoInternoPage({
           rondasTotales={torneo.rondasTotales}
           socios={socios}
           esJunta={Boolean(sesion?.esJunta)}
+          // Borrar es para deshacer una equivocación: quien lo creó (o un admin) y
+          // solo mientras no se haya jugado nada, porque los resultados cuentan para
+          // el ELO del club. El servidor lo vuelve a comprobar, con la partida en vivo
+          // incluida; esto solo decide si el botón se ofrece.
+          puedeBorrar={
+            Boolean(sesion?.esJunta) &&
+            (Boolean(sesion?.esAdmin) || torneo.creadoPor === sesion?.userId) &&
+            !hayPartidas
+          }
         />
         </div>
 

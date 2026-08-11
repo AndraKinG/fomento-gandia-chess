@@ -5,6 +5,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { avisar } from "@/lib/avisos/enviar";
 import { esJunta } from "@/lib/auth/es-admin";
+import { sesionActual } from "@/lib/auth/sesion";
 import { formatearRangoFechas } from "@/lib/torneos/fechas";
 import {
   efectosDeApuntarse,
@@ -437,6 +438,10 @@ export async function crearTorneoManual(datos: {
     return { error: "El torneo no puede acabar antes de empezar." };
   }
 
+  // Quién lo crea se guarda para que pueda deshacerlo él mismo (`borrarTorneoManual`).
+  // La sesión hace falta aquí y no solo el `esJunta()` de arriba, que no dice quién es.
+  const sesion = await sesionActual();
+
   const admin = createAdminClient();
   const { error } = await admin.from("tournaments").insert({
     nombre,
@@ -445,11 +450,62 @@ export async function crearTorneoManual(datos: {
     lugar: datos.lugar?.trim() || null,
     organizador: datos.organizador?.trim() || null,
     origen: "manual",
+    creado_por: sesion?.userId ?? null,
     // Un torneo que alguien se toma la molestia de crear a mano es, por
     // definición, uno al que el club va: aparece en la lista desde el principio
     // sin esperar a que nadie se apunte.
     de_interes: true,
   });
+  if (error) return { error: error.message };
+
+  revalidatePath("/club/torneos/facv");
+  revalidatePath("/club/admin/torneos");
+  revalidatePath("/club");
+  return {};
+}
+
+/**
+ * Borra un torneo creado a mano. Lo puede borrar QUIEN LO CREÓ (y cualquier admin).
+ *
+ * POR QUÉ EXISTE (pedido del propietario, 2026-08-11): borrar un torneo solo se podía
+ * desde el panel de admin, escondido dentro del formulario de editar, y solo siendo
+ * admin. Quien se equivocaba al crearlo no podía deshacerlo desde donde lo había
+ * creado. Un torneo mal escrito o de prueba lo ve todo el club en su lista, así que
+ * el arreglo tiene que estar a mano.
+ *
+ * LOS DEL CALENDARIO DE LA FACV NO SE BORRAN, y no es una cuestión de permisos: los
+ * trae la sincronización semanal, así que borrar uno lo haría reaparecer el viernes.
+ * Para quitarlo de la lista está el interruptor "de interés" del panel de admin.
+ *
+ * Se lleva por delante las asistencias y los coches del torneo (cascada de la 0010).
+ * Es lo correcto —sin torneo no hay a dónde ir— y es lo que hace que quien lo borra
+ * tenga que ver antes cuánta gente hay apuntada, que es trabajo de la pantalla.
+ */
+export async function borrarTorneoManual(tournamentId: string): Promise<Resultado> {
+  const sesion = await sesionActual();
+  if (!sesion?.esJunta) return { error: "No autorizado" };
+
+  const admin = createAdminClient();
+  const { data: torneo } = await admin
+    .from("tournaments")
+    .select("id, origen, creado_por")
+    .eq("id", tournamentId)
+    .maybeSingle();
+  if (!torneo) return { error: "Ese torneo ya no existe." };
+
+  if (torneo.origen !== "manual") {
+    return {
+      error:
+        "Este torneo viene del calendario de la FACV: no se borra, se sincroniza solo. Quítale 'de interés' desde el panel.",
+    };
+  }
+  // `creado_por` es null en los torneos creados antes de la 0038: esos solo los borra
+  // un admin, porque no hay forma de saber de quién eran.
+  if (!sesion.esAdmin && torneo.creado_por !== sesion.userId) {
+    return { error: "Solo puede borrarlo quien lo creó." };
+  }
+
+  const { error } = await admin.from("tournaments").delete().eq("id", tournamentId);
   if (error) return { error: error.message };
 
   revalidatePath("/club/torneos/facv");

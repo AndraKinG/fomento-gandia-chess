@@ -306,6 +306,85 @@ export async function borrarUltimaRonda(tournamentId: string): Promise<Resultado
   return {};
 }
 
+/**
+ * Borra un torneo interno entero. Lo puede borrar QUIEN LO CREÓ (y cualquier admin).
+ *
+ * SOLO SI NO SE HA JUGADO NADA, y esta es la parte importante: el ELO del club no se
+ * guarda en ninguna tabla, se recalcula recorriendo todas las partidas con resultado
+ * de todos los torneos internos (ver `leerRanking`). Borrar un torneo con resultados
+ * reescribiría el ranking del club en silencio y sin forma de deshacerlo. Un torneo
+ * jugado es historia, no una equivocación: eso se CIERRA, no se borra.
+ *
+ * Tampoco se borra si alguna de sus mesas se ha abierto en la app: `live_games` apunta
+ * al emparejamiento con `on delete set null` (0022), así que esas partidas quedarían
+ * sueltas, sin torneo y sin poder volver a él.
+ *
+ * Rondas y emparejamientos caen en cascada con el torneo (0015).
+ */
+export async function borrarTorneoInterno(tournamentId: string): Promise<Resultado> {
+  const sesion = await sesionActual();
+  if (!sesion?.esJunta) return { error: "No autorizado" };
+
+  const supabase = await createServerSupabase();
+  const { data: torneo } = await supabase
+    .from("club_tournaments")
+    .select("id, creado_por")
+    .eq("id", tournamentId)
+    .maybeSingle();
+  if (!torneo) return { error: "Ese torneo ya no existe." };
+
+  // `creado_por` puede ser null (se borró la cuenta de quien lo creó): entonces es
+  // cosa de admin, porque no hay de quién decir que era.
+  if (!sesion.esAdmin && torneo.creado_por !== sesion.userId) {
+    return { error: "Solo puede borrarlo quien lo creó." };
+  }
+
+  const { data: rondas } = await supabase
+    .from("club_rounds")
+    .select("id")
+    .eq("tournament_id", tournamentId);
+  const idsRondas = (rondas ?? []).map((r) => r.id);
+
+  if (idsRondas.length > 0) {
+    const { data: jugados } = await supabase
+      .from("club_pairings")
+      .select("id")
+      .in("round_id", idsRondas)
+      .not("resultado", "is", null)
+      .limit(1);
+    if ((jugados ?? []).length > 0) {
+      return {
+        error:
+          "Este torneo ya tiene resultados y cuentan para el ELO del club: ciérralo en vez de borrarlo.",
+      };
+    }
+
+    const { data: todos } = await supabase
+      .from("club_pairings")
+      .select("id")
+      .in("round_id", idsRondas);
+    const idsPares = (todos ?? []).map((p) => p.id);
+    if (idsPares.length > 0) {
+      const { data: enVivo } = await supabase
+        .from("live_games")
+        .select("id")
+        .in("club_pairing_id", idsPares)
+        .limit(1);
+      if ((enVivo ?? []).length > 0) {
+        return {
+          error: "Hay partidas de este torneo abiertas en la app: no se puede borrar.",
+        };
+      }
+    }
+  }
+
+  const { error } = await supabase.from("club_tournaments").delete().eq("id", tournamentId);
+  if (error) return { error: error.message };
+
+  refrescar();
+  return {};
+}
+
 /** Cierra el torneo. Se puede reabrir por si se cerró antes de tiempo. */
 export async function cambiarEstadoTorneo(
   tournamentId: string,
