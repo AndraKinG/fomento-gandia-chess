@@ -32,6 +32,7 @@ const ORDEN: GrupoAviso[] = ["interclubs", "torneos", "partidas", "gestion"];
 export function PreferenciasAvisos({
   silenciadosIniciales,
   mostrarGestion,
+  antes,
 }: {
   silenciadosIniciales: GrupoAviso[];
   /** El grupo "gestion" solo le llega a admin/junta (ver `GRUPO_DE` en
@@ -39,6 +40,11 @@ export function PreferenciasAvisos({
    *  enseñárselo solo confunde. El rango se decide en el servidor
    *  (`sesionActual`), nunca aquí. */
   mostrarGestion: boolean;
+  /** Lo que hay que hacer ANTES de que los interruptores sirvan de algo:
+   *  instalar la app y dar permiso de notificaciones. Vive aquí y no en otra
+   *  tarjeta porque es el mismo tema —"que me lleguen avisos al móvil"— y
+   *  separarlo dejaba los pasos en dos sitios distintos de la pantalla. */
+  antes?: React.ReactNode;
 }) {
   const [silenciados, setSilenciados] = useState<Set<GrupoAviso>>(
     () => new Set(silenciadosIniciales)
@@ -81,6 +87,8 @@ export function PreferenciasAvisos({
       </div>
 
       {error && <Banner tipo="error">{error}</Banner>}
+
+      {antes && <div className="flex flex-col gap-3">{antes}</div>}
 
       <div className="flex flex-col divide-y divide-borde">
         {grupos.map((grupo) => {

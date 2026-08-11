@@ -130,51 +130,17 @@ export default async function PerfilPage() {
             </Link>
           </p>
         )}
-        {/* Puerta a la administración SIEMPRE visible (petición del propietario,
-            2026-08-10). Nació solo para móvil —en escritorio Admin ya está en la
-            barra lateral— pero el perfil es donde se busca "lo mío", y que la
-            tarjeta aparezca y desaparezca según el ancho de pantalla despista más
-            de lo que ahorra. */}
-        {sesion?.esAdmin && (
-          <Link href="/club/admin" className="block">
-            <Tarjeta className="flex items-center justify-between gap-3 transition hover:border-borde-acento">
-              <div>
-                <p className="font-semibold text-tinta">Administración</p>
-                <p className="text-sm text-tinta-suave">
-                  Equipos, rangos, torneos, ELO y acceso al club
-                </p>
-              </div>
-              <span aria-hidden className="text-lg text-tinta-suave">
-                →
-              </span>
-            </Tarjeta>
-          </Link>
-        )}
 
-        {sesion?.esJunta && (
-          <Link href="/club/solicitudes" className="block">
-            <Tarjeta
-              destacada={(solicitudesPendientes ?? 0) > 0}
-              className="flex items-center justify-between gap-3 transition hover:border-borde-acento"
-            >
-              <div>
-                <p className="font-semibold text-tinta">Solicitudes de ingreso</p>
-                <p className="text-sm text-tinta-suave">
-                  {(solicitudesPendientes ?? 0) === 0
-                    ? "Nada pendiente"
-                    : `${solicitudesPendientes} sin resolver`}
-                </p>
-              </div>
-              <span aria-hidden className="text-lg text-tinta-suave">
-                →
-              </span>
-            </Tarjeta>
-          </Link>
-        )}
+        {/* EL ORDEN DE ESTA PANTALLA CUENTA UNA HISTORIA (reordenado el
+            2026-08-12 a petición del propietario): quién soy → cómo me ven los
+            demás → cómo veo yo la app → qué avisos me llegan → atajos → salir.
+            Antes eran NUEVE tarjetas sueltas con la gestión metida entre medias,
+            los ajustes repartidos en tres sitios y "Cerrar sesión" en el centro
+            de la pantalla con cosas debajo. */}
 
-        {/* LO QUE LOS DEMÁS VEN DE TI: foto y aperturas van juntas y con el enlace
-            a la ficha pública al lado, porque la pregunta que contestan es la misma
-            — "¿cómo me ven?" — y separarlas obligaría a explicarlo dos veces. */}
+        {/* 1. CÓMO TE VEN LOS DEMÁS. Foto y aperturas van juntas y con el enlace
+            a la ficha pública al lado: contestan la misma pregunta, y separarlas
+            obligaría a explicarlo dos veces. */}
         {p && profile?.player_id && (
           <Tarjeta className="flex flex-col gap-4">
             <div className="flex items-baseline justify-between gap-2">
@@ -191,68 +157,131 @@ export default async function PerfilPage() {
           </Tarjeta>
         )}
 
-        {/* El tablero a su aire y no dentro de Ajustes: es la elección más visual
-            de la pantalla y entre dos botones de texto no se ve. */}
+        {/* 2. CÓMO VES TÚ LA APP: todo lo visual en una tarjeta —tema, colores del
+            tablero y piezas—. Antes el tema vivía en "Ajustes" y el tablero en otra
+            tarjeta, que es la misma decisión partida en dos sitios. */}
         {p && (
           <Tarjeta className="flex flex-col gap-4">
-            <EligeTablero actual={(profile?.tema_tablero as string) ?? "gandiblues"} />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-tinta">Cómo se ve la app</p>
+              <ThemeToggle />
+            </div>
+            <div className="border-t border-borde pt-4">
+              <EligeTablero actual={(profile?.tema_tablero as string) ?? "gandiblues"} />
+            </div>
             <div className="border-t border-borde pt-4">
               <EligePiezas actual={(profile?.juego_piezas as string) ?? "celtic"} />
             </div>
           </Tarjeta>
         )}
 
-        {/* La guía de la app. Desde el perfil y no desde la navegación: se mira al
-            llegar y de tarde en tarde, no cada día. */}
-        <Link href="/club/perfil/guia" className="block">
-          <Tarjeta className="flex items-center justify-between gap-3 transition hover:border-borde-acento">
-            <div>
-              <p className="font-semibold text-tinta">¿Qué puedes hacer aquí?</p>
-              <p className="text-sm text-tinta-suave">
-                La app, sección a sección
-              </p>
-            </div>
-            <span aria-hidden className="text-lg text-tinta-suave">
-              →
-            </span>
-          </Tarjeta>
-        </Link>
-
-        {/* Los tres ajustes juntos en una tarjeta. Sueltos eran tres barras a todo lo
-            ancho, una de ellas en degradado, que pesaban más que la propia ficha. */}
-        <Tarjeta className="flex flex-col gap-3">
-          <p className="text-sm font-semibold text-tinta">Ajustes</p>
-          {/* Instalar va JUNTO a las notificaciones y antes que ellas: en iPhone
-              no hay avisos hasta que la app está en la pantalla de inicio, así
-              que este es el orden en que hay que hacer las dos cosas. Se
-              esconde solo cuando ya está instalada. */}
-          <InstalarApp compacto />
-          <div className="flex flex-wrap items-center gap-2">
-            <ThemeToggle />
-            <ActivarNotificaciones />
-          </div>
-          <form action={logout} className="border-t border-borde pt-3">
-            <BotonAccion
-              variante="secundario"
-              trabajando="Cerrando sesión…"
-              className="text-sm font-normal"
-            >
-              Cerrar sesión
-            </BotonAccion>
-          </form>
-        </Tarjeta>
-
-        {/* Por grupo, y no un único interruptor "avisos sí/no": interclubs,
-            torneos y partidas no se parecen entre sí y cada uno molesta o
-            no según a quién le llegue. "Gestión" solo se enseña a quien
-            puede recibirlo (ver `GRUPO_DE` en politica.ts): a un jugador
-            normal no le llega nunca, así que mostrárselo apagado y sin
-            efecto solo confundiría. */}
+        {/* 3. QUÉ AVISOS ME LLEGAN, con los pasos en el orden real: instalar la
+            app, dar permiso, y luego elegir grupos. Los tres viven en la MISMA
+            tarjeta porque son un solo tema; antes instalar y activar estaban en
+            "Ajustes" y los grupos en otra tarjeta más abajo. Los interruptores
+            son por grupo y no un "avisos sí/no": interclubs, torneos y partidas
+            no se parecen, y cada uno molesta o no según a quién le llegue.
+            "Gestión" solo se enseña a quien puede recibirlo (`GRUPO_DE` en
+            politica.ts). */}
         <PreferenciasAvisos
           silenciadosIniciales={(profile?.avisos_silenciados ?? []) as GrupoAviso[]}
           mostrarGestion={Boolean(sesion?.esAdmin || sesion?.esJunta)}
+          antes={
+            <>
+              <InstalarApp compacto />
+              <ActivarNotificaciones />
+            </>
+          }
         />
+
+        {/* 4. ATAJOS, en UNA CAJA CON FILAS y no en tres tarjetas sueltas: es el
+            patrón de la casa para listas de enlaces de dos líneas (ver la regla
+            de "usar el ancho" en CLAUDE.md). La guía va primero porque la usa
+            todo el mundo; admin y junta solo salen a quien le tocan. */}
+        <div className="overflow-hidden rounded-2xl border border-borde bg-tarjeta">
+          <ul className="divide-y divide-borde">
+            <FilaEnlace
+              href="/club/perfil/guia"
+              titulo="¿Qué puedes hacer aquí?"
+              detalle="La app, sección a sección"
+            />
+            {sesion?.esJunta && (
+              <FilaEnlace
+                href="/club/solicitudes"
+                titulo="Solicitudes de ingreso"
+                detalle={
+                  (solicitudesPendientes ?? 0) === 0
+                    ? "Nada pendiente"
+                    : `${solicitudesPendientes} sin resolver`
+                }
+                destacado={(solicitudesPendientes ?? 0) > 0}
+              />
+            )}
+            {/* La puerta a Admin va SIEMPRE, no solo en móvil (petición del
+                propietario, 2026-08-10): en escritorio ya está en la barra
+                lateral, pero el perfil es donde se busca "lo mío", y una tarjeta
+                que aparece y desaparece según el ancho despista más de lo que
+                ahorra. */}
+            {sesion?.esAdmin && (
+              <FilaEnlace
+                href="/club/admin"
+                titulo="Administración"
+                detalle="Equipos, rangos, torneos, ELO y acceso al club"
+              />
+            )}
+          </ul>
+        </div>
+
+        {/* 5. SALIR, lo último y solo. Estaba en medio de "Ajustes" con tres
+            bloques debajo: el botón de irse no puede tener nada detrás. */}
+        <form action={logout}>
+          <BotonAccion
+            variante="secundario"
+            trabajando="Cerrando sesión…"
+            className="w-full text-sm font-normal"
+          >
+            Cerrar sesión
+          </BotonAccion>
+        </form>
       </Contenedor>
     </main>
+  );
+}
+
+/**
+ * Una fila de la caja de atajos: título, detalle y flecha.
+ *
+ * Toda la fila es UN enlace, no un enlace dentro de otra cosa: el blanco de
+ * toque es la fila entera, que en un móvil es la diferencia entre acertar y no.
+ */
+function FilaEnlace({
+  href,
+  titulo,
+  detalle,
+  destacado = false,
+}: {
+  href: string;
+  titulo: string;
+  detalle: string;
+  /** Fondo suave cuando hay algo pendiente de verdad. */
+  destacado?: boolean;
+}) {
+  return (
+    <li>
+      <Link
+        href={href}
+        className={`flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-tarjeta-suave ${
+          destacado ? "bg-tarjeta-suave" : ""
+        }`}
+      >
+        <span className="min-w-0">
+          <span className="block font-semibold text-tinta">{titulo}</span>
+          <span className="block text-sm text-tinta-suave">{detalle}</span>
+        </span>
+        <span aria-hidden className="shrink-0 text-lg text-tinta-suave">
+          →
+        </span>
+      </Link>
+    </li>
   );
 }
