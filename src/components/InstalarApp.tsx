@@ -102,6 +102,43 @@ function suscribirse(avisar: () => void): () => void {
 }
 
 /**
+ * LA APP SE ACUERDA DE QUE ESTÁ INSTALADA, y esto es lo que de verdad funciona.
+ *
+ * Primero se intentó `getInstalledRelatedApps()`, que es la API "oficial" para
+ * esto. NO SIRVE: con `platform: "webapp"` no reporta las PWA instaladas en
+ * Chrome de escritorio (probado por el propietario en su PC, con la app
+ * instalada y la pestaña diciéndole que la instalara).
+ *
+ * Lo que sí funciona: la PWA y la pestaña del mismo navegador **comparten
+ * almacenamiento** porque son el mismo origen. Así que cuando la app se abre como
+ * app, deja una nota; y la pestaña la lee. Sin APIs experimentales.
+ *
+ * SE CORRIGE SOLA si el socio desinstala: Chrome solo dispara
+ * `beforeinstallprompt` cuando la app NO está instalada, así que ese evento borra
+ * la nota. Un recuerdo que se puede desmentir no se queda mintiendo para siempre.
+ */
+const RECUERDO = "fomento:app-instalada";
+
+function leerRecuerdo(): boolean {
+  try {
+    return window.localStorage.getItem(RECUERDO) === "1";
+  } catch {
+    // Modo incógnito o almacenamiento bloqueado: no se sabe, y no pasa nada.
+    return false;
+  }
+}
+
+/** Otra pestaña —o la propia PWA— puede escribirlo: `storage` avisa de eso. */
+function suscribirseAlRecuerdo(avisar: () => void): () => void {
+  window.addEventListener("storage", avisar);
+  return () => window.removeEventListener("storage", avisar);
+}
+
+function sinRecuerdoEnElServidor(): boolean {
+  return false;
+}
+
+/**
  * Saca al socio del navegador de la otra app y lo lleva al bueno, con la MISMA
  * página, para que pueda instalar allí.
  *
@@ -138,39 +175,29 @@ export function InstalarApp({
   siempre?: boolean;
 }) {
   const dispositivo = useSyncExternalStore(suscribirse, leerDispositivo, enElServidor);
+  const recordada = useSyncExternalStore(
+    suscribirseAlRecuerdo,
+    leerRecuerdo,
+    sinRecuerdoEnElServidor
+  );
   const [evento, setEvento] = useState<EventoInstalar | null>(null);
-  const [instalada, setInstalada] = useState(false);
   const [copiado, setCopiado] = useState(false);
 
   /**
-   * ¿ESTÁ INSTALADA EN ESTE EQUIPO, aunque ahora mismo estemos en una pestaña?
+   * Cuando esto se está ejecutando COMO app, se deja la nota para que la pestaña
+   * del mismo navegador también lo sepa (ver `RECUERDO` arriba).
    *
-   * `display-mode: standalone` solo contesta "¿me estoy ejecutando COMO app
-   * ahora?", que es otra pregunta. El propietario lo vio enseguida: instaló la
-   * app en el PC, y desde la app le salía "App instalada" mientras que en la
-   * pestaña del navegador seguía diciéndole que la instalara. Quien lo sabe es
-   * `getInstalledRelatedApps()`, y para que funcione el manifest tiene que
-   * declararse a sí mismo en `related_applications` (hecho).
-   *
-   * Solo existe en Chrome/Edge, y compara contra la URL ABSOLUTA de producción:
-   * en local no detectará nada, y en Safari o Firefox tampoco. De ahí que el
-   * texto de "no lo sé" tenga que valer para los dos casos.
+   * Es un efecto que escribe en un sistema externo y NO llama a `setState`: eso es
+   * exactamente para lo que sirven los efectos.
    */
   useEffect(() => {
-    const nav = navigator as Navigator & {
-      getInstalledRelatedApps?: () => Promise<unknown[]>;
-    };
-    if (!nav.getInstalledRelatedApps) return;
-    // setState en un callback, que es lo que el linter del compilador permite.
-    void nav
-      .getInstalledRelatedApps()
-      .then((apps) => {
-        if (apps.length > 0) setInstalada(true);
-      })
-      .catch(() => {
-        // Si la API falla no se concluye nada: se deja el texto neutro.
-      });
-  }, []);
+    if (dispositivo !== "pwa") return;
+    try {
+      window.localStorage.setItem(RECUERDO, "1");
+    } catch {
+      // Sin almacenamiento no se recuerda, y no pasa nada.
+    }
+  }, [dispositivo]);
 
   useEffect(() => {
     // setState DENTRO DE UN CALLBACK, que es lo que React sí quiere: esto es
@@ -179,8 +206,22 @@ export function InstalarApp({
       // Sin esto Chrome enseña ADEMÁS su propio aviso y salen dos cosas a la vez.
       e.preventDefault();
       setEvento(e as EventoInstalar);
+      // ESTE EVENTO DESMIENTE EL RECUERDO: Chrome solo lo dispara cuando la app
+      // NO está instalada, así que si el socio la desinstaló, aquí se borra.
+      try {
+        window.localStorage.removeItem(RECUERDO);
+      } catch {
+        // Sin almacenamiento no hay nada que borrar.
+      }
     };
-    const alInstalar = () => setInstalada(true);
+    const alInstalar = () => {
+      try {
+        window.localStorage.setItem(RECUERDO, "1");
+      } catch {
+        // Sin almacenamiento no se recuerda.
+      }
+      setEvento(null);
+    };
     window.addEventListener("beforeinstallprompt", alPoder);
     window.addEventListener("appinstalled", alInstalar);
     return () => {
@@ -191,7 +232,10 @@ export function InstalarApp({
 
   if (dispositivo === "mirando") return null;
 
-  const yaEsta = instalada || dispositivo === "pwa";
+  // EL EVENTO MANDA SOBRE EL RECUERDO: si el navegador ofrece instalarla, es que
+  // NO está instalada, diga lo que diga la nota. Así un recuerdo viejo (app
+  // desinstalada) no se queda mintiendo.
+  const yaEsta = dispositivo === "pwa" || (recordada && evento === null);
   const fueraDelNavegador = dispositivo === "appExterna" || dispositivo === "appleSinSafari";
   const puedePulsar = dispositivo === "otro" && evento !== null;
 

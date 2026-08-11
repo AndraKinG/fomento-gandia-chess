@@ -24,12 +24,5 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ],
-  "related_applications": [
-    {
-      "platform": "webapp",
-      "url": "https://fomento-gandia-chess-swart.vercel.app/manifest.json"
-    }
-  ],
-  "prefer_related_applications": false
+  ]
 }
