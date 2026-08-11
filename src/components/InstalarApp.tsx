@@ -29,7 +29,27 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 /** El evento de Chrome todavía no está en los tipos de TypeScript. */
 type EventoInstalar = Event & { prompt: () => Promise<void> };
 
-type Dispositivo = "pwa" | "apple" | "otro";
+type Dispositivo =
+  | "pwa"
+  /** iPhone/iPad en Safari: instrucciones, que es todo lo que Apple permite. */
+  | "apple"
+  /** iPhone/iPad en un navegador que NO es Safari: ahí NO se puede instalar. */
+  | "appleSinSafari"
+  /** Navegador DENTRO de otra app (WhatsApp, Instagram…): no puede instalar. */
+  | "appExterna"
+  | "otro";
+
+/**
+ * ¿Estamos dentro del navegador de otra app?
+ *
+ * ESTO IMPORTA MÁS QUE NADA EN LA PRÁCTICA: el enlace del club se reparte por
+ * WhatsApp, y al tocarlo NO se abre Chrome ni Safari — se abre el navegador
+ * interno de WhatsApp, que **no puede instalar nada**. Un socio hace todo bien y
+ * no le sale el botón; sin decírselo, se queda pensando que la app está rota.
+ */
+function esAppExterna(ua: string): boolean {
+  return /FBAN|FBAV|FB_IAB|Instagram|WhatsApp|Line\/|Twitter|TikTok|MicroMessenger|; wv\)/i.test(ua);
+}
 
 /**
  * Qué aparato es esto, leído del navegador.
@@ -46,11 +66,23 @@ function leerDispositivo(): Dispositivo {
     (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
   if (enPwa) return "pwa";
 
+  const ua = window.navigator.userAgent;
+
   // El iPad moderno se declara "MacIntel" con dedos, de ahí la segunda comprobación.
   const esApple =
-    /iphone|ipad|ipod/i.test(window.navigator.userAgent) ||
+    /iphone|ipad|ipod/i.test(ua) ||
     (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1);
-  return esApple ? "apple" : "otro";
+
+  if (esApple) {
+    // En iOS solo Safari puede añadir a la pantalla de inicio. Chrome y Firefox
+    // de iPhone (CriOS/FxiOS) y los navegadores dentro de otras apps, no.
+    const esSafari = !/CriOS|FxiOS|EdgiOS/i.test(ua) && !esAppExterna(ua);
+    return esSafari ? "apple" : "appleSinSafari";
+  }
+
+  // El navegador de WhatsApp y compañía se comprueba DESPUÉS de Apple: en iOS ya
+  // queda cubierto arriba, y aquí atrapa el caso de Android.
+  return esAppExterna(ua) ? "appExterna" : "otro";
 }
 
 /** En el servidor no se pinta nada: "pwa" es justo el caso que no enseña tarjeta. */
@@ -127,6 +159,20 @@ export function InstalarApp({
         <p className="text-sm text-tinta-suave">
           Ya la tienes en este dispositivo. Si quieres tenerla también en otro,
           entra allí con tu cuenta y te lo ofrecerá.
+        </p>
+      ) : dispositivo === "appExterna" ? (
+        // EL CASO MÁS FRECUENTE DE TODOS, porque el enlace se reparte por
+        // WhatsApp: su navegador interno no puede instalar nada.
+        <p className="text-sm text-tinta-suave">
+          Has entrado desde otra app (WhatsApp, Instagram…) y desde ahí no se puede
+          instalar. Abre <b className="font-semibold">el mismo enlace en Chrome</b>{" "}
+          (Android) o en <b className="font-semibold">Safari</b> (iPhone) y vuelve
+          aquí.
+        </p>
+      ) : dispositivo === "appleSinSafari" ? (
+        <p className="text-sm text-tinta-suave">
+          En iPhone solo se puede instalar desde <b className="font-semibold">Safari</b>.
+          Abre este enlace en Safari y vuelve a esta pantalla.
         </p>
       ) : dispositivo === "apple" ? (
         <>
