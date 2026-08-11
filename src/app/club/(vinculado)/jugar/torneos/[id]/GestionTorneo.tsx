@@ -10,6 +10,7 @@ import { Banner } from "@/components/ui/Banner";
 import { jugarEmparejamiento } from "@/app/club/(vinculado)/jugar/actions";
 import { Mirando } from "@/components/presencia/Mirando";
 import { diaYHora } from "@/lib/torneos/hora-de-ronda";
+import { ELO_POR_DEFECTO } from "@/lib/club/elo";
 import {
   anotarResultado,
   borrarTorneoInterno,
@@ -134,6 +135,17 @@ export function GestionTorneo({
   // La hora la pone la junta mientras el torneo esté vivo: en uno cerrado no hay
   // nada que avisar y el dato ya es histórico.
   const puedePonerHora = esJunta && estado !== "terminado";
+  /**
+   * La lista de inscritos solo se puede tocar antes de empezar.
+   *
+   * SE DERIVA DEL ESTADO, no solo del botón: antes el panel de casillas se pintaba
+   * con `abriendoInscritos` a secas, así que si lo dejabas abierto y generabas la
+   * ronda 1 se quedaba ahí —con las casillas activas— cuando ya no se podía cambiar
+   * nada (el servidor contestaba "el torneo ya ha empezado"). Con el permiso metido
+   * en la condición, generar la ronda lo cierra por sí mismo.
+   */
+  const puedeCambiarInscritos = esJunta && estado === "inscripcion";
+  const editandoInscritos = abriendoInscritos && puedeCambiarInscritos;
 
   return (
     <div className="space-y-4">
@@ -146,27 +158,35 @@ export function GestionTorneo({
           <h2 className="text-sm font-semibold uppercase tracking-wide text-tinta-suave">
             Inscritos ({inscritos.length})
           </h2>
-          {esJunta && estado === "inscripcion" && (
+          {puedeCambiarInscritos && (
+            // Pastilla y no un enlace subrayado: es el botón que abre y cierra un
+            // panel, igual que los números del selector de ronda, y con `aria-expanded`
+            // para que se sepa qué hace antes de pulsarlo.
             <button
               type="button"
+              aria-expanded={editandoInscritos}
               onClick={() => setAbriendoInscritos((v) => !v)}
-              className="text-sm text-acento-texto underline"
+              className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition duration-100 active:scale-[0.97] ${
+                editandoInscritos
+                  ? "bg-acento-fuerte text-sobre-acento"
+                  : "border border-borde bg-tarjeta text-tinta-suave hover:bg-tarjeta-suave"
+              }`}
             >
-              {abriendoInscritos ? "Listo" : "Cambiar"}
+              {editandoInscritos ? "Listo" : "Cambiar"}
             </button>
           )}
         </div>
 
-        {inscritos.length === 0 && (
+        {inscritos.length === 0 && !editandoInscritos && (
           <Tarjeta compacta>
             <p className="text-sm text-tinta-suave">
               Todavía no hay nadie inscrito.
-              {esJunta && estado === "inscripcion" ? " Pulsa Cambiar para apuntar gente." : ""}
+              {puedeCambiarInscritos ? " Pulsa Cambiar para apuntar gente." : ""}
             </p>
           </Tarjeta>
         )}
 
-        {!abriendoInscritos && inscritos.length > 0 && (
+        {!editandoInscritos && inscritos.length > 0 && (
           <Tarjeta compacta>
             <p className="text-sm text-tinta">
               {inscritos.map((s) => s.nombre).join(" · ")}
@@ -174,10 +194,12 @@ export function GestionTorneo({
           </Tarjeta>
         )}
 
-        {abriendoInscritos && (
+        {editandoInscritos && (
           <Tarjeta>
             <p className="mb-2 text-xs text-tinta-suave">
-              El ELO de partida de cada uno sale de su ELO oficial. La lista se cierra
+              {/* Decía que el ELO de partida sale del ELO oficial de cada uno, y desde
+                  la decisión de arrancar todos en 1000 eso era mentira en pantalla. */}
+              Todos empiezan con {ELO_POR_DEFECTO} en el ELO del club. La lista se cierra
               al generar la primera ronda.
             </p>
             <ul className="max-h-72 space-y-1 overflow-auto">
@@ -198,7 +220,12 @@ export function GestionTorneo({
                     <span className="min-w-0 flex-1 truncate text-sm text-tinta">
                       {s.nombre}
                     </span>
-                    <span className="shrink-0 text-xs text-tinta-suave">{s.elo}</span>
+                    {/* Solo el ELO de quien ESTÁ inscrito: a los demás se les pintaba
+                        un "0" que parecía un dato suyo y no lo era —el ELO de partida
+                        no existe hasta que te apuntas—. */}
+                    <span className="shrink-0 text-xs tabular-nums text-tinta-suave">
+                      {s.inscrito ? s.elo : "—"}
+                    </span>
                   </label>
                 </li>
               ))}
@@ -430,17 +457,26 @@ export function GestionTorneo({
               variante="degradado"
               className="w-full"
               disabled={pendiente || inscritos.length < 2 || faltanResultados}
-              onClick={() => ejecutar(() => generarRonda(tournamentId))}
+              // Se olvida también el panel abierto: si no, borrar luego la ronda 1
+              // —que devuelve el torneo a inscripción— lo haría reaparecer solo.
+              onClick={() => {
+                setAbriendoInscritos(false);
+                ejecutar(() => generarRonda(tournamentId));
+              }}
             >
               {pendiente ? "Trabajando…" : `Generar ronda ${rondasHechas + 1}`}
             </Boton>
           ) : (
             <p className="px-1 text-sm text-tinta-suave">
-              El torneo ya tiene sus {rondasTotales} rondas.
+              {rondasTotales === 1
+                ? "El torneo es de una sola ronda y ya está generada."
+                : `El torneo ya tiene sus ${rondasTotales} rondas.`}
             </p>
           )}
 
-          {faltanResultados && (
+          {/* Solo si de verdad quedan rondas: con las rondas agotadas, "no se puede
+              emparejar la ronda siguiente" hablaba de una ronda que no existe. */}
+          {faltanResultados && quedanRondas && (
             <p className="px-1 text-xs text-tinta-suave">
               Falta anotar resultados: no se puede emparejar la ronda siguiente con
               datos a medias.
