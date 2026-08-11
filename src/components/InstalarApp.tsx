@@ -103,6 +103,58 @@ function suscribirse(avisar: () => void): () => void {
 }
 
 /**
+ * "AHORA NO": la tarjeta de Inicio se puede posponer, y se acuerda un mes.
+ *
+ * Antes salía en CADA visita a Inicio hasta instalar, y eso es acosar a quien
+ * simplemente prefiere usar la web —que es una opción legítima: la app funciona
+ * igual en el navegador, solo se pierde los avisos—. Un mes es el equilibrio:
+ * deja de estorbar de verdad, pero si cambia de móvil o de opinión, vuelve a
+ * asomar una vez.
+ *
+ * NO SE PIERDE NADA AL POSPONERLA: en el Perfil la guía está siempre (`siempre`),
+ * que es donde uno va a buscarla.
+ *
+ * Esto sí funciona con `localStorage`, a diferencia del recuerdo de "está
+ * instalada" que se descartó: aquí no hace falta que la PWA y la pestaña compartan
+ * nada — es la misma pestaña acordándose de lo que pulsó su dueño.
+ */
+const POSPUESTO = "fomento:instalar-pospuesto";
+const UN_MES_MS = 30 * 24 * 60 * 60 * 1000;
+const AVISO_POSPUESTO = "fomento:pospuesto";
+
+function leerPospuesto(): boolean {
+  try {
+    const cuando = Number(window.localStorage.getItem(POSPUESTO));
+    return Number.isFinite(cuando) && cuando > 0 && Date.now() - cuando < UN_MES_MS;
+  } catch {
+    return false;
+  }
+}
+
+/** Se escucha el evento propio (misma pestaña) y `storage` (otra pestaña). */
+function suscribirseAlPospuesto(avisar: () => void): () => void {
+  window.addEventListener(AVISO_POSPUESTO, avisar);
+  window.addEventListener("storage", avisar);
+  return () => {
+    window.removeEventListener(AVISO_POSPUESTO, avisar);
+    window.removeEventListener("storage", avisar);
+  };
+}
+
+function noPospuestoEnElServidor(): boolean {
+  return false;
+}
+
+function posponer(): void {
+  try {
+    window.localStorage.setItem(POSPUESTO, String(Date.now()));
+  } catch {
+    // Sin almacenamiento no se puede recordar; se esconde solo hasta recargar.
+  }
+  window.dispatchEvent(new Event(AVISO_POSPUESTO));
+}
+
+/**
  * Saca al socio del navegador de la otra app y lo lleva al bueno, con la MISMA
  * página, para que pueda instalar allí.
  *
@@ -137,6 +189,11 @@ export function InstalarApp({
   siempre?: boolean;
 }) {
   const dispositivo = useSyncExternalStore(suscribirse, leerDispositivo, enElServidor);
+  const pospuesto = useSyncExternalStore(
+    suscribirseAlPospuesto,
+    leerPospuesto,
+    noPospuestoEnElServidor
+  );
   const [evento, setEvento] = useState<EventoInstalar | null>(null);
   const [copiado, setCopiado] = useState(false);
 
@@ -164,8 +221,11 @@ export function InstalarApp({
   const fueraDelNavegador = dispositivo === "appExterna" || dispositivo === "appleSinSafari";
   const puedePulsar = dispositivo === "otro" && evento !== null;
 
-  // En Inicio esto desaparece cuando no hay nada que pulsar ni que explicar.
-  if (!siempre && (enLaApp || (dispositivo === "otro" && !evento))) return null;
+  // En Inicio esto desaparece cuando no hay nada que pulsar ni que explicar, y
+  // también si el socio dijo "ahora no" en el último mes.
+  if (!siempre && (enLaApp || pospuesto || (dispositivo === "otro" && !evento))) {
+    return null;
+  }
 
   const caja = compacto
     ? "space-y-2"
@@ -233,6 +293,19 @@ export function InstalarApp({
         >
           {copiado ? "¡Copiado!" : "Copiar enlace"}
         </button>
+
+        {/* "Ahora no" SOLO en la tarjeta de Inicio: en el Perfil la guía es el
+            contenido de la pantalla, no una interrupción, y poder cerrarla allí
+            no tendría sentido. */}
+        {!siempre && (
+          <button
+            type="button"
+            onClick={posponer}
+            className="rounded-xl px-3 py-2 text-sm text-tinta-suave underline underline-offset-2 transition hover:text-tinta"
+          >
+            Ahora no
+          </button>
+        )}
       </div>
 
       {dispositivo === "apple" && (
