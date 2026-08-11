@@ -14,53 +14,110 @@ import { normalizaNombre } from "@/lib/import/facv-calendario";
  * "Gregori Olivares, Borja" y "Borja Gregori Olivares" dan los dos
  * {borja, gregori, olivares}.
  *
- * Y PARA QUE NO ATRIBUYA UNA PARTIDA A QUIEN NO ES: si dos fichas distintas dan el
- * mismo conjunto, ninguna de las dos se enlaza. Es preferible dejar el tablero sin
- * ficha —se enseña igual, con el nombre del acta— que colgársela al socio equivocado.
+ * Y ADEMÁS UNA SEGUNDA PASADA TOLERANTE, porque chess-results MUTILA nombres de
+ * cuatro maneras distintas — las cuatro vistas en las actas reales de 2026:
+ *
+ *   1. Guiones: "Mafe-Coll, Lorenzo" (la ficha dice "Lorenzo Mafé Coll").
+ *   2. Nombres truncados: "Lloren" por "Llorenç" (se comió la ç y lo que seguía).
+ *   3. Nombres de pila que faltan: "Hernandez Gonzalez, Jairo" cuando la ficha es
+ *      "Jairo Manuel Hernández González" — el "Manuel" no viaja.
+ *   4. El año de nacimiento pegado: "..., Manuel 1969", para distinguir tocayos.
+ *
+ * La segunda pasada acepta una ficha si CADA palabra del acta casa con una palabra
+ * DISTINTA de la ficha (igual, o la de la ficha empieza por la del acta con 4+
+ * letras), y solo si UNA ÚNICA ficha cumple. En cuanto dos fichas valdrían, no se
+ * enlaza ninguna: es preferible dejar el tablero sin ficha —se enseña igual, con el
+ * nombre del acta— que colgárselo al socio equivocado.
+ *
+ * Los APODOS: hay socios cuya ficha va con el nombre de uso ("Ximo") y el acta con
+ * el de pila ("Joaquim"). Eso no lo arregla ninguna cadena: la ficha puede llevar
+ * un `alias` (migración 0035) cuyas palabras cuentan como propias al cruzar.
  */
 
-/**
- * Conjunto de palabras del nombre, en orden alfabético y sin acentos.
- *
- * SE TIRA EL AÑO DE NACIMIENTO. Cuando dos jugadores del mismo grupo se llaman igual,
- * chess-results se lo añade al nombre para distinguirlos: "Gonzalez Rodriguez, Manuel
- * 1969". Eso es una marca de la fuente, no parte del nombre, y sin quitarla ese socio
- * no cruza con su ficha. Solo se tira si va suelto y parece un año (1900-2099), para
- * no cargarse un apellido con números, que no existe pero tampoco cuesta nada evitar.
- */
-export function claveNombre(nombre: string): string {
-  return normalizaNombre(nombre)
-    .replace(/[.,]/g, " ")
-    .split(/\s+/)
-    .filter((p) => p.length > 0 && !/^(?:19|20)\d{2}$/.test(p))
-    .sort()
-    .join(" ");
+/** Palabras del nombre, normalizadas, sin duplicados y sin años de nacimiento. */
+export function palabrasNombre(nombre: string): string[] {
+  return [
+    ...new Set(
+      normalizaNombre(nombre)
+        // El guion y el apóstrofo parten palabra: "mafe-coll" son dos apellidos.
+        .replace(/[.,\-']/g, " ")
+        .split(/\s+/)
+        .filter((p) => p.length > 0 && !/^(?:19|20)\d{2}$/.test(p))
+    ),
+  ].sort();
 }
 
-export type FichaConNombre = { id: string; nombre: string };
+/** Clave exacta de un nombre: sus palabras ordenadas. */
+export function claveNombre(nombre: string): string {
+  return palabrasNombre(nombre).join(" ");
+}
+
+export type FichaConNombre = {
+  id: string;
+  nombre: string;
+  /** Nombres alternativos (apodo, nombre de pila oficial…), si los hay. */
+  alias?: string | null;
+};
+
+export type IndiceFichas = {
+  /** Clave exacta → id, sin las ambiguas. */
+  exacto: Map<string, string>;
+  /** Todas las fichas con sus palabras (nombre + alias), para la pasada tolerante. */
+  fichas: { id: string; palabras: string[] }[];
+};
 
 /**
- * Índice de nombre → id de ficha, saltándose las claves ambiguas.
+ * Índice de fichas para cruzar nombres.
  *
- * Las claves que apuntarían a más de una ficha se eliminan del índice, no se quedan
- * con la primera.
+ * Las claves exactas que apuntarían a más de una ficha se eliminan del índice, no
+ * se quedan con la primera.
  */
-export function indicePorNombre(fichas: readonly FichaConNombre[]): Map<string, string> {
+export function indicePorNombre(fichas: readonly FichaConNombre[]): IndiceFichas {
   const cuantas = new Map<string, number>();
-  const indice = new Map<string, string>();
+  const exacto = new Map<string, string>();
+  const conPalabras: IndiceFichas["fichas"] = [];
+
   for (const f of fichas) {
+    const propias = palabrasNombre(f.alias ? `${f.nombre} ${f.alias}` : f.nombre);
+    if (propias.length === 0) continue;
+    conPalabras.push({ id: f.id, palabras: propias });
+
+    // La clave exacta va SIN el alias: el alias suma tolerancia, no cambia la
+    // identidad exacta del nombre tal como está escrito.
     const clave = claveNombre(f.nombre);
-    if (!clave) continue;
     cuantas.set(clave, (cuantas.get(clave) ?? 0) + 1);
-    indice.set(clave, f.id);
+    exacto.set(clave, f.id);
   }
   for (const [clave, n] of cuantas) {
-    if (n > 1) indice.delete(clave);
+    if (n > 1) exacto.delete(clave);
   }
-  return indice;
+  return { exacto, fichas: conPalabras };
+}
+
+/** ¿Casa cada palabra del acta con una palabra DISTINTA de la ficha? */
+function casan(delActa: string[], deLaFicha: string[]): boolean {
+  const libres = [...deLaFicha];
+  for (const palabra of delActa) {
+    const i = libres.findIndex(
+      (candidata) =>
+        candidata === palabra || (palabra.length >= 4 && candidata.startsWith(palabra))
+    );
+    if (i === -1) return false;
+    libres.splice(i, 1);
+  }
+  return true;
 }
 
 /** Id de la ficha que corresponde a `nombre`, o null si no hay una sola clara. */
-export function buscarFicha(nombre: string, indice: Map<string, string>): string | null {
-  return indice.get(claveNombre(nombre)) ?? null;
+export function buscarFicha(nombre: string, indice: IndiceFichas): string | null {
+  const exacta = indice.exacto.get(claveNombre(nombre));
+  if (exacta) return exacta;
+
+  // Pasada tolerante. Con MENOS de dos palabras no se intenta: un solo apellido
+  // casaría con media plantilla.
+  const palabras = palabrasNombre(nombre);
+  if (palabras.length < 2) return null;
+
+  const candidatas = indice.fichas.filter((f) => casan(palabras, f.palabras));
+  return candidatas.length === 1 ? candidatas[0].id : null;
 }

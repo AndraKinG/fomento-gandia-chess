@@ -118,9 +118,15 @@ export async function sincronizarActasCore(): Promise<ResumenSyncActas> {
     // de palabras y no por cadena: `players.nombre` tiene los dos formatos mezclados
     // ("Apellidos, Nombre" y "Nombre Apellidos") y el acta usa siempre el primero, así
     // que comparar cadenas enlazaba CERO de 248 tableros sin dar ningún error.
-    const { data: players } = await admin.from("players").select("id, nombre");
+    // El `alias` (migración 0035) entra en el cruce: hay socios cuya ficha va con
+    // el nombre de uso ("Ximo") y el acta con el de pila ("Joaquim").
+    const { data: players } = await admin.from("players").select("id, nombre, alias");
     const indiceFichas = indicePorNombre(
-      (players ?? []).map((p) => ({ id: p.id as string, nombre: p.nombre as string }))
+      (players ?? []).map((p) => ({
+        id: p.id as string,
+        nombre: p.nombre as string,
+        alias: p.alias as string | null,
+      }))
     );
 
     const calendario = await fetchConLimite(URL_CALENDARIO, {

@@ -16,9 +16,6 @@ export const LIMITE_PAGINA_MS = 15_000;
 /** Páginas grandes de la FACV (el calendario de torneos son ~600 KB). */
 export const LIMITE_PAGINA_GRANDE_MS = 30_000;
 
-/** Descargas de ficheros (la lista FEDA en .xlsx pasa de 3 MB). */
-export const LIMITE_FICHERO_MS = 60_000;
-
 /**
  * `fetch` con tiempo límite y user-agent por defecto.
  *

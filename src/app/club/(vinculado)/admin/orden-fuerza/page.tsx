@@ -86,7 +86,17 @@ export default async function OrdenFuerzaPage({
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Orden de fuerza" volverA="/club/admin" medida="panel" />
+      {/* "ELO de los socios" y no "Orden de fuerza" (corrección del propietario,
+          2026-08-11): el orden de fuerza es una cosa del INTERCLUBS —la foto fija
+          de antes de empezar, regla de los tres ELOs en CLAUDE.md— y esta pantalla
+          gestiona la lista de ELO de la que aquel sale. La ruta no cambia para no
+          romper enlaces. */}
+      <Cabecera
+        titulo="ELO de los socios"
+        subtitulo="La lista oficial FACV; de aquí sale el orden de fuerza del Interclubs"
+        volverA="/club/admin"
+        medida="panel"
+      />
       <Contenedor medida="panel" className="space-y-4">
         {msg ? <Banner tipo={tipo === "ok" ? "ok" : "error"}>{msg}</Banner> : null}
         {listaAvisos.length > 0 ? (

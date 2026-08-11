@@ -35,8 +35,7 @@ Para pruebas manuales: `?forzar=pedir|recordar|sync` con el mismo secreto.
   triggers y policies en la base: nadie tiene que vigilarlos.
 
 **Endpoints manuales bajo `/api/cron`** (existen pero NO están programados; se
-llaman a mano con el secreto): `elo-fide` y `elo-feda`. Ver por qué no están
-programados abajo.
+llaman a mano con el secreto): `elo-fide`. Ver por qué no está programado abajo.
 
 ## Qué NO se puede automatizar (verificado, no volver a intentarlo)
 
@@ -47,9 +46,11 @@ programados abajo.
   responder su pregunta — su código está en el historial de git si hiciera falta.
   El camino que funciona: `scripts/actualizar-elo-fide.mjs` desde un PC de casa,
   o el botón de Admin → ELO ejecutando la app en local.
-- **ELO FEDA: sin fuente.** La FEDA no publica listas desde diciembre de 2023. El
-  importador está arreglado y esperando; si publican, botón de Admin → ELO. Si
-  publican en otro sitio: `URL_PAGINA_ELO_FEDA` en `src/lib/import/feda-apply.ts`.
+- **ELO FEDA: RETIRADO ENTERO (2026-08-11, decisión del propietario).** La FEDA no
+  publica listas desde diciembre de 2023, así que el importador solo podía traer
+  datos de hace años. Se borraron el endpoint, los botones y el importador (con su
+  dependencia `xlsx`); el código está en el historial de git por si algún día
+  publican. La columna `players.elo_feda` se queda: es dato, no código.
 
 ## Qué es manual a propósito
 

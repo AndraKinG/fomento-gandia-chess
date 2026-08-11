@@ -102,4 +102,43 @@ describe("indicePorNombre y buscarFicha", () => {
     ]);
     expect(buscarFicha("Delord, Tristan", conVacio)).toBe("c");
   });
+
+  describe("la pasada tolerante (los cuatro mangles reales de las actas 2026)", () => {
+    const club = indicePorNombre([
+      { id: "lloren", nombre: "Llorenç Pérez Barberán" },
+      { id: "mafe", nombre: "Lorenzo Mafé Coll" },
+      { id: "jairo", nombre: "Jairo Manuel Hernández González" },
+      { id: "ximo", nombre: "Ximo Almiñana Almiñana", alias: "Joaquim" },
+      { id: "otro", nombre: "Delord, Tristan" },
+    ]);
+
+    it("guion en los apellidos", () => {
+      expect(buscarFicha("Mafe-Coll, Lorenzo", club)).toBe("mafe");
+    });
+
+    it("nombre de pila truncado (la ç se comió lo que seguía)", () => {
+      expect(buscarFicha("Perez Barberan, Lloren", club)).toBe("lloren");
+    });
+
+    it("segundo nombre que el acta no trae", () => {
+      expect(buscarFicha("Hernandez Gonzalez, Jairo 1982", club)).toBe("jairo");
+    });
+
+    it("apodo en la ficha y nombre de pila en el acta, vía alias", () => {
+      expect(buscarFicha("Alminana Alminana, Joaquim", club)).toBe("ximo");
+    });
+
+    it("con dos fichas que casarían, NINGUNA: mejor sin ficha que la equivocada", () => {
+      const ambiguo = indicePorNombre([
+        { id: "a", nombre: "Juan García Pérez" },
+        { id: "b", nombre: "Juan García Pons" },
+      ]);
+      expect(buscarFicha("Garcia, Juan", ambiguo)).toBeNull();
+    });
+
+    it("una sola palabra no cruza ni aunque sea única", () => {
+      // Un apellido suelto casaría con media plantilla en cuanto crezca la lista.
+      expect(buscarFicha("Delord", club)).toBeNull();
+    });
+  });
 });

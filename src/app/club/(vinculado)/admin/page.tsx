@@ -8,8 +8,8 @@ const ENLACES = [
   {
     href: "/club/admin/orden-fuerza",
     icono: "📋",
-    titulo: "Orden de fuerza",
-    detalle: "Importar y consultar el orden de fuerza de la temporada",
+    titulo: "ELO de los socios",
+    detalle: "La lista oficial FACV: sincronizar, crear fichas e importar la temporada",
   },
   {
     href: "/club/admin/acceso",
