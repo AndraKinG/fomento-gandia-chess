@@ -57,11 +57,11 @@ begin
   on conflict (dia, profile_id) do update
     set visitas = uso_socios_dia.visitas + (case when v_cuenta then 1 else 0 end),
         latidos = uso_socios_dia.latidos + 1,
-        -- `coalesce` y no un `case`: si esta vez no cuenta, se conserva la marca
-        -- que hubiera, no se pisa con null.
+        -- Si esta vez no cuenta, se CONSERVA la marca que hubiera: pisarla con
+        -- null reabriría la ventana y las visitas volverían a inflarse.
         ultima_visita = case
           when v_cuenta then now()
-          else coalesce(uso_socios_dia.ultima_visita, null)
+          else uso_socios_dia.ultima_visita
         end;
 
   insert into uso_diario (dia, visitas, latidos)
@@ -130,18 +130,20 @@ grant execute on function public.recuento_uso(date) to service_role;
 -- ---------------------------------------------------------------------------
 -- Verificación
 -- ---------------------------------------------------------------------------
-select 'columnas nuevas en uso_socios_dia (esperado 3)' as comprobacion,
-       count(*)::text as valor
-  from information_schema.columns
-  where table_schema = 'public' and table_name = 'uso_socios_dia'
-    and column_name in ('visitas', 'latidos', 'ultima_visita')
+-- Se consulta `pg_catalog` y no `information_schema` a propósito: la primera
+-- versión usaba `where table_schema = ... and table_name = ...`, y al copiarla al
+-- editor de Supabase llegó partida y dio "syntax error at or near table". Menos
+-- texto y sin palabras reservadas es menos superficie para que eso pase.
+select 'columnas nuevas (esperado 3)' as comprobacion, count(*)::text as valor
+  from pg_attribute
+  where attrelid = 'public.uso_socios_dia'::regclass
+    and attname in ('visitas', 'latidos', 'ultima_visita')
+    and attnum > 0 and not attisdropped
 union all
 select 'indice de ultima visita (esperado 1)', count(*)::text
-  from pg_indexes
-  where schemaname = 'public' and indexname = 'uso_socios_ultima_visita'
+  from pg_class where relname = 'uso_socios_ultima_visita'
 union all
-select 'recuento_uso devuelve nuevos (esperado 1)', count(*)::text
-  from information_schema.routines r
-  join information_schema.parameters p on p.specific_name = r.specific_name
-  where r.routine_schema = 'public' and r.routine_name = 'recuento_uso'
-    and p.parameter_name = 'nuevos';
+select 'recuento_uso con nuevos (esperado 1)', count(*)::text
+  from pg_proc
+  where proname = 'recuento_uso'
+    and pg_get_function_result(oid) like '%nuevos%';
