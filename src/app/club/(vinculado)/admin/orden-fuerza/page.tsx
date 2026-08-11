@@ -256,10 +256,13 @@ export default async function OrdenFuerzaPage({
                         nombre={p.nombre}
                         chips={
                           <>
-                            <ChipElo valor={f.elo_oficial} etiqueta="Oficial" />
-                            {/* FIDE y FEDA solo con dato: 46 chips de "FIDE —"
-                                no dicen nada, y FEDA además está retirada. */}
-                            {p.elo_fide !== null && <ChipElo valor={p.elo_fide} etiqueta="FIDE" />}
+                            {/* Los DOS ELOs a propósito, que esta es la pantalla de
+                                gestión: el real delante ("Actual", clásicas al día) y
+                                la foto del documento detrás ("Orden de fuerza") — con
+                                sus nombres, que "Oficial" y "FIDE" a secas ya
+                                despistaron al propietario una vez. Solo con dato. */}
+                            {p.elo_fide !== null && <ChipElo valor={p.elo_fide} etiqueta="Actual" />}
+                            <ChipElo valor={f.elo_oficial} etiqueta="Orden de fuerza" />
                             {p.elo_feda !== null && <ChipElo valor={p.elo_feda} etiqueta="FEDA" />}
                           </>
                         }
