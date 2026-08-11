@@ -3,6 +3,7 @@ import {
   agruparUso,
   claveMes,
   claveSemana,
+  conUnDecimal,
   mediaConectados,
   porcentajeDelClub,
   tiempoDeUso,
@@ -150,5 +151,43 @@ describe("porcentajeDelClub", () => {
 
   it("sin cuentas no dice un porcentaje falso", () => {
     expect(porcentajeDelClub(0, 0)).toBe("—");
+  });
+});
+
+describe("activosPorDia", () => {
+  // Lunes y martes de la misma semana: ana los dos días, bea solo el martes.
+  const dias = [dia("2026-08-10"), dia("2026-08-11")];
+  const actividad = [
+    { dia: "2026-08-10", profileId: "ana" },
+    { dia: "2026-08-11", profileId: "ana" },
+    { dia: "2026-08-11", profileId: "bea" },
+  ];
+
+  it("es la media diaria, no los distintos del periodo", () => {
+    // Distintos de la semana: 2 (ana y bea). Media diaria: (1 + 2) / 2 = 1,5.
+    // Son dos preguntas distintas y las dos importan: la primera mide alcance,
+    // la segunda el pulso de cada día.
+    const g = agruparUso(dias, actividad, "semana");
+    expect(g[0].activos).toBe(2);
+    expect(g[0].activosPorDia).toBe(1.5);
+  });
+
+  it("los días sin nadie cuentan y bajan la media", () => {
+    // Se añade un miércoles vacío: (1 + 2 + 0) / 3 = 1. Saltárselo daría 1,5 y
+    // solo hablaría de los días buenos.
+    const g = agruparUso([...dias, dia("2026-08-12")], actividad, "semana");
+    expect(g[0].activosPorDia).toBe(1);
+  });
+
+  it("en el periodo día vale lo mismo que los activos", () => {
+    const g = agruparUso(dias, actividad, "dia");
+    for (const grupo of g) expect(grupo.activosPorDia).toBe(grupo.activos);
+  });
+});
+
+describe("conUnDecimal", () => {
+  it("una décima y coma, como se escribe en español", () => {
+    expect(conUnDecimal(1.5)).toBe("1,5");
+    expect(conUnDecimal(2)).toBe("2,0");
   });
 });

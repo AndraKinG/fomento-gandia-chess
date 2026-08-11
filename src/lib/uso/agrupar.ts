@@ -35,6 +35,18 @@ export type UsoAgrupado = Omit<UsoDia, "dia"> & {
   clave: string;
   /** Cuentas distintas vistas en el periodo (no la suma de los días). */
   activos: number;
+  /**
+   * Media de socios distintos que entran POR DÍA dentro del periodo.
+   *
+   * Es otra pregunta que `activos`, y las dos importan: en una semana pueden
+   * entrar 10 socios distintos (activos) siendo solo 2 al día (esto). El primero
+   * mide alcance; el segundo, el pulso diario. En el periodo "día" valen lo mismo,
+   * claro.
+   *
+   * Se divide entre TODOS los días del periodo, incluidos los que no entró nadie:
+   * saltárselos daría una media inflada que solo habla de los días buenos.
+   */
+  activosPorDia: number;
 };
 
 /** Cada latido son ~5 minutos con la pestaña delante (ver Latido.tsx). */
@@ -82,6 +94,7 @@ export function agruparUso(
     const g = grupos.get(clave) ?? {
       clave,
       activos: 0,
+      activosPorDia: 0,
       visitas: 0,
       latidos: 0,
       nuevos: 0,
@@ -107,16 +120,35 @@ export function agruparUso(
   // Los activos, aparte y con Set por periodo: la misma cuenta en dos días de
   // la misma semana cuenta una vez.
   const vistos = new Map<string, Set<string>>();
+  // Y por DÍA, que es lo que da la media diaria.
+  const porDia = new Map<string, Set<string>>();
   for (const a of actividad) {
     const clave = clavePeriodo(a.dia, periodo);
     if (!grupos.has(clave)) continue; // actividad de un día sin fila no inventa periodos
     const s = vistos.get(clave) ?? new Set<string>();
     s.add(a.profileId);
     vistos.set(clave, s);
+    const d = porDia.get(a.dia) ?? new Set<string>();
+    d.add(a.profileId);
+    porDia.set(a.dia, d);
   }
   for (const [clave, s] of vistos) {
     const g = grupos.get(clave);
     if (g) g.activos = s.size;
+  }
+
+  // La media diaria: se suman los distintos DE CADA DÍA y se divide entre los días
+  // que tiene el periodo — contando los días sin nadie, que también son días.
+  const cuantosDias = new Map<string, number>();
+  const sumaDiaria = new Map<string, number>();
+  for (const d of dias) {
+    const clave = clavePeriodo(d.dia, periodo);
+    cuantosDias.set(clave, (cuantosDias.get(clave) ?? 0) + 1);
+    sumaDiaria.set(clave, (sumaDiaria.get(clave) ?? 0) + (porDia.get(d.dia)?.size ?? 0));
+  }
+  for (const [clave, g] of grupos) {
+    const n = cuantosDias.get(clave) ?? 0;
+    g.activosPorDia = n > 0 ? (sumaDiaria.get(clave) ?? 0) / n : 0;
   }
 
   return [...grupos.values()].sort((a, b) => b.clave.localeCompare(a.clave));
@@ -166,4 +198,9 @@ export function tiempoPorSocio(latidos: number, activos: number): string {
 export function porcentajeDelClub(activos: number, cuentasVinculadas: number): string {
   if (cuentasVinculadas <= 0) return "—";
   return `${Math.round((activos / cuentasVinculadas) * 100)} %`;
+}
+
+/** Un número con una décima y coma decimal, como se escribe en español. */
+export function conUnDecimal(n: number): string {
+  return n.toFixed(1).replace(".", ",");
 }

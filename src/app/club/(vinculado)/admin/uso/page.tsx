@@ -1,12 +1,15 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Cabecera } from "@/components/ui/Cabecera";
+import { Dato } from "./Dato";
+import { EnLineaAhora } from "./EnLineaAhora";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Contenedor } from "@/components/ui/Contenedor";
 import { Pestana, Pestanas } from "@/components/ui/Pestanas";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import {
   agruparUso,
+  conUnDecimal,
   mediaConectados,
   porcentajeDelClub,
   tiempoDeUso,
@@ -148,7 +151,10 @@ export default async function UsoPage({
           <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
             El club en la app
           </h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {/* EL ÚNICO DATO EN VIVO del panel, y va primero: es lo que se mira al
+                entrar. Sale de la presencia que ya alimenta el círculo verde. */}
+            <EnLineaAhora />
             <Dato
               titulo="Cuentas creadas"
               valor={String(cuentas ?? 0)}
@@ -194,7 +200,7 @@ export default async function UsoPage({
           </div>
 
           {actual && (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               <Dato
                 titulo="Socios activos"
                 valor={String(actual.activos)}
@@ -204,6 +210,14 @@ export default async function UsoPage({
                 titulo="Nuevos"
                 valor={actual.nuevos > 0 ? `+${actual.nuevos}` : "0"}
                 nota="entran por primera vez"
+              />
+              {/* ENTRAN AL DÍA y "socios activos" son dos preguntas distintas: en
+                  una semana pueden entrar 10 socios distintos siendo 2 al día. La
+                  primera mide alcance; esta, el pulso diario. */}
+              <Dato
+                titulo="Entran al día"
+                valor={conUnDecimal(actual.activosPorDia)}
+                nota="de media"
               />
               <Dato
                 titulo="Tiempo por socio"
@@ -317,31 +331,15 @@ export default async function UsoPage({
           socio se cuenta como mucho una cada cinco horas: recargar la pantalla no
           infla el número. El <b className="font-semibold">tiempo</b> sale del latido
           de la app (cada 5 min con la pestaña delante), así que los días anteriores a
-          estrenarlo van a cero. De cada socio solo se guarda «entró tal día»: sin
-          horas ni pantallas.
+          estrenarlo van a cero. <b className="font-semibold">En línea ahora</b> no se
+          guarda en ningún sitio —dura lo que dura una pestaña abierta—, y por eso no
+          está en la tabla: de ayer no se puede saber.{" "}
+          <b className="font-semibold">Entran al día</b> es la media de socios distintos
+          por día, contando también los días en que no entró nadie. De cada socio solo
+          se guarda «entró tal día»: sin horas ni pantallas.
         </p>
       </Contenedor>
     </main>
-  );
-}
-
-function Dato({
-  titulo,
-  valor,
-  nota,
-}: {
-  titulo: string;
-  valor: string;
-  /** La línea pequeña que le da sentido al número: un dato sin referencia
-   *  ("3 activos") no dice si es bueno o malo. */
-  nota?: string;
-}) {
-  return (
-    <Tarjeta compacta>
-      <p className="text-2xl font-bold tabular-nums text-tinta">{valor}</p>
-      <p className="text-xs uppercase tracking-wide text-tinta-suave">{titulo}</p>
-      {nota && <p className="mt-0.5 text-xs text-tinta-suave">{nota}</p>}
-    </Tarjeta>
   );
 }
 
