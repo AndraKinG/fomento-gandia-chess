@@ -131,3 +131,34 @@ export async function difundirAviso(
     // Silencio a propósito: el reintento del navegador lo recogerá igual.
   }
 }
+
+/**
+ * Avisar a la pantalla de un TORNEO del club de que ha caído un resultado.
+ *
+ * Canal PÚBLICO a propósito (no lleva datos: solo "mira otra vez") y con el
+ * mismo espíritu que difundirAviso: quien lo recibe vuelve a consultar con su
+ * sesión y su RLS. Sin esto, la clasificación de un torneo en marcha solo se
+ * movía al recargar — con el club entero jugando una tarde de torneo online,
+ * la pantalla del torneo tiene que moverse sola.
+ */
+export async function difundirTorneo(tournamentId: string): Promise<void> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const clave = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !clave) return;
+
+  try {
+    await fetch(`${url}/realtime/v1/api/broadcast`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        apikey: clave,
+        Authorization: `Bearer ${clave}`,
+      },
+      body: JSON.stringify({
+        messages: [{ topic: `torneo-${tournamentId}`, event: "resultado", payload: {} }],
+      }),
+    });
+  } catch {
+    // Silencio a propósito: revalidatePath ya cubre la siguiente navegación.
+  }
+}

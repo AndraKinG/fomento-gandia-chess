@@ -14,7 +14,7 @@ import { parado, relojInicial } from "@/lib/vivo/reloj";
 import { blancasEnAmistosa } from "@/lib/vivo/colores";
 import { aPgn } from "@/lib/vivo/partida";
 import { avisar } from "@/lib/avisos/enviar";
-import { difundirAviso, difundirChat, difundirPartida } from "@/lib/vivo/difundir";
+import { difundirAviso, difundirChat, difundirPartida, difundirTorneo } from "@/lib/vivo/difundir";
 
 /**
  * Todo lo que cambia una partida en vivo.
@@ -132,7 +132,7 @@ async function cerrarEnElTorneo(
 
   const { data: ronda } = await db
     .from("club_rounds")
-    .select("numero, club_tournaments(nombre)")
+    .select("numero, tournament_id, club_tournaments(nombre)")
     .eq("id", par.round_id)
     .maybeSingle();
   const nombreTorneo =
@@ -189,6 +189,10 @@ async function cerrarEnElTorneo(
     .from("club_pairings")
     .update({ resultado: desdeBlancas, game_id: guardada?.id ?? par.game_id })
     .eq("id", par.id);
+
+  // A quien esté MIRANDO la pantalla del torneo, en vivo: el revalidate de abajo
+  // solo refresca la siguiente navegación, no al que ya la tiene delante.
+  if (ronda?.tournament_id) await difundirTorneo(ronda.tournament_id);
 
   revalidatePath("/club/jugar/torneos");
   revalidatePath("/club/jugar/torneos/ranking");

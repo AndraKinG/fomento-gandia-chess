@@ -48,6 +48,14 @@ import { useEnPartida } from "./EnPartida";
  * (`src/app/club/layout.tsx`), para que nunca puedan discrepar.
  */
 
+/** Pantallas cuyo contenido ES la lista de lo que avisan: si llega un aviso
+ *  nuevo estando en ellas, se rehacen solas. */
+const PANTALLAS_QUE_LISTAN_AVISOS = [
+  "/club/avisos",
+  "/club/solicitudes",
+  "/club/admin/vinculaciones",
+];
+
 type Aviso =
   | { tipo: "reto"; id: string; de: string; cadencia: string; color: string }
   | { tipo: "info"; id: string; texto: string };
@@ -82,6 +90,9 @@ export function Avisos({ yo, perfilId }: { yo: string; perfilId: string }) {
   const donde = useRef(pathname);
   const ir = useRef(router);
   const anotar = useRef(poner);
+  /** Avisos sin leer del repaso anterior: para refrescar la pantalla SOLO cuando
+   *  llegan nuevos, no cuando se marcan leídos. */
+  const sinLeerAntes = useRef(0);
   // Mismo motivo que los de arriba: hace falta el valor FRESCO de `enPartida`
   // dentro del efecto sin meterlo en sus dependencias (ver el comentario del
   // `useEffect` de más abajo). Se lee en las dos navegaciones a una mesa
@@ -141,6 +152,22 @@ export function Avisos({ yo, perfilId }: { yo: string; perfilId: string }) {
       // el layout como valor de partida, así que no pueden discrepar de las
       // tarjetas ni de la bandeja de `/club/avisos`.
       anotar.current({ retos: (paraMi ?? []).length, avisos: sinLeer ?? 0 });
+
+      // SI LLEGAN AVISOS NUEVOS Y ESTÁS EN UNA PANTALLA QUE LISTA ESO, la
+      // pantalla se rehace sola. Sin esto, al admin le sonaba la tarjeta de "hay
+      // una solicitud" mientras miraba la propia página de solicitudes... y la
+      // lista seguía sin la solicitud hasta recargar a mano (pregunta literal
+      // del propietario: "¿debo recargar?"). Solo al AUMENTAR el número — al
+      // marcar leídos baja, y refrescar entonces sería un parpadeo por nada — y
+      // solo en pantallas de lista, nunca sobre una partida.
+      const sinLeerAhora = sinLeer ?? 0;
+      if (
+        sinLeerAhora > sinLeerAntes.current &&
+        PANTALLAS_QUE_LISTAN_AVISOS.some((ruta) => donde.current.startsWith(ruta))
+      ) {
+        ir.current.refresh();
+      }
+      sinLeerAntes.current = sinLeerAhora;
 
       // NOVEDAD ES TAMBIÉN QUE ALGO DESAPAREZCA, y esto es lo que faltaba: al
       // cancelar un reto, al retado le llegaba el mensaje pero la tarjeta de la

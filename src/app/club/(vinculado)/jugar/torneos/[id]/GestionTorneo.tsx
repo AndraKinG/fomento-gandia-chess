@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { clienteEnVivo } from "@/lib/supabase/vivo";
 import Link from "next/link";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Boton } from "@/components/ui/Boton";
@@ -73,6 +74,30 @@ export function GestionTorneo({
       router.refresh();
     });
   }
+
+  /**
+   * EL TORNEO EN DIRECTO: cuando una partida en vivo termina, el servidor
+   * difunde al canal `torneo-<id>` (cerrarEnElTorneo) y esta pantalla se rehace
+   * sola — resultados y clasificación al momento, sin recargar. Sin esto, con
+   * el club jugando una tarde de torneo online, quien miraba la clasificación
+   * la veía congelada. Canal público sin datos: solo "mira otra vez".
+   */
+  useEffect(() => {
+    let cerrar: (() => void) | null = null;
+    let cancelado = false;
+    void clienteEnVivo().then(({ supabase }) => {
+      if (cancelado) return;
+      const canal = supabase
+        .channel(`torneo-${tournamentId}`)
+        .on("broadcast", { event: "resultado" }, () => router.refresh())
+        .subscribe();
+      cerrar = () => void supabase.removeChannel(canal);
+    });
+    return () => {
+      cancelado = true;
+      cerrar?.();
+    };
+  }, [tournamentId, router]);
 
   const inscritos = socios.filter((s) => s.inscrito);
   const faltanResultados = rondas.some((r) => r.pares.some((p) => p.resultado === null));
