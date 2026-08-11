@@ -78,17 +78,12 @@ async function poner() {
     );
   }
 
-  // ELO de partida: el oficial de cada uno, como hace la app al inscribir.
-  const { data: orden } = await db
-    .from("force_order")
-    .select("player_id, elo_oficial")
-    .in("player_id", [yo.id, rival.id]);
-  const elo = new Map((orden ?? []).map((f) => [f.player_id, f.elo_oficial ?? 1500]));
-
+  // ELO de partida: 1000 para todos, como hace la app al inscribir (decisión
+  // del propietario, 2026-08-11 — ver ELO_POR_DEFECTO en src/lib/club/elo.ts).
   comprobar(
     await db.from("club_tournament_players").insert([
-      { tournament_id: torneo.id, player_id: yo.id, elo_inicial: elo.get(yo.id) ?? 1500 },
-      { tournament_id: torneo.id, player_id: rival.id, elo_inicial: elo.get(rival.id) ?? 1500 },
+      { tournament_id: torneo.id, player_id: yo.id, elo_inicial: 1000 },
+      { tournament_id: torneo.id, player_id: rival.id, elo_inicial: 1000 },
     ])
   );
 

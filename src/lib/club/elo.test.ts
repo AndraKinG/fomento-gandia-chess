@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   ELO_POR_DEFECTO,
   esperado,
-  eloInicial,
   factorK,
   nuevoElo,
   recalcular,
@@ -40,22 +39,13 @@ describe("factorK", () => {
   });
 });
 
-describe("eloInicial", () => {
-  it("arranca del ELO oficial más alto y no de 1500", () => {
-    // En un club la fuerza ya se conoce: empezar todos en 1500 daria un ranking
-    // absurdo durante meses.
-    expect(eloInicial({ eloFacv: 1850, eloFide: 1800, eloFeda: 1820 })).toBe(1850);
-  });
-
-  it("ignora los que faltan o son cero", () => {
-    expect(eloInicial({ eloFacv: null, eloFide: 1700, eloFeda: 0 })).toBe(1700);
-  });
-
-  it("sin ningún oficial, el de por defecto", () => {
-    expect(eloInicial({})).toBe(ELO_POR_DEFECTO);
-    expect(eloInicial({ eloFacv: null, eloFide: null, eloFeda: null })).toBe(
-      ELO_POR_DEFECTO
-    );
+describe("el ELO de salida", () => {
+  it("todos empiezan en 1000 (decisión del propietario, 2026-08-11)", () => {
+    // Antes se arrancaba del ELO oficial de cada uno (existía `eloInicial`, con
+    // su max entre federaciones). Se quitó entera: el ranking interno es mérito
+    // dentro del club, y este test existe para que a nadie le parezca buena idea
+    // volver a enchufar el oficial sin pasar por el propietario.
+    expect(ELO_POR_DEFECTO).toBe(1000);
   });
 });
 

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { sesionActual } from "@/lib/auth/sesion";
-import { eloInicial } from "@/lib/club/elo";
+import { ELO_POR_DEFECTO } from "@/lib/club/elo";
 import {
   calendarioLiguilla,
   emparejarSuizo,
@@ -102,23 +102,10 @@ export async function cambiarInscripcion(
     if (error) return { error: error.message };
   } else {
     // El ELO de partida: el oficial más alto que tenga, o el de por defecto.
-    const { data: jugador } = await supabase
-      .from("players")
-      .select("elo_fide, elo_feda, elo_otro")
-      .eq("id", playerId)
-      .single();
-    const { data: fo } = await supabase
-      .from("force_order")
-      .select("elo_oficial, seasons!inner(activa)")
-      .eq("player_id", playerId)
-      .eq("seasons.activa", true)
-      .maybeSingle();
-
-    const elo = eloInicial({
-      eloFacv: fo?.elo_oficial ?? null,
-      eloFide: jugador?.elo_fide ?? null,
-      eloFeda: jugador?.elo_feda ?? null,
-    });
+    // TODOS ARRANCAN EN 1000 (decisión del propietario, 2026-08-11): el ranking
+    // interno es mérito dentro del club, no un espejo del ELO de fuera. Antes se
+    // consultaba aquí el oficial de cada uno; ver el comentario de ELO_POR_DEFECTO.
+    const elo = ELO_POR_DEFECTO;
 
     const { error } = await supabase
       .from("club_tournament_players")

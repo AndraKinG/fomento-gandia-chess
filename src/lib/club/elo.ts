@@ -13,14 +13,16 @@
 export type Resultado = "1" | "0.5" | "0";
 
 /**
- * ELO de partida para quien no tiene ninguno todavía.
+ * TODOS EMPIEZAN EN 1000 (decisión del propietario, 2026-08-11).
  *
- * Solo se usa como último recurso: lo normal es **arrancar del ELO oficial**
- * (FACV/FIDE/FEDA) con `eloInicial`, porque en un club la fuerza de cada uno ya
- * se conoce y empezar a todos en 1500 daría un ranking absurdo durante meses
- * mientras converge.
+ * Antes se arrancaba del ELO oficial de cada uno, con el argumento de que "la
+ * fuerza ya se conoce". El propietario decidió lo contrario, y tiene su lógica:
+ * el ranking interno es 100% mérito DENTRO del club, sin arrastrar el nivel de
+ * fuera — y con el factor K provisional (40 las primeras 15 partidas) los
+ * fuertes suben rápido igual. Se cambió cuando no había ningún torneo interno
+ * en la base, así que no reescribió la historia de nadie.
  */
-export const ELO_POR_DEFECTO = 1500;
+export const ELO_POR_DEFECTO = 1000;
 
 /**
  * Factor K: cuánto se mueve el ELO por partida.
@@ -36,22 +38,6 @@ export const PARTIDAS_PROVISIONALES = 15;
 
 export function factorK(partidasJugadas: number): number {
   return partidasJugadas < PARTIDAS_PROVISIONALES ? K_PROVISIONAL : K_ASENTADO;
-}
-
-/**
- * ELO de partida de un jugador: el oficial si se conoce, y si no el de por
- * defecto. `max` entre las federaciones por el mismo criterio que ya usa el
- * validador para la fuerza (RGC art. 52.1).
- */
-export function eloInicial(oficiales: {
-  eloFacv?: number | null;
-  eloFide?: number | null;
-  eloFeda?: number | null;
-}): number {
-  const candidatos = [oficiales.eloFacv, oficiales.eloFide, oficiales.eloFeda].filter(
-    (e): e is number => typeof e === "number" && e > 0
-  );
-  return candidatos.length > 0 ? Math.max(...candidatos) : ELO_POR_DEFECTO;
 }
 
 /**
