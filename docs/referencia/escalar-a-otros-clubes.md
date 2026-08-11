@@ -90,3 +90,103 @@ son bastantes.
 La trampa a evitar: meter `club_id` "por si acaso" ahora. Duplicaría el coste de
 cada pantalla nueva durante meses para una demanda que aún no existe, y si el
 SaaS llega, se hará mejor sabiendo lo aprendido de las franquicias.
+
+---
+
+# ¿Es rentable? (análisis del 2026-08-12, a petición del propietario)
+
+**No lo he preguntado por encima: los números están medidos.** Y la conclusión es
+que como negocio de suscripción NO sale, pero hay dos formas en las que esto sí
+vale dinero.
+
+## El mercado, medido
+
+**114 clubes** en el desplegable de la FACV (contado ese día contra su web).
+Realistamente activos y con Interclubs, menos: pongamos 60-80. De esos, los que
+tendrían a alguien capaz de mantener la ilusión de usar una app nueva: menos aún.
+
+**Cuánto puede pagar un club de ajedrez**: son asociaciones sin ánimo de lucro
+con presupuestos de 2.000-10.000 €/año, casi todo de cuotas de socio (30-60 €) y
+alguna subvención municipal. Las licencias federativas se llevan la mayor parte.
+**El software no está en su presupuesto**: hoy tiran de WhatsApp, Excel y un
+Wordpress gratis, y les funciona "suficientemente bien".
+
+Tarifa creíble: **10-25 €/mes** por club (120-300 €/año). Por encima de eso, la
+junta dice no sin pensarlo.
+
+## Los costes, en serio
+
+| Concepto | Coste anual |
+| --- | --- |
+| Supabase Pro (25 $/mes) | ~300 € |
+| Vercel Pro (20 $/mes) | ~240 € |
+| Gemini de pago (uso real bajo) | 100-250 € |
+| Dominio | ~15 € |
+| **Infraestructura** | **~700-800 €** |
+| **Cuota de autónomos**, 1er año (tarifa plana ~80 €/mes) | **~960 €** |
+| **Cuota de autónomos**, después (tramo mínimo) | **~2.400-2.800 €** |
+| Gestor (opcional pero recomendable) | 300-600 € |
+
+**Ahí está el problema, y es aritmética simple**: pasado el primer año, la cuota
+de autónomos sola (~2.500 €) exige **más de 12 clubes pagando 200 €/año** solo
+para no perder dinero. Sumando infraestructura y gestor: **~20 clubes para
+empezar a ganar algo**. Eso es una cuarta parte de todos los clubes activos de
+la Comunitat — una cuota de mercado que ni el software bueno consigue.
+
+Y falta el coste que no se factura: **el soporte**. Con 20 clubes, cada juntero
+llama a Joan. Dos-cuatro horas semanales de atender gente ⇒ el "beneficio" se
+convierte en un sueldo por debajo del mínimo.
+
+## Donde SÍ hay dinero
+
+1. **Vender a la FACV, no a los clubes.** Un cliente institucional, con
+   presupuesto, que resuelve el problema de sus 114 clubes de golpe. Un contrato
+   de 1.000-3.000 €/año (o un desarrollo cerrado a medida) sin infierno de
+   soporte por club. **Es la única forma con forma de negocio de verdad**, y de
+   paso la app ya habla su idioma: importa de su web y de chess-results.
+2. **Como carta de presentación profesional.** Una PWA con tiempo real, IA,
+   motor de ajedrez, RLS auditada y 750 tests, en producción y usada por gente
+   real, vale más en una entrevista o para conseguir clientes de freelance que
+   2.400 €/año de suscripciones. Ese es el retorno realista y ya está cobrado.
+3. **Cobrar la instalación, no el uso.** En modo franquicia el club paga SUS
+   cuentas (Supabase/Vercel gratis a su nombre) y Joan factura la puesta en
+   marcha: 200-400 € una vez, sin compromiso recurrente ni soporte perpetuo.
+
+## ¿Autónomo?
+
+**Para 2-3 clubes amigos: no.** Es matar moscas a cañonazos — 2.500 €/año de
+cuota para ingresar 600 €. Si son clubes conocidos, franquicia con cada uno en
+sus propias cuentas gratuitas y sin cobrar: cero papeles, cero riesgo.
+
+**Sí hace falta darse de alta** en cuanto haya facturación habitual (y para
+facturar hay que estar de alta en Hacienda, modelo 036/037; la creencia de que
+"por debajo del SMI no hace falta" NO es una regla legal fiable). Con la tarifa
+plana de nuevo autónomo el primer año duele poco.
+
+**Esto lo resuelve un gestor por 50-80 €** y con la respuesta exacta para el caso
+concreto y el año en curso, que es lo que hay que hacer antes de facturar el
+primer euro. Yo no soy asesor fiscal y los tramos cambian cada año.
+
+## Dos cosas legales que revisar ANTES de cobrar a alguien
+
+1. **Stockfish es GPLv3** y se sirve al navegador (eso es distribución). Hoy va
+   como programa aparte, sin modificar, con su licencia al lado y hablándole por
+   mensajes UCI — que es la postura defendible. Comercializar cambia el nivel de
+   exigencia: hay que ofrecer su fuente y la licencia. **Pregunta para un abogado
+   si se cobra.** (Las piezas SVG son MIT/Apache: sin problema comercial.)
+2. **Datos de terceros.** Cobrando a otros clubes, Joan pasa a ser encargado de
+   tratamiento de los datos de SUS socios —fotos y menores incluidos— con
+   contrato de encargo, consentimientos y responsabilidad. Gratis y entre amigos
+   es un favor; cobrando es una obligación con firma.
+
+## Recomendación honesta
+
+**No montes un SaaS de clubes de ajedrez.** El mercado es pequeño, pobre y con
+alternativas gratuitas "suficientes", y la cuota de autónomos se come el margen
+antes de empezar.
+
+**Sí**: franquicia gratis a 2-3 clubes conocidos (coste cero, reputación, y
+aprendes qué piden), y con eso en la mano **llamar a la FACV**. Si la federación
+lo quiere, ahí hay un proyecto con dinero y un solo interlocutor. Y si no lo
+quiere, has perdido una llamada y sigues teniendo la mejor pieza de portfolio que
+un desarrollador junior puede llevar encima.
