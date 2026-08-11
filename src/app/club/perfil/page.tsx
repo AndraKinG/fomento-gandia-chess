@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { sesionActual } from "@/lib/auth/sesion";
 import { ActivarNotificaciones } from "@/components/PushSubscriber";
+import { InstalarApp } from "@/components/InstalarApp";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
@@ -221,6 +222,11 @@ export default async function PerfilPage() {
             ancho, una de ellas en degradado, que pesaban más que la propia ficha. */}
         <Tarjeta className="flex flex-col gap-3">
           <p className="text-sm font-semibold text-tinta">Ajustes</p>
+          {/* Instalar va JUNTO a las notificaciones y antes que ellas: en iPhone
+              no hay avisos hasta que la app está en la pantalla de inicio, así
+              que este es el orden en que hay que hacer las dos cosas. Se
+              esconde solo cuando ya está instalada. */}
+          <InstalarApp compacto />
           <div className="flex flex-wrap items-center gap-2">
             <ThemeToggle />
             <ActivarNotificaciones />

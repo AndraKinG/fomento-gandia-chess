@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sin conexión · Fomento de Gandia</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: 2rem;
+        background: #f2f7fc;
+        color: #16283c;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        text-align: center;
+      }
+      .caja { max-width: 24rem; }
+      h1 { font-size: 1.25rem; margin: 0 0 0.5rem; }
+      p { margin: 0; color: #556577; line-height: 1.5; }
+      @media (prefers-color-scheme: dark) {
+        body { background: #0a1628; color: #e7eef7; }
+        p { color: #9fb3c8; }
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      Página de "no hay red". Existe por DOS motivos, y el segundo es el que
+      importaba: (1) que quien pierda cobertura vea algo con sentido en vez del
+      dinosaurio del navegador, y (2) porque Chrome EXIGE que la app responda algo
+      estando sin conexión para considerarla instalable — sin esto, el aviso de
+      "instalar la app" NUNCA aparecía en Android (lo descubrimos el 2026-08-12,
+      cuando el primer socio de prueba dijo que no le había salido).
+    -->
+    <div class="caja">
+      <h1>Sin conexión</h1>
+      <p>
+        No hay internet ahora mismo. Vuelve a intentarlo cuando tengas cobertura:
+        la app funciona igual, solo necesita red para hablar con el club.
+      </p>
+    </div>
+  </body>
+</html>

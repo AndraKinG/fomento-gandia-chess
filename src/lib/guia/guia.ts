@@ -114,6 +114,7 @@ export const GUIA: readonly SeccionGuia[] = [
     puntos: [
       "Retos, resultados y novedades, con su enlace",
       "Notificaciones en el móvil si las activas en el perfil",
+      "En iPhone hay que instalar la app antes para recibirlas",
     ],
   },
   {

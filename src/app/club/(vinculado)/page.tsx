@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { InstalarApp } from "@/components/InstalarApp";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { nombreDePila, sesionActual } from "@/lib/auth/sesion";
 import { formatearFechaMadrid } from "@/lib/fecha-madrid";
@@ -320,6 +321,10 @@ export default async function Home() {
         medida="panel"
       />
       <Contenedor medida="panel" className="space-y-4">
+        {/* INSTALAR LA APP, en Inicio: es donde aterriza un socio nuevo, y a
+            Perfil no va a entrar el primer día. Se esconde solo en cuanto está
+            instalada, así que no molesta a nadie dos veces. */}
+        <InstalarApp />
         {!playerId && !pendiente && (
           <Banner tipo="aviso">
             Aún no estás vinculado a tu ficha del club →{" "}
