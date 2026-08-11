@@ -16,16 +16,27 @@ import { Banner } from "@/components/ui/Banner";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { Contenedor } from "@/components/ui/Contenedor";
 import { BotonAccion } from "@/components/ui/BotonAccion";
+import { Pestana, Pestanas } from "@/components/ui/Pestanas";
 
 const CAMPO =
   "rounded-xl border border-borde bg-tarjeta p-3 text-tinta placeholder:text-tinta-suave";
 
-function volver(resultado: { ok?: string; error?: string }): never {
+/** Vuelve a la pantalla con el mensaje, y A LA PESTAÑA del equipo que se estaba
+ *  tocando: sin `equipo`, cualquier acción sobre el B te devolvía al A. */
+function volver(resultado: { ok?: string; error?: string }, equipoId?: string): never {
   const params = new URLSearchParams({
     msg: resultado.ok ?? resultado.error ?? "",
     tipo: resultado.ok ? "ok" : "error",
   });
+  if (equipoId) params.set("equipo", equipoId);
   redirect(`/club/admin/equipos?${params.toString()}`);
+}
+
+/** Etiqueta corta para la pestaña: "Equipo A/B/C". El nombre completo ya está en
+ *  la tarjeta de abajo, y tres nombres de club enteros no caben en un móvil. */
+function etiquetaEquipo(nombre: string): string {
+  const m = nombre.trim().match(/ ([B-Z])$/);
+  return `Equipo ${m ? m[1] : "A"}`;
 }
 
 function ChipMargen({ margenElo }: { margenElo: number | null }) {
@@ -40,9 +51,9 @@ function ChipMargen({ margenElo }: { margenElo: number | null }) {
 export default async function EquiposPage({
   searchParams,
 }: {
-  searchParams: Promise<{ msg?: string; tipo?: string }>;
+  searchParams: Promise<{ msg?: string; tipo?: string; equipo?: string }>;
 }) {
-  const { msg, tipo } = await searchParams;
+  const { msg, tipo, equipo } = await searchParams;
   const supabase = await createServerSupabase();
 
   const { data: season } = await supabase
@@ -252,105 +263,110 @@ export default async function EquiposPage({
         {(equipos ?? []).length === 0 ? (
           <EstadoVacio titulo="Todavía no hay equipos" detalle="Da de alta el primero con el formulario de arriba." />
         ) : (
-          (equipos ?? []).map((eq, indice) => {
+          (() => {
+            // UNA PESTAÑA POR EQUIPO Y SOLO EL ELEGIDO EN PANTALLA (petición del
+            // propietario): los tres acordeones estiraban la página y obligaban a
+            // plegar y desplegar. Mismo patrón que Torneos y Datos de uso; la
+            // primera pestaña es la URL limpia, mismo estado = misma dirección.
+            const lista = equipos ?? [];
+            const eq = lista.find((e) => e.id === equipo) ?? lista[0];
             const capitanes = (eq.team_captains ?? []) as unknown as {
               player_id: string;
               players: { nombre: string } | null;
             }[];
             const yaCapitanes = new Set(capitanes.map((c) => c.player_id));
             const disponibles = (fichas ?? []).filter((f) => !yaCapitanes.has(f.id));
+            const propiasJornadas = jornadasPorEquipo.get(eq.id) ?? [];
 
             return (
-              <details
-                key={eq.id}
-                open={indice === 0}
-                className="group overflow-hidden rounded-2xl border border-borde bg-tarjeta shadow-sm"
-              >
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-4">
-                  <div className="flex min-w-0 flex-1 items-start justify-between gap-2">
+              <>
+                <Pestanas>
+                  {lista.map((e, i) => (
+                    <Pestana
+                      key={e.id}
+                      href={i === 0 ? "/club/admin/equipos" : `/club/admin/equipos?equipo=${e.id}`}
+                      activa={e.id === eq.id}
+                    >
+                      {etiquetaEquipo(e.nombre)}
+                    </Pestana>
+                  ))}
+                </Pestanas>
+
+                <div className="overflow-hidden rounded-2xl border border-borde bg-tarjeta shadow-sm">
+                  <div className="flex items-start justify-between gap-2 p-4">
                     <div className="min-w-0">
                       <p className="truncate font-semibold text-tinta">{eq.nombre}</p>
-                      <p className="text-sm text-tinta-suave">{eq.categoria}</p>
+                      <p className="text-sm text-tinta-suave">
+                        {eq.categoria} · {eq.num_tableros} tableros
+                      </p>
                     </div>
                     <ChipMargen margenElo={eq.margen_elo} />
                   </div>
-                  <span
-                    aria-hidden
-                    className="shrink-0 text-tinta-suave transition-transform group-open:rotate-180"
-                  >
-                    ▾
-                  </span>
-                </summary>
 
-                <div className="flex flex-col gap-3 border-t border-borde px-4 pb-4 pt-3">
-                <p className="text-xs text-tinta-suave">{eq.num_tableros} tableros</p>
-
-                <div className="flex flex-col gap-1.5">
-                  {capitanes.length === 0 ? (
-                    <p className="text-sm text-tinta-suave">Sin capitán asignado</p>
-                  ) : (
-                    capitanes.map((c) => (
-                      <div
-                        key={c.player_id}
-                        className="flex items-center justify-between rounded-xl bg-tarjeta-suave px-3 py-1.5"
-                      >
-                        <span className="text-sm text-tinta">
-                          {c.players?.nombre ?? "—"} · capitán
-                        </span>
-                        <form
-                          action={async () => {
-                            "use server";
-                            volver(await quitarCapitan(eq.id, c.player_id));
-                          }}
-                        >
-                          <button
-                            type="submit"
-                            aria-label="Quitar capitán"
-                            className="text-tinta-suave hover:text-tinta"
+                  <div className="flex flex-col gap-3 border-t border-borde px-4 pb-4 pt-3">
+                    <div className="flex flex-col gap-1.5">
+                      {capitanes.length === 0 ? (
+                        <p className="text-sm text-tinta-suave">Sin capitán asignado</p>
+                      ) : (
+                        capitanes.map((c) => (
+                          <div
+                            key={c.player_id}
+                            className="flex items-center justify-between rounded-xl bg-tarjeta-suave px-3 py-1.5"
                           >
-                            ✕
-                          </button>
-                        </form>
-                      </div>
-                    ))
-                  )}
-                </div>
+                            <span className="text-sm text-tinta">
+                              {c.players?.nombre ?? "—"} · capitán
+                            </span>
+                            <form
+                              action={async () => {
+                                "use server";
+                                volver(await quitarCapitan(eq.id, c.player_id), eq.id);
+                              }}
+                            >
+                              <button
+                                type="submit"
+                                aria-label="Quitar capitán"
+                                className="text-tinta-suave hover:text-tinta"
+                              >
+                                ✕
+                              </button>
+                            </form>
+                          </div>
+                        ))
+                      )}
+                    </div>
 
-                {disponibles.length > 0 && (
-                  <form
-                    action={async (formData: FormData) => {
-                      "use server";
-                      const playerId = String(formData.get("playerId") ?? "");
-                      volver(await nombrarCapitan(eq.id, playerId));
-                    }}
-                    className="flex gap-2"
-                  >
-                    <select name="playerId" required className={`min-w-0 flex-1 ${CAMPO}`}>
-                      <option value="">Elige una ficha…</option>
-                      {disponibles.map((f) => (
-                        <option key={f.id} value={f.id}>{f.nombre}</option>
-                      ))}
-                    </select>
-                    <button className="rounded-xl bg-acento-fuerte px-3 py-1.5 text-sm font-medium text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]">
-                      Nombrar capitán
-                    </button>
-                  </form>
-                )}
+                    {disponibles.length > 0 && (
+                      <form
+                        action={async (formData: FormData) => {
+                          "use server";
+                          const playerId = String(formData.get("playerId") ?? "");
+                          volver(await nombrarCapitan(eq.id, playerId), eq.id);
+                        }}
+                        className="flex gap-2"
+                      >
+                        <select name="playerId" required className={`min-w-0 flex-1 ${CAMPO}`}>
+                          <option value="">Elige una ficha…</option>
+                          {disponibles.map((f) => (
+                            <option key={f.id} value={f.id}>{f.nombre}</option>
+                          ))}
+                        </select>
+                        <button className="rounded-xl bg-acento-fuerte px-3 py-1.5 text-sm font-medium text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]">
+                          Nombrar capitán
+                        </button>
+                      </form>
+                    )}
 
-                <form
-                  action={async () => {
-                    "use server";
-                    volver(await eliminarEquipo(eq.id));
-                  }}
-                >
-                  <button className="text-xs text-tinta-suave underline underline-offset-2 hover:text-tinta">
-                    Eliminar equipo
-                  </button>
-                </form>
+                    <form
+                      action={async () => {
+                        "use server";
+                        volver(await eliminarEquipo(eq.id));
+                      }}
+                    >
+                      <button className="text-xs text-tinta-suave underline underline-offset-2 hover:text-tinta">
+                        Eliminar equipo
+                      </button>
+                    </form>
 
-                {(() => {
-                  const propiasJornadas = jornadasPorEquipo.get(eq.id) ?? [];
-                  return (
                     <div className="flex flex-col gap-2 border-t border-borde pt-3">
                       <p className="text-sm font-medium text-tinta">Jornadas</p>
                       {propiasJornadas.length === 0 ? (
@@ -391,7 +407,7 @@ export default async function EquiposPage({
                           action={async (formData: FormData) => {
                             "use server";
                             formData.set("team_id", eq.id);
-                            volver(await crearJornada(formData));
+                            volver(await crearJornada(formData), eq.id);
                           }}
                           className="mt-3 flex flex-col gap-2"
                         >
@@ -413,12 +429,11 @@ export default async function EquiposPage({
                         </form>
                       </details>
                     </div>
-                  );
-                })()}
+                  </div>
                 </div>
-              </details>
+              </>
             );
-          })
+          })()
         )}
       </Contenedor>
     </main>
