@@ -196,6 +196,22 @@ export default async function PerfilPage() {
           </Tarjeta>
         )}
 
+        {/* La guía de la app. Desde el perfil y no desde la navegación: se mira al
+            llegar y de tarde en tarde, no cada día. */}
+        <Link href="/club/perfil/guia" className="block">
+          <Tarjeta className="flex items-center justify-between gap-3 transition hover:border-borde-acento">
+            <div>
+              <p className="font-semibold text-tinta">¿Qué puedes hacer aquí?</p>
+              <p className="text-sm text-tinta-suave">
+                La app, sección a sección
+              </p>
+            </div>
+            <span aria-hidden className="text-lg text-tinta-suave">
+              →
+            </span>
+          </Tarjeta>
+        </Link>
+
         {/* Los tres ajustes juntos en una tarjeta. Sueltos eran tres barras a todo lo
             ancho, una de ellas en degradado, que pesaban más que la propia ficha. */}
         <Tarjeta className="flex flex-col gap-3">

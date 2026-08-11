@@ -61,10 +61,18 @@ describe("instrucciones", () => {
 
   it("conoce las secciones de la app, para guiar y no negar lo que existe", () => {
     // Llegó a decir "de bases de datos de partidas no dispongo" cuando la app
-    // tiene un repositorio entero de partidas.
+    // tiene un repositorio entero de partidas. El mapa sale de la guía
+    // compartida (src/lib/guia), la misma que ve la pantalla del perfil.
     const t = instrucciones(SOCIO, DIA);
-    expect(t).toContain("Partidas: repositorio compartido");
+    expect(t).toContain("Partidas: El repositorio compartido");
     expect(t).toContain("NUNCA digas que no tienes datos de algo sin haberlo consultado");
+  });
+
+  it("el mapa se recorta al rango: al socio no le menciona la administración", () => {
+    // Lo que el modelo no ve, no lo puede mencionar ni explicar — el mismo
+    // principio que el filtrado de herramientas.
+    expect(instrucciones(SOCIO, DIA)).not.toContain("Administración:");
+    expect(instrucciones({ ...SOCIO, esAdmin: true }, DIA)).toContain("Administración:");
   });
 
   it("le da los días ya calculados y le prohíbe deducirlos", () => {

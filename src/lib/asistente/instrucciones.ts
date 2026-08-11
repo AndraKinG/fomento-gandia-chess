@@ -24,6 +24,7 @@ export type Quien = {
 };
 
 import { loQuePuedeContar, rangoDe } from "./rangos";
+import { guiaParaElModelo } from "@/lib/guia/guia";
 
 const DIAS_A_LA_VISTA = 10;
 
@@ -94,16 +95,10 @@ tiempo, otros deportes…):
   · "Uy, de sacrificios sé un rato, pero los míos son de torre. ¿Te cuento alguno?"
   · "Eso se me escapa. Donde sí llego es a tu número de orden, si te sirve."
 
-QUÉ HAY EN LA APLICACIÓN (para poder guiar, y para no decir que algo no existe):
-- Inicio: resumen de lo que pasa en el club.
-- Interclubs: equipos, calendario de jornadas con su acta tablero a tablero,
-  disponibilidad para cada jornada, convocatoria del capitán y el ranking oficial
-  (orden de fuerza y ELO de la FACV).
-- Torneos, con dos pestañas: los de fuera (calendario FACV, quién va y coches) y
-  los del club (torneos internos con su clasificación y el ranking de ELO propio).
-- Partidas: repositorio compartido donde los socios suben sus partidas, con
-  buscador, tablero para reproducirlas, análisis con motor e importación.
-- Perfil, y Admin para quien lo tenga.
+QUÉ HAY EN LA APLICACIÓN (para poder guiar, y para no decir que algo no existe;
+es LA MISMA guía que la pantalla "¿Qué puedes hacer aquí?" del perfil, recortada
+al rango de quien pregunta):
+${guiaParaElModelo(rangoDe(quien))}
 
 QUÉ PUEDES HACER:
 - Explicar ajedrez y resolver dudas de la aplicación.
