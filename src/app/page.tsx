@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { Escudo } from "@/components/ui/Escudo";
 
 /**
@@ -60,6 +61,24 @@ export default function PaginaPublica() {
           </div>
         </div>
       </header>
+
+      {/* EL LOGO OFICIAL DEL CLUB (2026-08-11): el Puente del Fomento de Gandia
+          construido con piezas de ajedrez. Va aquí, grande y en la portada, y NO
+          como icono de la PWA: es un cartel con texto y detalle, y a tamaño de
+          icono sería una mancha — para eso está el escudo redondo de siempre.
+          OJO: el fichero vive en /logo-club.jpg, NUNCA bajo /club/... — ese
+          prefijo es la zona de socios y el proxy manda la petición al login
+          (pasó: el optimizador de imágenes recibía el HTML del login). */}
+      <section className="mx-auto max-w-3xl px-6 pt-12">
+        <Image
+          src="/logo-club.jpg"
+          alt="Logo del Club de Ajedrez Fomento Gandia: el Puente del Fomento construido con piezas de ajedrez"
+          width={1128}
+          height={712}
+          className="w-full rounded-2xl border border-borde shadow-sm"
+          priority
+        />
+      </section>
 
       <section className="mx-auto max-w-3xl px-6 py-12">
         <h2 className="text-2xl font-bold text-tinta">Competimos todo el año</h2>
