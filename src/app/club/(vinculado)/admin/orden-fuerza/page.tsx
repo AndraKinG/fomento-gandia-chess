@@ -124,89 +124,7 @@ export default async function OrdenFuerzaPage({
             Sincronizar con la FACV
           </BotonAccion>
         </form>
-        {orden && orden.length > 0 ? (
-          // EN DOS COLUMNAS desde lg, como su gemela de socios: 46 filas en una
-          // sola columna es la pantalla corriendo hacia abajo sin techo, que es
-          // justo lo que la regla de "usar el ancho" vino a quitar.
-          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-x-4">
-            {partirEnDos(orden).map((trozo, n) => (
-              <ol key={n} className="space-y-2">
-                {trozo.map((f) => {
-                  const p = f.players as unknown as {
-                    nombre: string; elo_fide: number | null; elo_feda: number | null;
-                  };
-                  return (
-                    <li key={`${f.numero}-${f.bis_index}`}>
-                      <FilaJugadorOF
-                        numero={f.numero}
-                        bisIndex={f.bis_index}
-                        nombre={p.nombre}
-                        chips={
-                          <>
-                            <ChipElo valor={f.elo_oficial} etiqueta="Oficial" />
-                            <ChipElo valor={p.elo_fide} etiqueta="FIDE" />
-                            <ChipElo valor={p.elo_feda} etiqueta="FEDA" />
-                          </>
-                        }
-                      />
-                    </li>
-                  );
-                })}
-              </ol>
-            ))}
-          </div>
-        ) : null}
-        {nombresSinFicha.length > 0 && (
-          <Banner tipo="aviso">
-            <p className="font-semibold">
-              {nombresSinFicha.length === 1
-                ? "Un jugador del acta no tiene ficha en el club"
-                : `${nombresSinFicha.length} jugadores del acta no tienen ficha en el club`}
-            </p>
-            <ul className="mt-1 list-disc space-y-0.5 pl-4 text-sm">
-              {nombresSinFicha.map((n) => (
-                <li key={n}>{n}</li>
-              ))}
-            </ul>
-            <p className="mt-2 text-sm">
-              Si acaban de entrar, sincroniza el orden de fuerza. Si ya están, revisa
-              cómo está escrito el nombre en su ficha.
-            </p>
-          </Banner>
-        )}
 
-        <form action={accionSincronizar}>
-          {/* Esto descarga y parsea una página de la FACV: los segundos que tarda
-              tienen que verse, o parece que el botón no ha hecho nada. */}
-          <BotonAccion trabajando="Consultando la web de la FACV…" className="w-full">
-            Sincronizar con la FACV
-          </BotonAccion>
-        </form>
-        {orden && orden.length > 0 ? (
-          <ol className="space-y-2">
-            {orden.map((f) => {
-              const p = f.players as unknown as {
-                nombre: string; elo_fide: number | null; elo_feda: number | null;
-              };
-              return (
-                <li key={`${f.numero}-${f.bis_index}`}>
-                  <FilaJugadorOF
-                    numero={f.numero}
-                    bisIndex={f.bis_index}
-                    nombre={p.nombre}
-                    chips={
-                      <>
-                        <ChipElo valor={f.elo_oficial} etiqueta="Oficial" />
-                        <ChipElo valor={p.elo_fide} etiqueta="FIDE" />
-                        <ChipElo valor={p.elo_feda} etiqueta="FEDA" />
-                      </>
-                    }
-                  />
-                </li>
-              );
-            })}
-          </ol>
-        ) : null}
         <details className="group rounded-xl border border-borde bg-tarjeta p-3">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-medium text-tinta">
             Crear una ficha a mano
@@ -278,6 +196,39 @@ export default async function OrdenFuerzaPage({
             </BotonAccion>
           </form>
         </details>
+
+        {orden && orden.length > 0 ? (
+          // EN DOS COLUMNAS desde lg, como su gemela de socios: 46 filas en una
+          // sola columna es la pantalla corriendo hacia abajo sin techo, que es
+          // justo lo que la regla de "usar el ancho" vino a quitar.
+          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-x-4">
+            {partirEnDos(orden).map((trozo, n) => (
+              <ol key={n} className="space-y-2">
+                {trozo.map((f) => {
+                  const p = f.players as unknown as {
+                    nombre: string; elo_fide: number | null; elo_feda: number | null;
+                  };
+                  return (
+                    <li key={`${f.numero}-${f.bis_index}`}>
+                      <FilaJugadorOF
+                        numero={f.numero}
+                        bisIndex={f.bis_index}
+                        nombre={p.nombre}
+                        chips={
+                          <>
+                            <ChipElo valor={f.elo_oficial} etiqueta="Oficial" />
+                            <ChipElo valor={p.elo_fide} etiqueta="FIDE" />
+                            <ChipElo valor={p.elo_feda} etiqueta="FEDA" />
+                          </>
+                        }
+                      />
+                    </li>
+                  );
+                })}
+              </ol>
+            ))}
+          </div>
+        ) : null}
       </Contenedor>
     </main>
   );
