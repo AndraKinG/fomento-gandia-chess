@@ -43,6 +43,11 @@ const LADO_MARCA = 512;
  *  volver a encuadrar aquí. */
 const CABALLO = { left: 864, top: 170, width: 264, height: 264 };
 
+/** El encuadre CENTRADO que se enseña en pantalla (petición del propietario,
+ *  2026-08-11): el puente con los dos rótulos, sin la banda sobrante de la
+ *  derecha ni los peones de abajo. El original entero se queda como master. */
+const CENTRADO = { left: 20, top: 8, width: 860, height: 576 };
+
 const origen = process.argv[2] ?? resolve(SALIDA, "logo-club.jpg");
 
 async function guardar(nombre, buffer) {
@@ -108,6 +113,12 @@ function empaquetarIco(imagenes) {
 }
 
 console.log(`Origen: ${origen}\n`);
+
+// 0. El recorte centrado para pantalla (ver CENTRADO).
+await guardar(
+  "logo-club-centrado.jpg",
+  await sharp(origen).extract(CENTRADO).jpeg({ quality: 85, progressive: true }).toBuffer()
+);
 
 // 1. El caballo, recortado y en disco: se enmascara con un círculo (transparente
 //    fuera) y se le pone el aro marino de la casa encima.

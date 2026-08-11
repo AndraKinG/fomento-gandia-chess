@@ -1,8 +1,8 @@
 import Image from "next/image";
 
-/** Proporción del logo oficial (1128x712): hace falta para reservar el hueco
- *  exacto y que el layout no salte al cargar. */
-const PROPORCION = 1128 / 712;
+/** Proporción del recorte centrado del logo (860x576): hace falta para reservar
+ *  el hueco exacto y que el layout no salte al cargar. */
+const PROPORCION = 860 / 576;
 
 /**
  * La imagen de marca del club — desde el 2026-08-11, el LOGO OFICIAL: el Puente
@@ -11,9 +11,11 @@ const PROPORCION = 1128 / 712;
  *
  * DOS VERSIONES A PROPÓSITO, y no es capricho:
  *
- * - `completo` (`/logo-club.jpg`) es el mural entero, RECTANGULAR. Va en login,
- *   registro y la web pública, donde hay sitio. `lado` es su ALTO; el ancho sale
- *   de la proporción real para que no se deforme.
+ * - `completo` (`/logo-club-centrado.jpg`) es el ENCUADRE CENTRADO del mural —
+ *   el puente con los dos rótulos, pedido así por el propietario. Va en login,
+ *   registro y la web pública. `lado` es su ALTO; el ancho sale de la proporción
+ *   real para que no se deforme. El original entero queda en `/logo-club.jpg`
+ *   como master del que el script genera los recortes.
  * - `marca` (`/marca.png`) es el caballo del mural en un disco con el aro marino
  *   de la casa — lo único del mural que se reconoce a 32 px. Va en la barra
  *   lateral y en la cabecera del móvil, donde además el nombre del club ya está
@@ -44,7 +46,7 @@ export function Escudo({
   const completo = version === "completo";
   return (
     <Image
-      src={completo ? "/logo-club.jpg" : "/marca.png"}
+      src={completo ? "/logo-club-centrado.jpg" : "/marca.png"}
       width={completo ? Math.round(lado * PROPORCION) : lado}
       height={lado}
       alt={alt}

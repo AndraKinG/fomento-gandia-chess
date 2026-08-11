@@ -66,10 +66,10 @@ export default function UnirsePage() {
             aquí se viene a apuntarse, no a mirar — en la portada ya recibe. Vive
             en /logo-club.jpg, nunca bajo /club/ (ver el comentario de page.tsx). */}
         <Image
-          src="/logo-club.jpg"
+          src="/logo-club-centrado.jpg"
           alt="Logo del Club de Ajedrez Fomento Gandia: el Puente del Fomento construido con piezas de ajedrez"
-          width={1128}
-          height={712}
+          width={860}
+          height={576}
           className="mt-6 w-full rounded-2xl border border-borde shadow-sm"
         />
       </section>
