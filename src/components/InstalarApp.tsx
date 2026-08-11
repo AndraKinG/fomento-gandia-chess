@@ -142,6 +142,36 @@ export function InstalarApp({
   const [instalada, setInstalada] = useState(false);
   const [copiado, setCopiado] = useState(false);
 
+  /**
+   * ¿ESTÁ INSTALADA EN ESTE EQUIPO, aunque ahora mismo estemos en una pestaña?
+   *
+   * `display-mode: standalone` solo contesta "¿me estoy ejecutando COMO app
+   * ahora?", que es otra pregunta. El propietario lo vio enseguida: instaló la
+   * app en el PC, y desde la app le salía "App instalada" mientras que en la
+   * pestaña del navegador seguía diciéndole que la instalara. Quien lo sabe es
+   * `getInstalledRelatedApps()`, y para que funcione el manifest tiene que
+   * declararse a sí mismo en `related_applications` (hecho).
+   *
+   * Solo existe en Chrome/Edge, y compara contra la URL ABSOLUTA de producción:
+   * en local no detectará nada, y en Safari o Firefox tampoco. De ahí que el
+   * texto de "no lo sé" tenga que valer para los dos casos.
+   */
+  useEffect(() => {
+    const nav = navigator as Navigator & {
+      getInstalledRelatedApps?: () => Promise<unknown[]>;
+    };
+    if (!nav.getInstalledRelatedApps) return;
+    // setState en un callback, que es lo que el linter del compilador permite.
+    void nav
+      .getInstalledRelatedApps()
+      .then((apps) => {
+        if (apps.length > 0) setInstalada(true);
+      })
+      .catch(() => {
+        // Si la API falla no se concluye nada: se deja el texto neutro.
+      });
+  }, []);
+
   useEffect(() => {
     // setState DENTRO DE UN CALLBACK, que es lo que React sí quiere: esto es
     // suscribirse a un aviso del navegador, no calcular estado al montar.
@@ -176,15 +206,17 @@ export function InstalarApp({
 
   return (
     <div className={caja}>
+      {/* "Instala la app" y no "…en el móvil": también se instala en el
+          ordenador, y el propietario la instaló justo ahí. */}
       <p className="text-sm font-semibold text-tinta">
         <span aria-hidden>{yaEsta ? "✅" : "📲"}</span>{" "}
-        {yaEsta ? "App instalada" : "Instala la app en el móvil"}
+        {yaEsta ? "App instalada" : "Instala la app"}
       </p>
 
       {yaEsta ? (
         <p className="text-sm text-tinta-suave">
-          Ya la tienes en este dispositivo. Si la quieres también en otro, entra
-          allí con tu cuenta y te lo ofrecerá.
+          Ya la tienes en este dispositivo — ábrela desde su icono. Si la quieres
+          también en otro, entra allí con tu cuenta y te lo ofrecerá.
         </p>
       ) : (
         <>
@@ -238,11 +270,17 @@ export function InstalarApp({
               En iPhone hace falta instalarla para poder recibir los avisos del club.
             </p>
           )}
+          {/* CUANDO NO SE SABE, NO SE AFIRMA. Este caso son DOS situaciones que
+              desde aquí no se distinguen —ya está instalada (y por eso el
+              navegador no ofrece el diálogo), o este navegador no sabe
+              instalarla— así que el texto sirve para las dos. Antes decía "este
+              navegador no ofrece el botón" a secas, y el propietario lo leyó
+              teniendo la app instalada en ese mismo PC. */}
           {dispositivo === "otro" && !puedePulsar && (
             <p className="text-xs text-tinta-suave">
-              Este navegador no ofrece el botón. Prueba desde su menú (⋮ → Instalar
-              aplicación), o pega el enlace en Chrome. Si acabas de actualizar,
-              cierra la pestaña y vuelve a entrar.
+              Si ya la tienes instalada, ábrela desde su icono: el navegador no
+              vuelve a ofrecerla. Si no la tienes, prueba desde el menú del
+              navegador (⋮ → Instalar aplicación) o pega el enlace en Chrome.
             </p>
           )}
         </>
