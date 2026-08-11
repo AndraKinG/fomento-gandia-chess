@@ -26,6 +26,8 @@ export type PartidaInicial = {
   apertura: string;
   notas: string;
   pgn: string;
+  /** No sale en el repositorio del club: solo la ve su dueño (migración 0039). */
+  privada: boolean;
 };
 
 const VACIA: Omit<PartidaInicial, "id"> = {
@@ -42,6 +44,9 @@ const VACIA: Omit<PartidaInicial, "id"> = {
   apertura: "",
   notas: "",
   pgn: "",
+  // Compartida por defecto: el repositorio existe para que el club pueda mirar las
+  // partidas de todos, y esconderlas de serie lo dejaría vacío sin que nadie lo pida.
+  privada: false,
 };
 
 export function FormularioPartida({
@@ -94,6 +99,8 @@ export function FormularioPartida({
             apertura: String(fd.get("apertura") ?? ""),
             notas: String(fd.get("notas") ?? ""),
             pgn: String(fd.get("pgn") ?? ""),
+            // Una casilla sin marcar no viaja en el formulario: ausente es "no".
+            privada: fd.get("privada") === "on",
           };
           startTransition(async () => {
             // Edita solo si hay un id de verdad: la pantalla de "nueva" pasa
@@ -295,6 +302,24 @@ export function FormularioPartida({
               filas={4}
               marcador="Qué pasó, dónde se decidió, qué aprendiste…"
             />
+
+            {/* PRIVADA. La casilla va aquí abajo, junto a las anotaciones, porque es
+                de la misma familia: lo que escribes para ti. Y sin marcar por defecto,
+                que el repositorio es del club. */}
+            <label className="flex items-start gap-3 rounded-xl border border-borde p-3">
+              <input
+                type="checkbox"
+                name="privada"
+                defaultChecked={v.privada}
+                className="mt-0.5 h-5 w-5 shrink-0 accent-[#0369a1]"
+              />
+              <span className="text-sm">
+                <span className="font-medium text-tinta">Solo para mí</span>
+                <span className="block text-xs text-tinta-suave">
+                  No sale en las partidas del club. La ves tú en “Mías”.
+                </span>
+              </span>
+            </label>
 
             <div className="flex gap-2">
               <Boton variante="degradado" type="submit" disabled={pendiente} className="flex-1">

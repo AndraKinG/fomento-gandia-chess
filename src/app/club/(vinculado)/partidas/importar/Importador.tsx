@@ -19,6 +19,8 @@ export function Importador({ miNombre }: { miNombre: string }) {
   const [usuarios, setUsuarios] = useState("");
   const [candidatas, setCandidatas] = useState<Candidata[] | null>(null);
   const [aviso, setAviso] = useState<{ tipo: "error" | "aviso"; texto: string } | null>(null);
+  /** Importar en privado: se decide para toda la tanda (ver `importarPartidas`). */
+  const [privadas, setPrivadas] = useState(false);
   const [pendiente, startTransition] = useTransition();
   const router = useRouter();
 
@@ -75,7 +77,7 @@ export function Importador({ miNombre }: { miNombre: string }) {
 
     setAviso(null);
     startTransition(async () => {
-      const r = await importarPartidas(filas);
+      const r = await importarPartidas(filas, privadas);
       if (r.error) {
         setAviso({ tipo: "error", texto: r.error });
         return;
@@ -230,6 +232,23 @@ export function Importador({ miNombre }: { miNombre: string }) {
               </li>
             ))}
           </ul>
+
+          {/* Para toda la tanda: quien trae 80 partidas de Lichess las quiere todas
+              igual, y una casilla por fila sería un formulario imposible. */}
+          <label className="flex items-start gap-3 rounded-xl border border-borde p-3">
+            <input
+              type="checkbox"
+              checked={privadas}
+              onChange={(e) => setPrivadas(e.target.checked)}
+              className="mt-0.5 h-5 w-5 shrink-0 accent-[#0369a1]"
+            />
+            <span className="text-sm">
+              <span className="font-medium text-tinta">Solo para mí</span>
+              <span className="block text-xs text-tinta-suave">
+                No salen en las partidas del club. Las ves tú en “Mías”.
+              </span>
+            </span>
+          </label>
 
           <Boton
             variante="degradado"

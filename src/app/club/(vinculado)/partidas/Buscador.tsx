@@ -8,13 +8,24 @@ import { useState } from "react";
  * que la búsqueda quede en la URL: así se puede compartir un enlace a "las
  * partidas contra Pérez" y el botón de atrás del móvil funciona como se espera.
  */
-export function Buscador({ valor, soloMias }: { valor: string; soloMias: boolean }) {
+export function Buscador({
+  valor,
+  soloMias,
+  soloFavoritas,
+}: {
+  valor: string;
+  soloMias: boolean;
+  soloFavoritas: boolean;
+}) {
   const [texto, setTexto] = useState(valor);
   const router = useRouter();
 
   function buscar(q: string) {
+    // La pestaña se conserva al buscar: sin esto, buscar desde "Mías" o desde
+    // "Favoritas" te devolvía a la lista entera del club.
     const params = new URLSearchParams();
-    if (soloMias) params.set("mias", "1");
+    if (soloFavoritas) params.set("favoritas", "1");
+    else if (soloMias) params.set("mias", "1");
     if (q.trim()) params.set("q", q.trim());
     const cadena = params.toString();
     router.push(`/club/partidas${cadena ? `?${cadena}` : ""}`);

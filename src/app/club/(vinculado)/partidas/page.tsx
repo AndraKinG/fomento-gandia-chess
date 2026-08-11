@@ -9,6 +9,7 @@ import { formatearRangoFechas } from "@/lib/torneos/fechas";
 import { textoResultado, type Resultado } from "@/lib/partidas/validar";
 import { Buscador } from "./Buscador";
 import { Exportar } from "./Exportar";
+import { Estrella } from "./Estrella";
 import { Contenedor, REJILLA } from "@/components/ui/Contenedor";
 import { Pestana, Pestanas } from "@/components/ui/Pestanas";
 import { filtroBusqueda } from "@/lib/partidas/buscar";
@@ -25,24 +26,45 @@ const COLOR_MARCA: Record<Resultado, string> = {
 export default async function PartidasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mias?: string; q?: string }>;
+  searchParams: Promise<{ mias?: string; favoritas?: string; q?: string }>;
 }) {
-  const { mias, q } = await searchParams;
-  const soloMias = mias === "1";
+  const { mias, favoritas, q } = await searchParams;
+  const soloFavoritas = favoritas === "1";
+  // "Favoritas" manda sobre "Mías": son dos formas de recortar la misma lista y
+  // combinarlas daría una pestaña que no existe en la barra.
+  const soloMias = !soloFavoritas && mias === "1";
   const busqueda = (q ?? "").trim();
 
   const supabase = await createServerSupabase();
   const sesion = await sesionActual();
 
+  // Las favoritas de quien mira: hacen falta SIEMPRE, no solo en su pestaña, porque
+  // cada tarjeta pinta su estrella encendida o apagada. Es una tabla por cuenta con
+  // pocas filas (migración 0039).
+  const { data: misFavoritas } = await supabase
+    .from("game_favorites")
+    .select("game_id")
+    .order("created_at", { ascending: false });
+  const idsFavoritas = (misFavoritas ?? []).map((f) => f.game_id as string);
+  const esFavorita = new Set(idsFavoritas);
+
   let consulta = supabase
     .from("games")
     .select(
-      "id, player_id, fecha, ronda, rival_nombre, rival_elo, mi_elo, color, resultado, apertura, torneo_texto, pgn, players!games_player_id_fkey(nombre), tournaments(nombre)"
+      "id, player_id, fecha, ronda, rival_nombre, rival_elo, mi_elo, color, resultado, apertura, torneo_texto, pgn, privada, players!games_player_id_fkey(nombre), tournaments(nombre)"
     )
     .order("fecha", { ascending: false })
     .limit(200);
 
   if (soloMias && sesion?.playerId) consulta = consulta.eq("player_id", sesion.playerId);
+  // El UUID de relleno es para el caso "ninguna favorita": un `in.()` vacío rompe el
+  // análisis de PostgREST, y aquí lo que se quiere es una lista vacía, no un error.
+  if (soloFavoritas) {
+    consulta = consulta.in(
+      "id",
+      idsFavoritas.length > 0 ? idsFavoritas : ["00000000-0000-0000-0000-000000000000"]
+    );
+  }
 
   // Búsqueda por nombre: vale tanto el del rival como el del socio dueño de la
   // partida, que es como la gente busca ("las de Pedro" y "las que jugó alguien
@@ -64,13 +86,24 @@ export default async function PartidasPage({
 
   const { data: partidas, error } = await consulta;
 
-  const titulo = soloMias ? "Mis partidas" : "Partidas del club";
+  const titulo = soloFavoritas
+    ? "Mis favoritas"
+    : soloMias
+      ? "Mis partidas"
+      : "Partidas del club";
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera
         titulo={titulo}
-        subtitulo={soloMias ? undefined : "Todas las que ha subido el club"} medida="panel"
+        subtitulo={
+          soloFavoritas
+            ? "Las que has guardado con la estrella"
+            : soloMias
+              ? undefined
+              : "Todas las que ha subido el club"
+        }
+        medida="panel"
       />
       <Contenedor medida="panel" className="space-y-4">
         {/* Pestañas y acciones en la MISMA fila desde `sm`. Apiladas eran cuatro
@@ -78,11 +111,14 @@ export default async function PartidasPage({
             llegar a la primera partida. */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <Pestanas>
-            <Pestana href="/club/partidas" activa={!soloMias}>
+            <Pestana href="/club/partidas" activa={!soloMias && !soloFavoritas}>
               Todas
             </Pestana>
             <Pestana href="/club/partidas?mias=1" activa={soloMias}>
               Mías
+            </Pestana>
+            <Pestana href="/club/partidas?favoritas=1" activa={soloFavoritas}>
+              ★ Favoritas
             </Pestana>
           </Pestanas>
           <div className="flex flex-wrap items-center gap-2">
@@ -96,7 +132,7 @@ export default async function PartidasPage({
           </div>
         </div>
 
-        <Buscador valor={busqueda} soloMias={soloMias} />
+        <Buscador valor={busqueda} soloMias={soloMias} soloFavoritas={soloFavoritas} />
 
         {error && (
           <Tarjeta compacta>
@@ -112,14 +148,18 @@ export default async function PartidasPage({
             titulo={
               busqueda
                 ? "Ninguna partida con ese nombre"
-                : soloMias
-                  ? "Todavía no has subido ninguna"
-                  : "Todavía no hay partidas"
+                : soloFavoritas
+                  ? "Todavía no has guardado ninguna"
+                  : soloMias
+                    ? "Todavía no has subido ninguna"
+                    : "Todavía no hay partidas"
             }
             detalle={
               busqueda
                 ? undefined
-                : "Sube las tuyas con sus datos y quedarán en la base del club para que todos puedan consultarlas."
+                : soloFavoritas
+                  ? "Pulsa la estrella de una partida y la tendrás aquí a mano."
+                  : "Sube las tuyas con sus datos y quedarán en la base del club para que todos puedan consultarlas."
             }
           />
         )}
@@ -162,11 +202,20 @@ export default async function PartidasPage({
                           {p.ronda ? ` · Ronda ${p.ronda}` : ""}
                           {torneo ? ` · ${torneo}` : ""}
                         </p>
+                        {/* Solo aparece en las tuyas: si la ves y es privada, es que
+                            es tuya (lo garantiza la RLS de la 0039). Sin este aviso no
+                            habría forma de saber cuáles has escondido. */}
+                        {p.privada && (
+                          <p className="mt-0.5 text-xs font-medium text-tinta-suave">
+                            🔒 Solo para ti
+                          </p>
+                        )}
                         {p.apertura && (
                           <p className="truncate text-xs text-tinta-suave">{p.apertura}</p>
                         )}
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-0.5">
+                        <Estrella gameId={p.id} favorita={esFavorita.has(p.id)} />
                         <span
                           className={`text-lg font-bold ${COLOR_MARCA[resultado]}`}
                           title={textoResultado(resultado)}

@@ -74,6 +74,7 @@ export default async function NuevaPartidaPage({
               apertura: "",
               notas: "",
               pgn: "",
+              privada: false,
             }
           }
         />

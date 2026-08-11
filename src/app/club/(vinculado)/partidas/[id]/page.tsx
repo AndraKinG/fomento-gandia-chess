@@ -8,6 +8,7 @@ import { Boton } from "@/components/ui/Boton";
 import { formatearRangoFechas } from "@/lib/torneos/fechas";
 import { textoResultado, type Resultado } from "@/lib/partidas/validar";
 import { AccionesPartida } from "./AccionesPartida";
+import { Estrella } from "../Estrella";
 import { VisorPartida } from "@/components/ajedrez/VisorPartida";
 import { Contenedor } from "@/components/ui/Contenedor";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
@@ -24,11 +25,19 @@ export default async function PartidaPage({
   const { data: p } = await supabase
     .from("games")
     .select(
-      "id, player_id, fecha, ronda, rival_nombre, rival_id, rival_elo, mi_elo, color, resultado, apertura, notas, pgn, torneo_texto, tournament_id, players!games_player_id_fkey(nombre), tournaments(nombre)"
+      "id, player_id, fecha, ronda, rival_nombre, rival_id, rival_elo, mi_elo, color, resultado, apertura, notas, pgn, torneo_texto, tournament_id, privada, players!games_player_id_fkey(nombre), tournaments(nombre)"
     )
     .eq("id", id)
     .maybeSingle();
+  // Una partida privada de otro socio no es que dé error: es que la RLS (0039) no la
+  // devuelve, así que aquí llega igual que una que no existe.
   if (!p) redirect("/club/partidas");
+
+  const { data: favorita } = await supabase
+    .from("game_favorites")
+    .select("game_id")
+    .eq("game_id", id)
+    .maybeSingle();
 
   const resultado = p.resultado as Resultado;
   const duenio = (p.players as unknown as { nombre: string } | null)?.nombre ?? "Socio";
@@ -101,11 +110,21 @@ export default async function PartidaPage({
                     <span aria-hidden>♟</span> {negras}
                   </p>
                 </div>
-                <span className="shrink-0 rounded-full bg-tarjeta px-3 py-1 text-sm font-semibold text-tinta ring-1 ring-borde">
-                  {textoResultado(resultado)} de{" "}
-                  {duenio.split(",")[0].split(" ")[0]}
-                </span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="rounded-full bg-tarjeta px-3 py-1 text-sm font-semibold text-tinta ring-1 ring-borde">
+                    {textoResultado(resultado)} de{" "}
+                    {duenio.split(",")[0].split(" ")[0]}
+                  </span>
+                  {/* La estrella al lado del marcador: es lo primero que se mira de la
+                      partida y guardarla es una decisión que se toma justo ahí. */}
+                  <Estrella gameId={p.id} favorita={Boolean(favorita)} tamano="grande" />
+                </div>
               </div>
+              {p.privada && (
+                <p className="mt-2 text-xs text-tinta-suave">
+                  🔒 Solo para ti: esta partida no sale en las del club.
+                </p>
+              )}
             </Tarjeta>
 
             <Tarjeta compacta>

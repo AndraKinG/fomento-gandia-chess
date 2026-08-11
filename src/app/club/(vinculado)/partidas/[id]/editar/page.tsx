@@ -19,7 +19,7 @@ export default async function EditarPartidaPage({
   const { data: p } = await supabase
     .from("games")
     .select(
-      "id, player_id, fecha, ronda, rival_nombre, rival_id, rival_elo, mi_elo, color, resultado, apertura, notas, pgn, torneo_texto, tournament_id"
+      "id, player_id, fecha, ronda, rival_nombre, rival_id, rival_elo, mi_elo, color, resultado, apertura, notas, pgn, torneo_texto, tournament_id, privada"
     )
     .eq("id", id)
     .maybeSingle();
@@ -59,6 +59,7 @@ export default async function EditarPartidaPage({
             apertura: p.apertura ?? "",
             notas: p.notas ?? "",
             pgn: p.pgn ?? "",
+            privada: Boolean(p.privada),
           }}
         />
       </Contenedor>

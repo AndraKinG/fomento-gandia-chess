@@ -25,7 +25,15 @@ export type FilaImportar = {
  * partidas en la cuenta de otro.
  */
 export async function importarPartidas(
-  filas: FilaImportar[]
+  filas: FilaImportar[],
+  /**
+   * Marcarlas todas como privadas (migración 0039).
+   *
+   * En lote y no una a una a propósito: quien importa 80 partidas de Lichess las
+   * quiere todas igual, y una casilla por fila sería un formulario imposible. Si
+   * luego quiere compartir una suelta, se edita.
+   */
+  privadas = false
 ): Promise<{ guardadas: number; error?: string }> {
   const sesion = await sesionActual();
   if (!sesion?.playerId) return { guardadas: 0, error: "No tienes una ficha vinculada" };
@@ -50,6 +58,7 @@ export async function importarPartidas(
       resultado: f.resultado,
       torneo_texto: f.torneoTexto,
       pgn: f.pgn,
+      privada: privadas,
     })),
     { count: "exact" }
   );

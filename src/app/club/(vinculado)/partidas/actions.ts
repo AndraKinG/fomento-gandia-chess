@@ -20,7 +20,13 @@ function refrescar(id?: string): void {
  * datos no dejaría guardar una partida en nombre de otro.
  */
 export async function guardarPartida(
-  datos: DatosPartida & { tournamentId?: string; rivalId?: string; pairingId?: string }
+  datos: DatosPartida & {
+    tournamentId?: string;
+    rivalId?: string;
+    pairingId?: string;
+    /** No sale en el repositorio del club: solo la ve su dueño (migración 0039). */
+    privada?: boolean;
+  }
 ): Promise<Resultado> {
   const sesion = await sesionActual();
   if (!sesion?.playerId) return { error: "No tienes una ficha vinculada" };
@@ -53,6 +59,7 @@ export async function guardarPartida(
       apertura: d.apertura,
       notas: d.notas,
       pgn: d.pgn,
+      privada: Boolean(datos.privada),
     })
     .select("id")
     .single();
@@ -79,7 +86,7 @@ export async function guardarPartida(
 /** Actualiza una partida propia. La RLS impide tocar las de otro. */
 export async function editarPartida(
   id: string,
-  datos: DatosPartida & { tournamentId?: string; rivalId?: string }
+  datos: DatosPartida & { tournamentId?: string; rivalId?: string; privada?: boolean }
 ): Promise<Resultado> {
   const sesion = await sesionActual();
   if (!sesion?.playerId) return { error: "No tienes una ficha vinculada" };
@@ -109,12 +116,50 @@ export async function editarPartida(
       apertura: d.apertura,
       notas: d.notas,
       pgn: d.pgn,
+      privada: Boolean(datos.privada),
     })
     .eq("id", id);
   if (error) return { error: error.message };
 
   refrescar(id);
   return { id };
+}
+
+/**
+ * Marca o desmarca una partida como favorita de quien está mirando.
+ *
+ * ES UN MARCADOR DE LECTOR, no un dato de la partida: se pueden guardar las de otros
+ * igual que las propias, así que vive en su propia tabla por cuenta (`game_favorites`,
+ * migración 0039) y no en una columna de `games`. La RLS solo deja tocar las filas de
+ * uno mismo, así que nadie puede saber ni cambiar lo que se guarda otro.
+ *
+ * Al desmarcar no hace falta comprobar nada: borrar una fila que no existe no es un
+ * error, y así el botón funciona igual aunque la pantalla venga desfasada.
+ */
+export async function cambiarFavorita(
+  gameId: string,
+  favorita: boolean
+): Promise<Resultado> {
+  const sesion = await sesionActual();
+  if (!sesion) return { error: "No autorizado" };
+
+  const supabase = await createServerSupabase();
+  const { error } = favorita
+    ? await supabase
+        .from("game_favorites")
+        .upsert(
+          { profile_id: sesion.userId, game_id: gameId },
+          { onConflict: "profile_id,game_id" }
+        )
+    : await supabase
+        .from("game_favorites")
+        .delete()
+        .eq("profile_id", sesion.userId)
+        .eq("game_id", gameId);
+  if (error) return { error: error.message };
+
+  refrescar(gameId);
+  return {};
 }
 
 /** Borra una partida propia. */

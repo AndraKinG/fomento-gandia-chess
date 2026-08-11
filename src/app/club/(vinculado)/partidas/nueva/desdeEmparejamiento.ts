@@ -80,6 +80,8 @@ export async function inicialDesdeEmparejamiento(
       apertura: "",
       notas: "",
       pgn: "",
+      // Una partida de un torneo del club es del club: nace compartida.
+      privada: false,
     },
   };
 }
