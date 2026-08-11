@@ -332,3 +332,146 @@ piloto pagado con la FACV → contrato grande**.
 
 _(Análisis de negocio, no asesoría fiscal ni jurídica: lo fiscal lo cierra un
 gestor y el contrato un abogado de IT. Cuotas y tramos cambian cada año.)_
+
+---
+
+# "¿Y si monto una empresa y consigo muchos clubes o federaciones?" (2026-08-12)
+
+El propietario empujó contra el análisis conservador de arriba, y tiene razón en
+una cosa: **ese análisis está calibrado a "un club y tres amigos". El escenario
+"muchas federaciones" es OTRO negocio y hay que valorarlo aparte.** Aquí va, con
+lo bueno y lo que cuesta.
+
+## Los números del escenario ambicioso
+
+**El mercado real, de arriba abajo:**
+
+- **17 federaciones autonómicas + FEDA** (la nacional) ⇒ **18 clientes posibles**
+  en toda España. Poquísimos clientes, pero cada uno trae sus clubes.
+- **~1.000-1.200 clubes** de ajedrez federados en España.
+
+**Por qué vender a federaciones y no a clubes, en una tabla:**
+
+| Vía | Clientes | Precio | Techo teórico | Realista (penetración típica) |
+| --- | --- | --- | --- | --- |
+| Clubes directo | ~1.000 | 20 €/mes | 240.000 €/año | 5-15 % ⇒ **12.000-36.000 €/año** |
+| Federaciones | 18 | 4.000-10.000 €/año | ~130.000 €/año | 3-6 federaciones ⇒ **15.000-50.000 €/año** |
+
+La segunda columna es la que decide: **con 4 federaciones ganas lo que con 150
+clubes**, y atiendes a 4 interlocutores en vez de 150. Ahí sí hay una empresa.
+
+**El coste que trae cada federación nueva**: sus importadores. Cada federación
+tiene su web y su formato ⇒ capa de adaptadores. Presupuestar **40-80 h por
+federación nueva** solo para leer sus datos.
+
+## HAY COMPETENCIA, y esto es lo más importante de esta sección
+
+Buscado el 2026-08-12: el hueco no está vacío. **Playoff, TieSports (TieManager),
+Tempoize, GestFede, TPV Club** venden ya software de gestión a federaciones
+deportivas españolas — licencias, competiciones, pagos, clubes. Son empresas
+hechas, con comerciales, referencias y años de contratos.
+
+Qué significa:
+
+- **No eres el primero que llama a la puerta de una federación.** Probablemente
+  ya tienen a alguno, o ya les han hecho demo.
+- **Pero ninguno hace ajedrez de verdad.** Son genéricos: licencias y cuotas
+  valen para cualquier deporte, y ahí no puedes competir. Lo que ninguno tiene es
+  **orden de fuerza con el RGC, validador de alineaciones, actas por tablero,
+  ELO, emparejamientos suizos, tablero en vivo y análisis con motor**. Eso es
+  dominio puro y es tu foso.
+- **Conclusión estratégica**: NO ir a competir en "gestión de federación"
+  (perderías contra empresas con 10 años de ventaja), sino a **lo deportivo del
+  ajedrez, que ellos no van a construir jamás porque su mercado es todos los
+  deportes.** Idealmente **integrándote** con el que ya tengan, no sustituyéndolo.
+
+## ¿SL o autónomo?
+
+Autónomo aguanta más de lo que parece: hasta **40-60 k€ de beneficio** sale igual
+o mejor que una SL, porque el IRPF no supera aún al 25 % de sociedades y te
+ahorras la contabilidad.
+
+**Pero aquí hay un argumento que no es fiscal y que en este caso pesa más:
+RESPONSABILIDAD.** Tratando datos personales de decenas de miles de federados,
+menores incluidos, un incidente serio como autónomo se responde con **tu
+patrimonio personal, sin límite**. Con una SL, la responsabilidad queda en la
+sociedad (salvo negligencia grave). Ese solo motivo justifica constituirla antes
+de lo que diría la cuenta fiscal.
+
+Y hay un segundo motivo práctico: **contratos institucionales grandes piden
+solvencia técnica y económica** (cuentas de años anteriores, a veces seguros).
+Un autónomo de un año no la acredita. Bajo 15.000 € (contrato menor) no importa;
+para un contrato multi-federación de 50.000 €, sí.
+
+**Coste de la SL**: ~3.000 € entre notaría, registro y capital (el capital se
+queda en la empresa, no se pierde) y **1.200-2.400 €/año** de contabilidad. Es
+mucho para 12.000 € de facturación y es ruido de fondo para 60.000 €.
+
+## En qué te tienes que convertir (esto es lo que nadie cuenta)
+
+El salto no es técnico, es de oficio. Con 4 federaciones dejas de ser
+desarrollador con un proyecto y pasas a:
+
+- **Vender**: ciclos de 6-18 meses, asambleas, presupuestos, cambios de junta.
+  Es el 50 % del tiempo y no es programar.
+- **Sostener un SLA**: si el orden de fuerza no sale el viernes antes de una
+  jornada, te llaman. En vacaciones también.
+- **Resolver el factor autobús.** Y esto es lo que **te van a preguntar en la
+  primera reunión seria**: "¿y si te atropella un coche, o encuentras trabajo en
+  otra ciudad?". Una federación no pone su temporada en las tardes de una
+  persona. La respuesta pasa por tener un segundo desarrollador (aunque sea un
+  freelance con contrato de continuidad) y un depósito de código con acceso
+  pactado. Es un coste real desde el segundo cliente.
+- **Riesgo de concentración**: con 18 clientes posibles en toda España, perder
+  uno es perder el 20 % de los ingresos. Un negocio con 4 clientes es frágil por
+  definición.
+
+## Dos cosas que hay que comprobar ANTES de nada
+
+1. **Tu contrato de trabajo.** Trabajas como desarrollador en una empresa de
+   software. Muchos contratos llevan cláusulas de **dedicación, no competencia y
+   titularidad de lo creado** — a veces redactadas tan amplias que abarcan
+   proyectos personales del mismo sector. Antes de facturar un euro, léelo, y si
+   hay dudas pregunta (a un laboralista, no a RR. HH. de entrada). Es el riesgo
+   más barato de comprobar y el más caro de descubrir tarde.
+2. **La competencia, en serio.** Pide reunión a alguien de la FACV y pregunta qué
+   usan hoy y qué les han ofrecido. Media hora de conversación vale más que
+   semanas de suposiciones.
+
+## La secuencia, con disparadores en vez de fechas
+
+| Etapa | Qué haces | Forma jurídica |
+| --- | --- | --- |
+| 0. Hoy | Franquicia gratis a 2-3 clubes. Validar que alguien lo quiere de verdad | Nada |
+| 1. Primer cobro | Piloto pagado con la FACV (2-3 k€) | **Autónomo** (tarifa plana) |
+| 2. Primera federación completa | Encargo de desarrollo (8-15 k€). **Que ELLOS paguen el multi-tenant**: te construyen el activo que luego revendes | Autónomo |
+| 3. Segunda federación | Adaptadores + primer colaborador freelance | Autónomo, y ya mirando la SL |
+| 4. Tercera, o 40 k€, o empleado, o miedo a la responsabilidad | Empresa de verdad | **SL** |
+
+**El disparador de la SL no es un número solo**: es el primero de estos cuatro —
+un contrato que la exija, una exposición a responsabilidad que te quite el sueño,
+contratar a alguien, o pasar de ~40-60 k€ de beneficio.
+
+**Y la jugada más lista de toda la tabla es la etapa 2**: cobrar a la primera
+federación por construir el multi-tenant. Alguien te paga por fabricar el activo
+que luego vendes 17 veces. Eso es exactamente cómo se financia un producto sin
+inversores.
+
+## Veredicto honesto
+
+**El escenario que planteas es un negocio de verdad** — 15-50 k€/año con 3-6
+federaciones es real y alcanzable en 3-5 años. No es "ganar dinero con la app":
+es **fundar una empresa de software deportivo**, con lo que eso trae de vender,
+sostener y depender de pocos clientes.
+
+Mi consejo no cambia en la secuencia, solo en el techo: **no quemes el escenario
+grande empezando por la burocracia.** Autónomo, piloto pagado, y que la primera
+federación financie el multi-tenant. Si a los dos años tienes dos federaciones
+pagando, entonces la SL no es una apuesta: es papeleo que se justifica solo.
+
+**Y no dejes el trabajo hasta que los ingresos recurrentes cubran tu sueldo.** La
+asimetría está a tu favor: sueldo por el día, empresa por las tardes, y solo
+saltas cuando ya no hace falta saltar.
+
+_(Análisis de negocio. Lo fiscal, un gestor; el contrato y tu cláusula laboral, un
+abogado. Los importes cambian cada año.)_
