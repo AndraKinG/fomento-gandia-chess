@@ -1,5 +1,6 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { formatearCodigo } from "@/lib/acceso/codigo";
+import { BotonCopiar } from "@/components/ui/BotonCopiar";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Banner } from "@/components/ui/Banner";
@@ -37,9 +38,16 @@ export default async function AccesoPage() {
             <p className="text-xs uppercase tracking-wide text-tinta-suave">
               Código activo
             </p>
-            <p className="mt-1 select-all font-mono text-2xl font-bold tracking-wider text-tinta">
-              {formatearCodigo(activo.codigo)}
-            </p>
+            {/* El código y su botón de copiar en la misma fila: este código se
+                comparte por WhatsApp cada vez que entra alguien, y seleccionar a
+                mano un texto con guiones en un móvil es un suplicio. Se copia
+                FORMATEADO, tal como lo valida el registro. */}
+            <div className="mt-1 flex flex-wrap items-center gap-3">
+              <p className="select-all font-mono text-2xl font-bold tracking-wider text-tinta">
+                {formatearCodigo(activo.codigo)}
+              </p>
+              <BotonCopiar texto={formatearCodigo(activo.codigo)} etiqueta="Copiar" />
+            </div>
             <p className="mt-2 text-sm text-tinta-suave">
               {activo.usos} {activo.usos === 1 ? "cuenta creada" : "cuentas creadas"}{" "}
               con este código.
