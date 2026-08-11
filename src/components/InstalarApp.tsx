@@ -3,33 +3,33 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 /**
- * "Instalar la app": el empujón para tenerla en la pantalla de inicio.
+ * "Instalar la app": la guía para tenerla en la pantalla de inicio.
  *
- * POR QUÉ EXISTE (2026-08-12): el primer socio de prueba entró desde el móvil y
- * dijo que no le había salido lo de instalar. Tenía razón, y por tres motivos que
- * conviene tener claros para no volver a caer:
+ * LO PRIMORDIAL, dicho por el propietario el 2026-08-12: que CUALQUIER socio, con
+ * cualquier móvil y cualquier navegador, tenga aquí la explicación de cómo
+ * instalarla. Todo lo demás es secundario.
  *
- * 1. **En Android**, Chrome solo ofrece instalar si la web responde algo SIN
- *    CONEXIÓN. Nuestro service worker no tenía manejador de `fetch`, así que la
- *    app no era instalable y el aviso no salía nunca (arreglado en `sw.js`).
- * 2. **En iPhone NO EXISTE ningún botón posible.** Safari no tiene
- *    `beforeinstallprompt` ni ninguna API de instalación: la única vía es
- *    Compartir → Añadir a pantalla de inicio, a mano. Y ojo, **en iOS sin
- *    instalar NO HAY NOTIFICACIONES**.
- * 3. **Desde el navegador de WhatsApp no se puede instalar**, y es por donde
- *    entra casi todo el club. No es un fallo nuestro: es un WebView sin esa
- *    capacidad, y no hay API que lo rodee.
+ * POR QUÉ HIZO FALTA. El primer socio de prueba dijo que no le salió lo de
+ * instalar, y había tres motivos distintos:
  *
- * ASÍ QUE UN BOTÓN "INSTALAR" UNIVERSAL ES IMPOSIBLE. Lo que sí se puede —y es
- * lo que hace esto (petición del propietario: "¿no podemos tener el botón entres
- * por donde entres?")— es que **nunca haya un callejón sin salida**: siempre hay
- * un botón, y hace lo mejor que la plataforma permita en ese momento:
+ * 1. **En Android**, Chrome solo lo ofrece si la web responde algo SIN CONEXIÓN.
+ *    Nuestro service worker no tenía manejador de `fetch`, así que la app no era
+ *    instalable y el aviso no salía nunca (arreglado en `sw.js`).
+ * 2. **En iPhone NO EXISTE ningún botón posible.** Safari no tiene ninguna API de
+ *    instalación: la única vía es Compartir → Añadir a pantalla de inicio, a mano.
+ *    Y ojo, **en iOS sin instalar NO HAY NOTIFICACIONES**.
+ * 3. **Desde el navegador de WhatsApp no se puede instalar**, y es por donde entra
+ *    casi todo el club. Es un WebView sin esa capacidad; no hay API que lo rodee.
  *
- * - Si el navegador ofrece el diálogo nativo → instala de verdad.
- * - Si estamos dentro de otra app → **te saca al navegador bueno** (`intent://`
- *   abre Chrome en Android; `x-safari-https:` abre Safari en iOS).
- * - Y en cualquier caso, **copiar el enlace**, que es el plan B que funciona
- *   siempre: pegarlo en el navegador y seguir desde ahí.
+ * QUÉ NO SE PUEDE SABER, y por eso el texto es NEUTRO: desde una pestaña normal
+ * **no hay forma fiable de saber si la app ya está instalada en el equipo**. Se
+ * intentaron dos caminos y los dos fallaron en producción: `getInstalledRelatedApps()`
+ * (no reporta PWA en Chrome de escritorio) y dejar una nota en `localStorage` desde
+ * la app para que la leyera la pestaña (no compartían almacenamiento en el Chrome
+ * del propietario). Así que **no se afirma nada**: se explica, y se recuerda que
+ * quien ya la tenga la abra desde su icono. Lo único que sí se sabe con certeza es
+ * cuándo estamos ejecutándonos DENTRO de la app (`display-mode: standalone`), y
+ * ahí sí se dice.
  */
 
 /** El evento de Chrome todavía no está en los tipos de TypeScript. */
@@ -38,6 +38,7 @@ type EventoInstalar = Event & { prompt: () => Promise<void> };
 type Dispositivo =
   /** Todavía no se sabe: en el servidor no hay navegador que preguntar. */
   | "mirando"
+  /** Ejecutándose COMO app. Es lo único que se puede afirmar con certeza. */
   | "pwa"
   /** iPhone/iPad en Safari: instrucciones, que es todo lo que Apple permite. */
   | "apple"
@@ -102,51 +103,14 @@ function suscribirse(avisar: () => void): () => void {
 }
 
 /**
- * LA APP SE ACUERDA DE QUE ESTÁ INSTALADA, y esto es lo que de verdad funciona.
- *
- * Primero se intentó `getInstalledRelatedApps()`, que es la API "oficial" para
- * esto. NO SIRVE: con `platform: "webapp"` no reporta las PWA instaladas en
- * Chrome de escritorio (probado por el propietario en su PC, con la app
- * instalada y la pestaña diciéndole que la instalara).
- *
- * Lo que sí funciona: la PWA y la pestaña del mismo navegador **comparten
- * almacenamiento** porque son el mismo origen. Así que cuando la app se abre como
- * app, deja una nota; y la pestaña la lee. Sin APIs experimentales.
- *
- * SE CORRIGE SOLA si el socio desinstala: Chrome solo dispara
- * `beforeinstallprompt` cuando la app NO está instalada, así que ese evento borra
- * la nota. Un recuerdo que se puede desmentir no se queda mintiendo para siempre.
- */
-const RECUERDO = "fomento:app-instalada";
-
-function leerRecuerdo(): boolean {
-  try {
-    return window.localStorage.getItem(RECUERDO) === "1";
-  } catch {
-    // Modo incógnito o almacenamiento bloqueado: no se sabe, y no pasa nada.
-    return false;
-  }
-}
-
-/** Otra pestaña —o la propia PWA— puede escribirlo: `storage` avisa de eso. */
-function suscribirseAlRecuerdo(avisar: () => void): () => void {
-  window.addEventListener("storage", avisar);
-  return () => window.removeEventListener("storage", avisar);
-}
-
-function sinRecuerdoEnElServidor(): boolean {
-  return false;
-}
-
-/**
  * Saca al socio del navegador de la otra app y lo lleva al bueno, con la MISMA
  * página, para que pueda instalar allí.
  *
  * `intent://` es el esquema de Android para "ábreme esto con esta app": funciona
  * desde un WebView y es la vía documentada. En iOS no hay equivalente oficial;
  * `x-safari-https:` funciona en la práctica desde hace años pero NO está
- * documentado, así que se intenta y punto: si no hace nada, las instrucciones y
- * el botón de copiar siguen en pantalla. Nunca es la única salida.
+ * documentado, así que se intenta y punto: si no hace nada, las instrucciones y el
+ * botón de copiar siguen en pantalla. Nunca es la única salida.
  */
 function abrirEnNavegadorBueno(): void {
   const url = window.location.href;
@@ -164,40 +128,17 @@ export function InstalarApp({
 }: {
   compacto?: boolean;
   /**
-   * true = DI ALGO SIEMPRE, aunque no haya nada que ofrecer.
+   * true = DI ALGO SIEMPRE, aunque no haya botón que ofrecer.
    *
-   * Es para el Perfil, que es donde uno va A BUSCARLO. Sin esto el componente
-   * devolvía `null` en varios casos distintos y desde fuera todos se ven igual:
-   * un hueco. El propietario preguntó "¿y dónde está la parte de instalar?", que
-   * es la prueba de que un silencio no vale. En Inicio se queda en false: allí
-   * debe desaparecer cuando no hay nada que hacer, o es ruido.
+   * Es para el Perfil, que es donde uno va A BUSCARLO: allí la guía tiene que
+   * estar pase lo que pase, para cualquier navegador. En Inicio se queda en false
+   * y solo aparece cuando hay algo que pulsar, o sería ruido.
    */
   siempre?: boolean;
 }) {
   const dispositivo = useSyncExternalStore(suscribirse, leerDispositivo, enElServidor);
-  const recordada = useSyncExternalStore(
-    suscribirseAlRecuerdo,
-    leerRecuerdo,
-    sinRecuerdoEnElServidor
-  );
   const [evento, setEvento] = useState<EventoInstalar | null>(null);
   const [copiado, setCopiado] = useState(false);
-
-  /**
-   * Cuando esto se está ejecutando COMO app, se deja la nota para que la pestaña
-   * del mismo navegador también lo sepa (ver `RECUERDO` arriba).
-   *
-   * Es un efecto que escribe en un sistema externo y NO llama a `setState`: eso es
-   * exactamente para lo que sirven los efectos.
-   */
-  useEffect(() => {
-    if (dispositivo !== "pwa") return;
-    try {
-      window.localStorage.setItem(RECUERDO, "1");
-    } catch {
-      // Sin almacenamiento no se recuerda, y no pasa nada.
-    }
-  }, [dispositivo]);
 
   useEffect(() => {
     // setState DENTRO DE UN CALLBACK, que es lo que React sí quiere: esto es
@@ -206,22 +147,9 @@ export function InstalarApp({
       // Sin esto Chrome enseña ADEMÁS su propio aviso y salen dos cosas a la vez.
       e.preventDefault();
       setEvento(e as EventoInstalar);
-      // ESTE EVENTO DESMIENTE EL RECUERDO: Chrome solo lo dispara cuando la app
-      // NO está instalada, así que si el socio la desinstaló, aquí se borra.
-      try {
-        window.localStorage.removeItem(RECUERDO);
-      } catch {
-        // Sin almacenamiento no hay nada que borrar.
-      }
     };
-    const alInstalar = () => {
-      try {
-        window.localStorage.setItem(RECUERDO, "1");
-      } catch {
-        // Sin almacenamiento no se recuerda.
-      }
-      setEvento(null);
-    };
+    // Instalada desde el botón: el evento ya no sirve, así que se retira.
+    const alInstalar = () => setEvento(null);
     window.addEventListener("beforeinstallprompt", alPoder);
     window.addEventListener("appinstalled", alInstalar);
     return () => {
@@ -232,15 +160,12 @@ export function InstalarApp({
 
   if (dispositivo === "mirando") return null;
 
-  // EL EVENTO MANDA SOBRE EL RECUERDO: si el navegador ofrece instalarla, es que
-  // NO está instalada, diga lo que diga la nota. Así un recuerdo viejo (app
-  // desinstalada) no se queda mintiendo.
-  const yaEsta = dispositivo === "pwa" || (recordada && evento === null);
+  const enLaApp = dispositivo === "pwa";
   const fueraDelNavegador = dispositivo === "appExterna" || dispositivo === "appleSinSafari";
   const puedePulsar = dispositivo === "otro" && evento !== null;
 
-  // En Inicio esto desaparece cuando no hay nada que hacer.
-  if (!siempre && (yaEsta || (dispositivo === "otro" && !evento))) return null;
+  // En Inicio esto desaparece cuando no hay nada que pulsar ni que explicar.
+  if (!siempre && (enLaApp || (dispositivo === "otro" && !evento))) return null;
 
   const caja = compacto
     ? "space-y-2"
@@ -248,87 +173,115 @@ export function InstalarApp({
   const boton =
     "rounded-xl bg-acento-fuerte px-4 py-2 text-sm font-semibold text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]";
 
+  // ESTAR DENTRO DE LA APP es lo único que se puede afirmar sin equivocarse.
+  if (enLaApp) {
+    return (
+      <div className={caja}>
+        <p className="text-sm font-semibold text-tinta">
+          <span aria-hidden>✅</span> Estás usando la app instalada
+        </p>
+        <p className="text-sm text-tinta-suave">
+          Si la quieres también en otro móvil u ordenador, entra allí con tu cuenta
+          y verás cómo hacerlo.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className={caja}>
-      {/* "Instala la app" y no "…en el móvil": también se instala en el
-          ordenador, y el propietario la instaló justo ahí. */}
       <p className="text-sm font-semibold text-tinta">
-        <span aria-hidden>{yaEsta ? "✅" : "📲"}</span>{" "}
-        {yaEsta ? "App instalada" : "Instala la app"}
+        <span aria-hidden>📲</span> Instalar la app
       </p>
 
-      {yaEsta ? (
-        <p className="text-sm text-tinta-suave">
-          Ya la tienes en este dispositivo — ábrela desde su icono. Si la quieres
-          también en otro, entra allí con tu cuenta y te lo ofrecerá.
+      <p className="text-sm text-tinta-suave">
+        {fueraDelNavegador
+          ? "Has entrado desde otra app y desde ahí no se puede instalar. Un toque y sigues en el navegador:"
+          : dispositivo === "apple"
+            ? "En iPhone se añade a mano: toca Compartir abajo en Safari y elige «Añadir a pantalla de inicio»."
+            : "Se abre como una app, entras más rápido y recibes los avisos del club."}
+      </p>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {puedePulsar && (
+          <button
+            type="button"
+            onClick={() => {
+              void evento?.prompt();
+              // El evento sirve UNA sola vez: después no haría nada.
+              setEvento(null);
+            }}
+            className={boton}
+          >
+            Instalar
+          </button>
+        )}
+        {fueraDelNavegador && (
+          <button type="button" onClick={abrirEnNavegadorBueno} className={boton}>
+            {dispositivo === "appleSinSafari" ? "Abrir en Safari" : "Abrir en Chrome"}
+          </button>
+        )}
+        {/* EL PLAN B QUE FUNCIONA SIEMPRE: con el enlace copiado, pegarlo en el
+            navegador es un paso que nadie falla. */}
+        <button
+          type="button"
+          onClick={() => {
+            void navigator.clipboard?.writeText(window.location.origin + "/club");
+            setCopiado(true);
+          }}
+          className="rounded-xl border border-borde bg-tarjeta px-3 py-2 text-sm text-tinta transition hover:bg-tarjeta-suave active:scale-[0.97]"
+        >
+          {copiado ? "¡Copiado!" : "Copiar enlace"}
+        </button>
+      </div>
+
+      {dispositivo === "apple" && (
+        <p className="text-xs text-tinta-suave">
+          En iPhone hace falta instalarla para poder recibir los avisos del club.
         </p>
-      ) : (
-        <>
-          <p className="text-sm text-tinta-suave">
-            {fueraDelNavegador
-              ? "Has entrado desde otra app y desde ahí no se puede instalar. Un toque y sigues en el navegador:"
-              : dispositivo === "apple"
-                ? "En iPhone se añade a mano: toca Compartir abajo en Safari y elige «Añadir a pantalla de inicio»."
-                : "Se abre como una app, entras más rápido y recibes los avisos del club."}
-          </p>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {/* SIEMPRE HAY UN BOTÓN, y hace lo mejor que permita la plataforma:
-                instalar de verdad, o sacarte al navegador donde sí se puede. */}
-            {puedePulsar && (
-              <button
-                type="button"
-                onClick={() => {
-                  void evento?.prompt();
-                  // El evento sirve UNA sola vez: después no haría nada.
-                  setEvento(null);
-                }}
-                className={boton}
-              >
-                Instalar
-              </button>
-            )}
-            {fueraDelNavegador && (
-              <button type="button" onClick={abrirEnNavegadorBueno} className={boton}>
-                {dispositivo === "appleSinSafari" ? "Abrir en Safari" : "Abrir en Chrome"}
-              </button>
-            )}
-            {/* EL PLAN B QUE FUNCIONA SIEMPRE: con el enlace copiado, pegarlo en
-                el navegador es un paso que nadie falla. Va en todos los casos en
-                que aún no está instalada, incluido el iPhone en Safari (por si
-                prefiere hacerlo desde otro sitio). */}
-            <button
-              type="button"
-              onClick={() => {
-                void navigator.clipboard?.writeText(window.location.origin + "/club");
-                setCopiado(true);
-              }}
-              className="rounded-xl border border-borde bg-tarjeta px-3 py-2 text-sm text-tinta transition hover:bg-tarjeta-suave active:scale-[0.97]"
-            >
-              {copiado ? "¡Copiado!" : "Copiar enlace"}
-            </button>
-          </div>
-
-          {dispositivo === "apple" && (
-            <p className="text-xs text-tinta-suave">
-              En iPhone hace falta instalarla para poder recibir los avisos del club.
-            </p>
-          )}
-          {/* CUANDO NO SE SABE, NO SE AFIRMA. Este caso son DOS situaciones que
-              desde aquí no se distinguen —ya está instalada (y por eso el
-              navegador no ofrece el diálogo), o este navegador no sabe
-              instalarla— así que el texto sirve para las dos. Antes decía "este
-              navegador no ofrece el botón" a secas, y el propietario lo leyó
-              teniendo la app instalada en ese mismo PC. */}
-          {dispositivo === "otro" && !puedePulsar && (
-            <p className="text-xs text-tinta-suave">
-              Si ya la tienes instalada, ábrela desde su icono: el navegador no
-              vuelve a ofrecerla. Si no la tienes, prueba desde el menú del
-              navegador (⋮ → Instalar aplicación) o pega el enlace en Chrome.
-            </p>
-          )}
-        </>
       )}
+
+      {/* LA GUÍA PARA CUALQUIER NAVEGADOR, plegada para no estorbar a quien ya
+          tiene su botón. Es la petición de fondo del propietario: que nadie se
+          quede sin saber cómo hacerlo, tenga el móvil que tenga. Va SIEMPRE, no
+          solo cuando falla algo, porque el botón puede tardar en aparecer o no
+          aparecer nunca según el navegador. */}
+      <details className="group">
+        <summary className="cursor-pointer list-none text-xs text-acento-texto underline">
+          Cómo instalarla en cada navegador
+        </summary>
+        <ul className="mt-2 space-y-1.5 text-xs text-tinta-suave">
+          <li>
+            <b className="font-semibold text-tinta">iPhone o iPad (Safari)</b>: toca
+            Compartir (el cuadrado con la flecha, abajo) → Añadir a pantalla de inicio.
+            Es la única forma que permite Apple.
+          </li>
+          <li>
+            <b className="font-semibold text-tinta">Android con Chrome</b>: menú ⋮
+            (arriba a la derecha) → Instalar aplicación, o Añadir a pantalla de inicio.
+          </li>
+          <li>
+            <b className="font-semibold text-tinta">Android con Samsung Internet</b>:
+            menú ☰ → Añadir página a → Pantalla de inicio.
+          </li>
+          <li>
+            <b className="font-semibold text-tinta">Android con Firefox</b>: menú ⋮ →
+            Instalar, o Añadir a la pantalla de inicio.
+          </li>
+          <li>
+            <b className="font-semibold text-tinta">Ordenador (Chrome o Edge)</b>: el
+            icono de instalar en la barra de direcciones, o menú ⋮ → Instalar aplicación.
+          </li>
+          <li>
+            <b className="font-semibold text-tinta">Desde WhatsApp o Instagram</b>: no
+            se puede. Copia el enlace con el botón de arriba y ábrelo en Chrome o Safari.
+          </li>
+        </ul>
+        <p className="mt-2 text-xs text-tinta-suave">
+          Si ya la tienes instalada, ábrela desde su icono: el navegador no vuelve a
+          ofrecértela.
+        </p>
+      </details>
     </div>
   );
 }
