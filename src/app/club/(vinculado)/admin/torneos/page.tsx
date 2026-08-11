@@ -19,7 +19,9 @@ export default async function AdminTorneosPage() {
       "id, nombre, fecha_inicio, fecha_fin, lugar, organizador, hora, ritmo, info_extra, url_bases, de_interes, origen"
     )
     .gte("fecha_fin", hoy)
-    .order("de_interes", { ascending: false })
+    // CRONOLÓGICO, no los marcados primero: la pantalla es una agenda por meses
+    // (petición del propietario) y en una agenda manda la fecha. Los marcados se
+    // distinguen resaltados, no reordenados.
     .order("fecha_inicio");
 
   const ids = (torneos ?? []).map((t) => t.id);
@@ -62,6 +64,7 @@ export default async function AdminTorneosPage() {
     return {
       id: t.id,
       nombre: t.nombre,
+      fechaInicio: t.fecha_inicio,
       rango: formatearRangoFechas(t.fecha_inicio, t.fecha_fin),
       lugar: t.lugar,
       organizador: t.organizador,

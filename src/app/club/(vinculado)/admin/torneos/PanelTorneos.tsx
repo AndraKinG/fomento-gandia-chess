@@ -16,6 +16,8 @@ import {
 export type TorneoAdmin = {
   id: string;
   nombre: string;
+  /** ISO, para agrupar por mes. */
+  fechaInicio: string;
   rango: string;
   lugar: string | null;
   organizador: string | null;
@@ -30,6 +32,14 @@ export type TorneoAdmin = {
   sinPlaza: number;
   plazasLibres: number;
 };
+
+/** "agosto 2026" a partir del ISO, para las cabeceras de la agenda. */
+function mesDe(fechaIso: string): string {
+  return new Date(`${fechaIso}T00:00:00`).toLocaleDateString("es-ES", {
+    month: "long",
+    year: "numeric",
+  });
+}
 
 export function PanelTorneos({ torneos }: { torneos: TorneoAdmin[] }) {
   const [aviso, setAviso] = useState<{ tipo: "ok" | "error" | "aviso"; texto: string } | null>(
@@ -97,117 +107,138 @@ export function PanelTorneos({ torneos }: { torneos: TorneoAdmin[] }) {
         </Tarjeta>
       )}
 
-      {torneos.map((t) => (
-        <Tarjeta key={t.id} destacada={t.deInteres}>
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="font-semibold text-tinta">
-                <Link href={`/club/torneos/facv/${t.id}`} className="hover:underline">
-                  {t.nombre}
-                </Link>
-              </p>
-              <p className="mt-0.5 text-sm text-tinta-suave">
-                {t.rango}
-                {t.lugar ? ` · ${t.lugar}` : ""}
-              </p>
-              {t.deInteres && (
-                <p className="mt-1 text-xs text-tinta-suave">
-                  {t.van} {t.van === 1 ? "va" : "van"}
-                  {t.sinPlaza > 0
-                    ? ` · ${t.sinPlaza} sin coche, ${t.plazasLibres} ${t.plazasLibres === 1 ? "plaza" : "plazas"} libres`
-                    : " · transporte cubierto"}
-                </p>
-              )}
-            </div>
-            <div className="flex shrink-0 flex-col gap-1.5">
-              <button
-                type="button"
-                disabled={pendiente}
-                onClick={() =>
-                  ejecutar(
-                    () => cambiarDeInteres(t.id, !t.deInteres),
-                    t.deInteres ? "Quitado de la lista del club." : "Marcado y avisado al club."
-                  )
-                }
-                className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition duration-100 active:scale-[0.97] disabled:opacity-50 ${
-                  t.deInteres
-                    ? "bg-acento-fuerte text-sobre-acento"
-                    : "border border-borde bg-tarjeta text-tinta-suave"
-                }`}
-              >
-                {t.deInteres ? "★ Vamos" : "Marcar"}
-              </button>
-              <button
-                type="button"
-                disabled={pendiente}
-                onClick={() => setEditando(editando === t.id ? null : t.id)}
-                className="rounded-xl border border-borde bg-tarjeta px-3 py-1.5 text-xs text-tinta-suave transition duration-100 active:scale-[0.97] disabled:opacity-50"
-              >
-                Ficha
-              </button>
-            </div>
-          </div>
+      {/* AGENDA POR MESES y no 50 tarjetas apiladas (petición del propietario):
+          es el patrón de referencia de la app, el calendario de Interclubs — una
+          caja por mes con una fila por torneo. Los marcados van resaltados, no
+          reordenados: en una agenda manda la fecha. */}
+      {(() => {
+        const meses = new Map<string, TorneoAdmin[]>();
+        for (const t of torneos) {
+          const clave = mesDe(t.fechaInicio);
+          meses.set(clave, [...(meses.get(clave) ?? []), t]);
+        }
+        return [...meses.entries()].map(([mes, delMes]) => (
+          <section key={mes} className="space-y-2">
+            <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
+              {mes}
+            </h2>
+            <div className="overflow-hidden rounded-2xl border border-borde bg-tarjeta">
+              <ul className="divide-y divide-borde">
+                {delMes.map((t) => (
+                  <li key={t.id} className={t.deInteres ? "bg-tarjeta-suave" : ""}>
+                    <div className="flex items-center gap-3 px-3 py-2">
+                      <span className="w-24 shrink-0 text-xs text-tinta-suave">{t.rango}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-tinta">
+                          {t.deInteres && <span aria-hidden>★ </span>}
+                          <Link href={`/club/torneos/facv/${t.id}`} className="hover:underline">
+                            {t.nombre}
+                          </Link>
+                        </p>
+                        <p className="truncate text-xs text-tinta-suave">
+                          {t.lugar ?? ""}
+                          {t.deInteres &&
+                            ` · ${t.van} ${t.van === 1 ? "va" : "van"}` +
+                              (t.sinPlaza > 0
+                                ? ` · ${t.sinPlaza} sin coche, ${t.plazasLibres} ${t.plazasLibres === 1 ? "plaza" : "plazas"} libres`
+                                : " · transporte cubierto")}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 gap-1.5">
+                        <button
+                          type="button"
+                          disabled={pendiente}
+                          onClick={() =>
+                            ejecutar(
+                              () => cambiarDeInteres(t.id, !t.deInteres),
+                              t.deInteres ? "Quitado de la lista del club." : "Marcado y avisado al club."
+                            )
+                          }
+                          className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition duration-100 active:scale-[0.97] disabled:opacity-50 ${
+                            t.deInteres
+                              ? "bg-acento-fuerte text-sobre-acento"
+                              : "border border-borde bg-tarjeta text-tinta-suave"
+                          }`}
+                        >
+                          {t.deInteres ? "★ Vamos" : "Marcar"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={pendiente}
+                          onClick={() => setEditando(editando === t.id ? null : t.id)}
+                          aria-expanded={editando === t.id}
+                          className="rounded-lg border border-borde bg-tarjeta px-2.5 py-1 text-xs text-tinta-suave transition duration-100 active:scale-[0.97] disabled:opacity-50"
+                        >
+                          Ficha
+                        </button>
+                      </div>
+                    </div>
 
-          {editando === t.id && (
-            <form
-              className="mt-3 flex flex-col gap-3 border-t border-borde pt-3"
-              action={(fd) =>
-                ejecutar(
-                  () =>
-                    editarFichaTorneo(t.id, {
-                      hora: String(fd.get("hora") ?? ""),
-                      ritmo: String(fd.get("ritmo") ?? ""),
-                      infoExtra: String(fd.get("infoExtra") ?? ""),
-                      urlBases: String(fd.get("urlBases") ?? ""),
-                    }),
-                  "Ficha guardada."
-                )
-              }
-            >
-              <p className="text-xs text-tinta-suave">
-                Esto no lo publica la FACV: lo rellenas tú y el re-sync no lo toca.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <Campo id="hora" etiqueta="Hora" valor={t.hora} marcador="09:30" />
-                <Campo id="ritmo" etiqueta="Ritmo" valor={t.ritmo} marcador="blitz" />
-              </div>
-              <Campo
-                id="urlBases"
-                etiqueta="Enlace a las bases"
-                valor={t.urlBases}
-                marcador="https://…"
-              />
-              <Campo
-                id="infoExtra"
-                etiqueta="Información extra"
-                valor={t.infoExtra}
-                marcador="Inscripción media hora antes"
-              />
-              <div className="flex flex-wrap gap-2">
-                <Boton variante="solido" type="submit" disabled={pendiente} className="flex-1">
-                  Guardar
-                </Boton>
-                <Boton
-                  variante="secundario"
-                  onClick={() => setEditando(null)}
-                  disabled={pendiente}
-                >
-                  Cancelar
-                </Boton>
-                {t.esManual && (
-                  <Boton
-                    variante="secundario"
-                    disabled={pendiente}
-                    onClick={() => ejecutar(() => borrarTorneo(t.id), "Torneo borrado.")}
-                  >
-                    Borrar torneo
-                  </Boton>
-                )}
-              </div>
-            </form>
-          )}
-        </Tarjeta>
-      ))}
+                    {editando === t.id && (
+                      <form
+                        className="flex flex-col gap-3 border-t border-borde px-3 pb-3 pt-3"
+                        action={(fd) =>
+                          ejecutar(
+                            () =>
+                              editarFichaTorneo(t.id, {
+                                hora: String(fd.get("hora") ?? ""),
+                                ritmo: String(fd.get("ritmo") ?? ""),
+                                infoExtra: String(fd.get("infoExtra") ?? ""),
+                                urlBases: String(fd.get("urlBases") ?? ""),
+                              }),
+                            "Ficha guardada."
+                          )
+                        }
+                      >
+                        <p className="text-xs text-tinta-suave">
+                          Esto no lo publica la FACV: lo rellenas tú y el re-sync no lo toca.
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Campo id="hora" etiqueta="Hora" valor={t.hora} marcador="09:30" />
+                          <Campo id="ritmo" etiqueta="Ritmo" valor={t.ritmo} marcador="blitz" />
+                        </div>
+                        <Campo
+                          id="urlBases"
+                          etiqueta="Enlace a las bases"
+                          valor={t.urlBases}
+                          marcador="https://…"
+                        />
+                        <Campo
+                          id="infoExtra"
+                          etiqueta="Información extra"
+                          valor={t.infoExtra}
+                          marcador="Inscripción media hora antes"
+                        />
+                        <div className="flex flex-wrap gap-2">
+                          <Boton variante="solido" type="submit" disabled={pendiente} className="flex-1">
+                            Guardar
+                          </Boton>
+                          <Boton
+                            variante="secundario"
+                            onClick={() => setEditando(null)}
+                            disabled={pendiente}
+                          >
+                            Cancelar
+                          </Boton>
+                          {t.esManual && (
+                            <Boton
+                              variante="secundario"
+                              disabled={pendiente}
+                              onClick={() => ejecutar(() => borrarTorneo(t.id), "Torneo borrado.")}
+                            >
+                              Borrar torneo
+                            </Boton>
+                          )}
+                        </div>
+                      </form>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        ));
+      })()}
     </div>
   );
 }
