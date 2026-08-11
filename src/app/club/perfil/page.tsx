@@ -105,11 +105,13 @@ export default async function PerfilPage() {
                 <p className="text-3xl font-bold tabular-nums text-tinta">
                   {filaOrden.elo_oficial}
                 </p>
-                {/* "Orden de fuerza" y no "ELO oficial": es la foto fija de antes
-                    del Interclubs (documento del club, estático todo el año), no el
-                    ELO que el socio tiene HOY. Aclaración del propietario, 2026-08-11. */}
+                {/* "ELO FACV" = el ELO REAL ACTUAL: la sync semanal refresca
+                    `elo_oficial` con lo que ponga la página de la FACV, que es el
+                    que se mueve con los resultados. Lo estático del orden de fuerza
+                    son las POSICIONES (numero/bis), no este número. Regla de los
+                    tres ELOs en CLAUDE.md; segunda aclaración del propietario. */}
                 <p className="text-xs uppercase tracking-wide text-tinta-suave">
-                  ELO orden de fuerza
+                  ELO FACV
                 </p>
               </div>
             ) : null}

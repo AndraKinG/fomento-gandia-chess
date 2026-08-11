@@ -106,7 +106,7 @@ export default async function OrdenFuerzaPage({
           romper enlaces. */}
       <Cabecera
         titulo="ELO de los socios"
-        subtitulo="La lista oficial FACV; de aquí sale el orden de fuerza del Interclubs"
+        subtitulo="El ELO actual de la FACV y las posiciones del orden de fuerza"
         volverA="/club/admin"
         medida="panel"
       />
