@@ -125,3 +125,29 @@ export async function marcarTodosLeidos(): Promise<{ error?: string }> {
   revalidatePath("/club/avisos");
   return {};
 }
+
+/**
+ * Borra los avisos YA LEÍDOS del socio de la sesión, para limpiar la bandeja.
+ *
+ * Cliente de usuario, como el resto del fichero: la policy "avisos: borro los
+ * mios leidos" (migración 0034) es quien decide — tus filas y solo las leídas.
+ * Un aviso sin leer no se puede borrar ni queriendo: primero se lee o se marca
+ * leído, y así nunca desaparece nada que no se haya visto.
+ */
+export async function borrarLeidos(): Promise<{ error?: string }> {
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "No autenticado" };
+
+  const { error } = await supabase
+    .from("notifications")
+    .delete()
+    .eq("profile_id", user.id)
+    .not("leido_en", "is", null);
+  if (error) return { error: error.message };
+
+  revalidatePath("/club/avisos");
+  return {};
+}

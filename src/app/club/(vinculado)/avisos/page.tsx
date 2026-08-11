@@ -7,7 +7,7 @@ import { Cabecera } from "@/components/ui/Cabecera";
 import { Contenedor } from "@/components/ui/Contenedor";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { BotonAccion } from "@/components/ui/BotonAccion";
-import { marcarLeido, marcarLeidoQuieto, marcarTodosLeidos } from "./actions";
+import { borrarLeidos, marcarLeido, marcarLeidoQuieto, marcarTodosLeidos } from "./actions";
 
 type AvisoVista = {
   id: string;
@@ -185,12 +185,18 @@ export default async function AvisosPage() {
   }));
 
   const hayAlgoSinLeer = avisos.some((a) => a.sinLeer);
+  const hayLeidos = avisos.some((a) => !a.sinLeer);
 
   // La action de un `<form>` tiene que devolver `void`/`Promise<void>`, igual
   // que en `FilaAviso`.
   async function marcarTodosLeidosAction() {
     "use server";
     await marcarTodosLeidos();
+  }
+
+  async function borrarLeidosAction() {
+    "use server";
+    await borrarLeidos();
   }
 
   return (
@@ -207,19 +213,33 @@ export default async function AvisosPage() {
           />
         ) : (
           <>
-            {/* Solo tiene sentido si hay algo que limpiar: un botón que no hace
-                nada es peor que no tenerlo. */}
-            {hayAlgoSinLeer && (
-              <div className="mb-3 flex justify-end">
-                <form action={marcarTodosLeidosAction}>
-                  <BotonAccion
-                    variante="secundario"
-                    trabajando="Marcando…"
-                    className="px-3 py-1.5 text-sm font-medium"
-                  >
-                    Marcar todos como leídos
-                  </BotonAccion>
-                </form>
+            {/* Cada botón solo si tiene trabajo: uno que no hace nada es peor
+                que no tenerlo. Borrar solo toca LEÍDOS (policy de la 0034): lo
+                que no se ha visto no desaparece, primero se marca leído. */}
+            {(hayAlgoSinLeer || hayLeidos) && (
+              <div className="mb-3 flex flex-wrap justify-end gap-2">
+                {hayLeidos && (
+                  <form action={borrarLeidosAction}>
+                    <BotonAccion
+                      variante="secundario"
+                      trabajando="Borrando…"
+                      className="px-3 py-1.5 text-sm font-medium"
+                    >
+                      Borrar los leídos
+                    </BotonAccion>
+                  </form>
+                )}
+                {hayAlgoSinLeer && (
+                  <form action={marcarTodosLeidosAction}>
+                    <BotonAccion
+                      variante="secundario"
+                      trabajando="Marcando…"
+                      className="px-3 py-1.5 text-sm font-medium"
+                    >
+                      Marcar todos como leídos
+                    </BotonAccion>
+                  </form>
+                )}
               </div>
             )}
             <div className="overflow-hidden rounded-2xl border border-borde bg-tarjeta">
