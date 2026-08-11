@@ -72,10 +72,10 @@ export default function PaginaPublica() {
           (pasó: el optimizador de imágenes recibía el HTML del login). */}
       <section className="mx-auto max-w-3xl px-6 pt-12">
         <Image
-          src="/logo-club-centrado.jpg"
+          src="/logo-club.jpg"
           alt="Logo del Club de Ajedrez Fomento Gandia: el Puente del Fomento construido con piezas de ajedrez"
-          width={860}
-          height={576}
+          width={1128}
+          height={712}
           className="w-full rounded-2xl border border-borde shadow-sm"
           priority
         />
