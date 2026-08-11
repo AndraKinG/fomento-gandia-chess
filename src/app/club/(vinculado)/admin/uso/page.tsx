@@ -85,7 +85,8 @@ export default async function UsoPage({
     { data: recuento },
     { data: diario },
     { data: actividad },
-    { count: cuentas },
+    { count: cuentasTotales },
+    { count: cuentasDePrueba },
     { count: vinculadas },
     { count: fichas },
     { count: dispositivos },
@@ -95,11 +96,23 @@ export default async function UsoPage({
     admin.from("uso_diario").select("dia, visitas, latidos").gte("dia", desdeIso),
     admin.from("uso_socios_dia").select("dia, profile_id").gte("dia", desdeIso),
     supabase.from("profiles").select("id", { count: "exact", head: true }),
+    // LAS CUENTAS DE PRUEBA NO SON EL CLUB (migración 0040): su latido ya no se
+    // apunta, pero los denominadores de aquí se cuentan en esta pantalla, así que
+    // hay que descontarlas también aquí o el "% del club" saldría bajo por una
+    // cuenta que no es de nadie. `!inner` porque el filtro va sobre la ficha.
     supabase
       .from("profiles")
+      .select("id, players!inner(de_prueba)", { count: "exact", head: true })
+      .eq("players.de_prueba", true),
+    supabase
+      .from("profiles")
+      .select("id, players!inner(de_prueba)", { count: "exact", head: true })
+      .eq("players.de_prueba", false),
+    supabase
+      .from("players")
       .select("id", { count: "exact", head: true })
-      .not("player_id", "is", null),
-    supabase.from("players").select("id", { count: "exact", head: true }).eq("activo", true),
+      .eq("activo", true)
+      .eq("de_prueba", false),
     // Dispositivos con notificaciones activas: es la mejor medida de adopción real
     // que tenemos, porque activarlas exige tener la app a mano (en iOS, instalada).
     admin.from("push_subscriptions").select("id", { count: "exact", head: true }),
@@ -108,6 +121,11 @@ export default async function UsoPage({
     // mientras el club sea el que es.
     admin.from("uso_socios_dia").select("profile_id"),
   ]);
+
+  // "Cuentas creadas" tampoco cuenta las de prueba. Se resta en vez de filtrarse en
+  // la consulta porque el total incluye las cuentas SIN ficha (recién registradas,
+  // todavía sin vincular) y un `!inner` las dejaría fuera a todas.
+  const cuentas = Math.max(0, (cuentasTotales ?? 0) - (cuentasDePrueba ?? 0));
 
   // Se casan las dos fuentes por día: el recuento trae TODOS los días de la
   // ventana (generate_series), así que es la espina; el diario del latido puede
@@ -157,7 +175,7 @@ export default async function UsoPage({
             <EnLineaAhora />
             <Dato
               titulo="Cuentas creadas"
-              valor={String(cuentas ?? 0)}
+              valor={String(cuentas)}
               nota={`de ${fichas ?? 0} socios`}
             />
             <Dato

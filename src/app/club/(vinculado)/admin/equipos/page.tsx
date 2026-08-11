@@ -86,8 +86,14 @@ export default async function EquiposPage({
     .eq("season_id", season.id)
     .order("nombre");
 
+  // Sin la ficha de pruebas (migración 0040): es una plantilla de Interclubs, y ahí
+  // solo va gente que puede jugar una jornada de verdad.
   const { data: fichas } = await supabase
-    .from("players").select("id, nombre").eq("activo", true).order("nombre");
+    .from("players")
+    .select("id, nombre")
+    .eq("activo", true)
+    .eq("de_prueba", false)
+    .order("nombre");
 
   type Jornada = {
     id: string;
