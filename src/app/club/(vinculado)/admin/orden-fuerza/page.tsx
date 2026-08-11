@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { crearFichaManual, importarOrdenFuerza, sincronizarOrdenFuerzaFACV } from "./actions";
+import { actualizarEloFide, crearFichaManual, importarOrdenFuerza, sincronizarOrdenFuerzaFACV } from "./actions";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Banner } from "@/components/ui/Banner";
 import { ChipElo } from "@/components/ui/ChipElo";
@@ -70,6 +70,19 @@ export default async function OrdenFuerzaPage({
     redirect(`/club/admin/orden-fuerza?${params.toString()}`);
   }
 
+  async function accionFide() {
+    "use server";
+    const resultado = await actualizarEloFide();
+    const params = new URLSearchParams({
+      msg:
+        resultado.error ??
+        `ELO FIDE actualizado: ${resultado.actualizados} jugadores` +
+          (resultado.errores > 0 ? ` (${resultado.errores} sin respuesta de fide.com)` : ""),
+      tipo: resultado.error ? "error" : "ok",
+    });
+    redirect(`/club/admin/orden-fuerza?${params.toString()}`);
+  }
+
   async function accionSincronizar() {
     "use server";
     const resultado = await sincronizarOrdenFuerzaFACV();
@@ -127,13 +140,28 @@ export default async function OrdenFuerzaPage({
           </Banner>
         )}
 
-        <form action={accionSincronizar}>
-          {/* Esto descarga y parsea una página de la FACV: los segundos que tarda
-              tienen que verse, o parece que el botón no ha hecho nada. */}
-          <BotonAccion trabajando="Consultando la web de la FACV…" className="w-full">
-            Sincronizar con la FACV
-          </BotonAccion>
-        </form>
+        {/* Las DOS fuentes de ELO, lado a lado (al fusionar aquí la antigua
+            "Actualización de ELO", 2026-08-11): la lista FACV —semanal, la sincroniza
+            también el cron del viernes— y el FIDE mensual, que fide.com solo deja
+            consultar desde un ordenador de casa, nunca desde Vercel. */}
+        <div className="grid gap-2 sm:grid-cols-2">
+          <form action={accionSincronizar}>
+            {/* Esto descarga y parsea una página de la FACV: los segundos que tarda
+                tienen que verse, o parece que el botón no ha hecho nada. */}
+            <BotonAccion trabajando="Consultando la web de la FACV…" className="w-full">
+              Sincronizar con la FACV
+            </BotonAccion>
+          </form>
+          <form action={accionFide}>
+            <BotonAccion
+              variante="secundario"
+              trabajando="Consultando fide.com…"
+              className="w-full"
+            >
+              Actualizar FIDE (solo desde casa)
+            </BotonAccion>
+          </form>
+        </div>
 
         <details className="group rounded-xl border border-borde bg-tarjeta p-3">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-medium text-tinta">
@@ -227,8 +255,10 @@ export default async function OrdenFuerzaPage({
                         chips={
                           <>
                             <ChipElo valor={f.elo_oficial} etiqueta="Oficial" />
-                            <ChipElo valor={p.elo_fide} etiqueta="FIDE" />
-                            <ChipElo valor={p.elo_feda} etiqueta="FEDA" />
+                            {/* FIDE y FEDA solo con dato: 46 chips de "FIDE —"
+                                no dicen nada, y FEDA además está retirada. */}
+                            {p.elo_fide !== null && <ChipElo valor={p.elo_fide} etiqueta="FIDE" />}
+                            {p.elo_feda !== null && <ChipElo valor={p.elo_feda} etiqueta="FEDA" />}
                           </>
                         }
                       />

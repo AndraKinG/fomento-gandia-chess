@@ -42,12 +42,6 @@ const ENLACES = [
     detalle: "Sincronizar el calendario FACV, elegir a cuáles vamos y ver el transporte",
   },
   {
-    href: "/club/admin/elo",
-    icono: "📈",
-    titulo: "Actualización de ELO",
-    detalle: "Actualizar el ELO FIDE y FEDA de los jugadores",
-  },
-  {
     href: "/club/admin/uso",
     icono: "📊",
     titulo: "Datos de uso",

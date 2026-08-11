@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { esAdmin } from "@/lib/auth/es-admin";
+import { actualizarEloFideCore } from "@/lib/import/fide-apply";
 import { parseOrdenFuerza } from "@/lib/import/orden-fuerza-parser";
 import { sincronizarOrdenFuerzaFACVCore } from "@/lib/import/facv-of-apply";
 import { buscarFicha, indicePorNombre } from "@/lib/import/cruzar-nombres";
@@ -235,4 +236,22 @@ export async function crearFichaManual(formData: FormData): Promise<{
       `Ficha creada: ${nombre}, colocada como nº ${posicion} por ELO ${eloOficialDe(elos)}. ` +
       `Ya puede vincular su cuenta. Cuando la FACV lo publique, la sincronización la funde con la oficial.`,
   };
+}
+
+/**
+ * Actualiza el ELO FIDE (el "real" mensual) de los jugadores con `fide_id`.
+ *
+ * Vivía en la antigua pantalla "Actualización de ELO", fusionada aquí el
+ * 2026-08-11. Solo funciona con la app EN LOCAL: fide.com bloquea las IPs de
+ * Vercel (ver docs/referencia/automatizaciones.md).
+ */
+export async function actualizarEloFide(): Promise<{
+  actualizados: number;
+  errores: number;
+  error?: string;
+}> {
+  if (!(await esAdmin())) {
+    return { actualizados: 0, errores: 0, error: "Solo el admin puede hacer esto" };
+  }
+  return actualizarEloFideCore();
 }
