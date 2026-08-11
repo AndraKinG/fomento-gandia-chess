@@ -15,9 +15,9 @@ import { leerTorneo } from "./datos";
 type Resultado = { error?: string; id?: string };
 
 function refrescar(id?: string): void {
-  revalidatePath("/club/torneos/interno");
-  revalidatePath("/club/torneos/interno/ranking");
-  if (id) revalidatePath(`/club/torneos/interno/${id}`);
+  revalidatePath("/club/jugar/torneos");
+  revalidatePath("/club/jugar/torneos/ranking");
+  if (id) revalidatePath(`/club/jugar/torneos/${id}`);
 }
 
 /** Crea un torneo interno. Lo organizan junta y admin. */

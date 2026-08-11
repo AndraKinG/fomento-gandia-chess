@@ -38,26 +38,21 @@ export function Pestana({
 }
 
 /**
- * Las dos pestañas de la sección Torneos.
+ * Las dos pestañas de la sección Jugar.
  *
- * POR QUÉ ESTÁN JUNTOS LOS DOS TIPOS: es una sección, no dos, porque para el socio
- * los dos son "torneos". Pero NO se mezclan en una sola lista con filtro, porque lo
- * que haces en cada uno no se parece: en los de fuera dices si vas y se organizan
- * los coches —logística—, y en los del club te inscribes, te emparejan y el
- * resultado cuenta para el ELO interno —competición—.
- *
- * "De fuera" va primero y es la que se abre por defecto: el calendario de la FACV
- * se usa todo el año, mientras que un torneo interno solo existe de vez en cuando
- * (y cuando existe, ya sale destacado en Inicio).
+ * LOS TORNEOS DEL CLUB VIVEN EN JUGAR desde el 2026-08-11 (decisión del
+ * propietario): son partidas que se juegan EN la app, como los retos — mientras
+ * que la sección Torneos es pura organización de los de fuera (si vas, coches).
+ * El criterio que separa ya no es "cómo se llama la cosa" sino "dónde se juega".
  */
-export function PestanasTorneos({ activa }: { activa: "facv" | "interno" }) {
+export function PestanasJugar({ activa }: { activa: "retos" | "torneos" }) {
   return (
     <Pestanas>
-      <Pestana href="/club/torneos/facv" activa={activa === "facv"}>
-        De fuera
+      <Pestana href="/club/jugar" activa={activa === "retos"}>
+        Retos
       </Pestana>
-      <Pestana href="/club/torneos/interno" activa={activa === "interno"}>
-        Del club
+      <Pestana href="/club/jugar/torneos" activa={activa === "torneos"}>
+        Torneos del club
       </Pestana>
     </Pestanas>
   );

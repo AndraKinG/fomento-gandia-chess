@@ -7,7 +7,7 @@ import { Boton } from "@/components/ui/Boton";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { formatearRangoFechas } from "@/lib/torneos/fechas";
 import { Contenedor, REJILLA } from "@/components/ui/Contenedor";
-import { PestanasTorneos } from "@/components/ui/Pestanas";
+import { PestanasJugar } from "@/components/ui/Pestanas";
 
 const ETIQUETA_ESTADO: Record<string, string> = {
   inscripcion: "Inscripción abierta",
@@ -48,11 +48,11 @@ export default async function InternoPage() {
         {/* Pestañas y acciones en la MISMA fila desde `sm`. Apiladas eran cuatro
             bloques a todo lo ancho antes de llegar al primer torneo. */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <PestanasTorneos activa="interno" />
+          <PestanasJugar activa="torneos" />
           <div className="flex flex-wrap items-center gap-2">
             <Boton
               variante="secundario"
-              href="/club/torneos/interno/ranking"
+              href="/club/jugar/torneos/ranking"
               className="text-sm"
             >
               Ranking de ELO
@@ -60,7 +60,7 @@ export default async function InternoPage() {
             {sesion?.esJunta && (
               <Boton
                 variante="secundario"
-                href="/club/torneos/interno/nuevo"
+                href="/club/jugar/torneos/nuevo"
                 className="text-sm"
               >
                 Organizar torneo
@@ -84,7 +84,7 @@ export default async function InternoPage() {
         <ul className={REJILLA[3]}>
           {(torneos ?? []).map((t) => (
             <li key={t.id}>
-              <Link href={`/club/torneos/interno/${t.id}`} className="block">
+              <Link href={`/club/jugar/torneos/${t.id}`} className="block">
                 <Tarjeta
                   destacada={t.estado === "en_curso"}
                   className="flex items-start justify-between gap-3 transition hover:border-borde-acento"

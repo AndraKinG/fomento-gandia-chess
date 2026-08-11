@@ -451,9 +451,9 @@ export default async function Home() {
 
           <div className="space-y-4">
             <section className="space-y-2">
-              <Titulo enlace="/club/torneos/interno">Torneos del club</Titulo>
+              <Titulo enlace="/club/jugar/torneos">Torneos del club</Titulo>
               {internoVivo ? (
-                <Link href={`/club/torneos/interno/${internoVivo.id}`} className="block">
+                <Link href={`/club/jugar/torneos/${internoVivo.id}`} className="block">
                   <Tarjeta
                     destacada={internoVivo.estado === "en_curso"}
                     className="transition hover:border-borde-acento"
@@ -487,7 +487,7 @@ export default async function Home() {
                     No hay ningún torneo del club en marcha.
                   </p>
                   <Link
-                    href="/club/torneos/interno/ranking"
+                    href="/club/jugar/torneos/ranking"
                     className="mt-2 inline-block text-sm text-acento-texto underline"
                   >
                     Ver el ranking de ELO del club

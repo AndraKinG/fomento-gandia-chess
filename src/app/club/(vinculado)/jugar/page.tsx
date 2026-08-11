@@ -7,6 +7,7 @@ import { Contenedor } from "@/components/ui/Contenedor";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { Retos } from "./Retos";
+import { PestanasJugar } from "@/components/ui/Pestanas";
 
 /**
  * Jugar: lo que tienes en marcha, los retos y a quién retar.
@@ -63,6 +64,10 @@ export default async function JugarPage() {
         medida="panel"
       />
       <Contenedor medida="panel" className="space-y-4">
+        {/* Jugar son dos cosas desde el 2026-08-11: los retos y los torneos del
+            club — todo lo que se juega EN la app. La sección Torneos quedó solo
+            para la organización de los de fuera. */}
+        <PestanasJugar activa="retos" />
         {!yo && (
           <EstadoVacio
             icono="♟"

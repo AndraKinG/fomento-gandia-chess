@@ -190,8 +190,8 @@ async function cerrarEnElTorneo(
     .update({ resultado: desdeBlancas, game_id: guardada?.id ?? par.game_id })
     .eq("id", par.id);
 
-  revalidatePath("/club/torneos/interno");
-  revalidatePath("/club/torneos/interno/ranking");
+  revalidatePath("/club/jugar/torneos");
+  revalidatePath("/club/jugar/torneos/ranking");
 }
 
 /**

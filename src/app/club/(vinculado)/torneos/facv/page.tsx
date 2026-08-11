@@ -8,7 +8,6 @@ import { Boton } from "@/components/ui/Boton";
 import { formatearRangoFechas, hoyISO } from "@/lib/torneos/fechas";
 import { CrearTorneo } from "./CrearTorneo";
 import { Contenedor, REJILLA } from "@/components/ui/Contenedor";
-import { PestanasTorneos } from "@/components/ui/Pestanas";
 
 type Asistencia = "voy" | "no_voy" | "duda";
 
@@ -93,15 +92,12 @@ export default async function TorneosPage({
         volverA={verTodos || verPasados ? "/club/torneos/facv" : undefined} medida="panel"
       />
       <Contenedor medida="panel" className="space-y-3">
-        {/* Pestañas y acciones en la MISMA fila desde `sm`. Apiladas eran tres bloques
-            a todo lo ancho antes de llegar al primer torneo.
-
-            LA FILA LA MONTA `CrearTorneo` porque su formulario tiene que salir DEBAJO,
-            no dentro: estando en la misma fila que las pestañas, al abrirlo se comía el
-            ancho y dejaba "De fuera / Del club" partido en dos líneas y descolocado. */}
+        {/* SIN PESTAÑAS desde el 2026-08-11: los torneos del club se mudaron a
+            Jugar (se juegan en la app; esto es organización de los de fuera), así
+            que esta sección vuelve a ser una sola cosa. */}
         <CrearTorneo
           puedeCrear={Boolean(sesion?.esJunta) && !verPasados}
-          pestanas={<PestanasTorneos activa="facv" />}
+          pestanas={null}
           acciones={
             <>
               {!verTodos && !verPasados && (

@@ -385,7 +385,7 @@ export async function ejecutar(
 
     case "ranking_del_club": {
       const { leerRanking } = await import(
-        "@/app/club/(vinculado)/torneos/interno/datos"
+        "@/app/club/(vinculado)/jugar/torneos/datos"
       );
       const filas = await leerRanking(supabase);
       return {
