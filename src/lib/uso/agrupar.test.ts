@@ -4,7 +4,9 @@ import {
   claveMes,
   claveSemana,
   mediaConectados,
+  porcentajeDelClub,
   tiempoDeUso,
+  tiempoPorSocio,
   type UsoDia,
 } from "./agrupar";
 
@@ -13,6 +15,7 @@ function dia(fecha: string, extra: Partial<UsoDia> = {}): UsoDia {
     dia: fecha,
     visitas: 0,
     latidos: 0,
+    nuevos: 0,
     partidasVivo: 0,
     retos: 0,
     partidasSubidas: 0,
@@ -113,5 +116,39 @@ describe("mediaConectados", () => {
 
   it("cero días no divide por cero", () => {
     expect(mediaConectados(100, 0)).toBe("0");
+  });
+});
+
+describe("nuevos", () => {
+  it("se suman por periodo, porque cada socio es nuevo una sola vez", () => {
+    // Lo calcula SQL con el primer día de cada socio, así que sumar dos días de
+    // la misma semana no puede duplicar a nadie.
+    const g = agruparUso(
+      [dia("2026-08-10", { nuevos: 2 }), dia("2026-08-11", { nuevos: 1 })],
+      [],
+      "semana"
+    );
+    expect(g[0].nuevos).toBe(3);
+  });
+});
+
+describe("tiempoPorSocio", () => {
+  it("reparte el tiempo entre los activos", () => {
+    // 24 latidos = 2 h; entre 4 socios, media hora cada uno.
+    expect(tiempoPorSocio(24, 4)).toBe("30 min");
+  });
+
+  it("sin activos no divide por cero", () => {
+    expect(tiempoPorSocio(10, 0)).toBe("—");
+  });
+});
+
+describe("porcentajeDelClub", () => {
+  it("mide sobre las cuentas vinculadas, no sobre las fichas", () => {
+    expect(porcentajeDelClub(3, 12)).toBe("25 %");
+  });
+
+  it("sin cuentas no dice un porcentaje falso", () => {
+    expect(porcentajeDelClub(0, 0)).toBe("—");
   });
 });

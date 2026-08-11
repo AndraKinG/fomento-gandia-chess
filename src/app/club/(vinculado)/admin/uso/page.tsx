@@ -8,7 +8,9 @@ import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import {
   agruparUso,
   mediaConectados,
+  porcentajeDelClub,
   tiempoDeUso,
+  tiempoPorSocio,
   type Periodo,
   type UsoDia,
 } from "@/lib/uso/agrupar";
@@ -17,14 +19,21 @@ import {
  * El panel de datos de uso, solo para el admin (la puerta la pone el layout de
  * /club/admin).
  *
- * QUÉ ENSEÑA: los contadores agregados que deja el latido (visitas, tiempo,
- * media de conectados, socios activos — ver la decisión de privacidad en la
- * migración 0032) más la actividad que YA estaba en la base con su fecha
- * (partidas, retos, chat, avisos), agregada al consultarla por `recuento_uso`.
+ * TRES BLOQUES, y el orden es el de las preguntas que se hacen de verdad
+ * (reordenado el 2026-08-12 a petición del propietario, que pidió "datos más
+ * útiles y todo mejor estructurado"):
+ *
+ * 1. **¿Cuánto club hay dentro?** Adopción: cuentas, notificaciones, quién ha
+ *    entrado alguna vez. No depende del periodo — es una foto de hoy.
+ * 2. **¿Se está usando?** Las cifras del periodo en curso, en grande.
+ * 3. **¿Va a mejor o a peor?** La tabla, para comparar periodos.
+ *
+ * QUÉ ENSEÑA Y QUÉ NO: contadores agregados del latido (ver la decisión de
+ * privacidad en la migración 0032) más la actividad que YA estaba en la base con
+ * su fecha, agregada al consultarla por `recuento_uso`. De cada socio solo se
+ * sabe "entró tal día", nunca a qué hora ni qué miró.
  *
  * CUÁNTO SE MIRA HACIA ATRÁS según el periodo: 14 días, 12 semanas o 12 meses.
- * Más historia en pantalla no ayuda a decidir nada y estira la tabla — y los
- * datos siguen en la base si algún día hacen falta.
  */
 
 const VENTANAS: Record<Periodo, { dias: number; titulo: string }> = {
@@ -75,6 +84,9 @@ export default async function UsoPage({
     { data: actividad },
     { count: cuentas },
     { count: vinculadas },
+    { count: fichas },
+    { count: dispositivos },
+    { data: todosLosDias },
   ] = await Promise.all([
     admin.rpc("recuento_uso", { desde: desdeIso }),
     admin.from("uso_diario").select("dia, visitas, latidos").gte("dia", desdeIso),
@@ -84,6 +96,14 @@ export default async function UsoPage({
       .from("profiles")
       .select("id", { count: "exact", head: true })
       .not("player_id", "is", null),
+    supabase.from("players").select("id", { count: "exact", head: true }).eq("activo", true),
+    // Dispositivos con notificaciones activas: es la mejor medida de adopción real
+    // que tenemos, porque activarlas exige tener la app a mano (en iOS, instalada).
+    admin.from("push_subscriptions").select("id", { count: "exact", head: true }),
+    // TODA la historia de quién ha entrado, para "han entrado alguna vez". Son ≤46
+    // socios por día: una consulta ligera que cabe de sobra en el tope de mil filas
+    // mientras el club sea el que es.
+    admin.from("uso_socios_dia").select("profile_id"),
   ]);
 
   // Se casan las dos fuentes por día: el recuento trae TODOS los días de la
@@ -96,6 +116,7 @@ export default async function UsoPage({
     dia: String(f.dia),
     visitas: latidosPorDia.get(String(f.dia))?.visitas ?? 0,
     latidos: latidosPorDia.get(String(f.dia))?.latidos ?? 0,
+    nuevos: Number(f.nuevos),
     partidasVivo: Number(f.partidas_vivo),
     retos: Number(f.retos),
     partidasSubidas: Number(f.partidas_subidas),
@@ -111,117 +132,215 @@ export default async function UsoPage({
 
   const grupos = agruparUso(dias, pares, periodo);
   const actual = grupos[0];
+  const hanEntradoAlguna = new Set((todosLosDias ?? []).map((f) => f.profile_id as string)).size;
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera
         titulo="Datos de uso"
-        subtitulo={`${vinculadas ?? 0} de ${cuentas ?? 0} cuentas vinculadas`}
+        subtitulo="Cuánto club hay dentro de la app"
         volverA="/club/admin"
         medida="panel"
       />
-      <Contenedor medida="panel" className="space-y-4">
-        <Pestanas>
-          {/* "Por día" apunta a la URL LIMPIA, que ya significa día por defecto:
-              así el mismo estado tiene siempre la misma dirección, entre en el
-              panel como entre. Con ?periodo=dia había dos URLs para lo mismo. */}
-          <Pestana href="/club/admin/uso" activa={periodo === "dia"}>
-            Por día
-          </Pestana>
-          <Pestana href="/club/admin/uso?periodo=semana" activa={periodo === "semana"}>
-            Por semana
-          </Pestana>
-          <Pestana href="/club/admin/uso?periodo=mes" activa={periodo === "mes"}>
-            Por mes
-          </Pestana>
-        </Pestanas>
-
-        {/* El periodo en curso, en grande: es la pregunta que trae al panel
-            ("¿se usa?"), y en una tabla de 14 filas no se ve de un vistazo. */}
-        {actual && (
+      <Contenedor medida="panel" className="space-y-6">
+        {/* ---- 1. ADOPCIÓN: la foto de hoy, sin depender del periodo ---- */}
+        <section className="space-y-2">
+          <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
+            El club en la app
+          </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Dato titulo="Socios activos" valor={String(actual.activos)} />
-            <Dato titulo="Visitas" valor={String(actual.visitas)} />
-            <Dato titulo="Tiempo de uso" valor={tiempoDeUso(actual.latidos)} />
             <Dato
-              titulo="Conectados de media"
-              valor={mediaConectados(actual.latidos, diasDelGrupo(periodo))}
+              titulo="Cuentas creadas"
+              valor={String(cuentas ?? 0)}
+              nota={`de ${fichas ?? 0} socios`}
+            />
+            <Dato
+              titulo="Con ficha vinculada"
+              valor={String(vinculadas ?? 0)}
+              nota="pueden usarlo todo"
+            />
+            <Dato
+              titulo="Han entrado alguna vez"
+              valor={String(hanEntradoAlguna)}
+              nota={porcentajeDelClub(hanEntradoAlguna, vinculadas ?? 0) + " de las cuentas"}
+            />
+            <Dato
+              titulo="Avisos activados"
+              valor={String(dispositivos ?? 0)}
+              nota="dispositivos"
             />
           </div>
-        )}
+        </section>
 
+        {/* ---- 2. EL PERIODO EN CURSO, en grande ---- */}
+        <section className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
+              {periodo === "dia" ? "Hoy" : periodo === "semana" ? "Esta semana" : "Este mes"}
+            </h2>
+            <Pestanas>
+              {/* "Por día" apunta a la URL LIMPIA, que ya significa día por
+                  defecto: así el mismo estado tiene siempre la misma dirección. */}
+              <Pestana href="/club/admin/uso" activa={periodo === "dia"}>
+                Día
+              </Pestana>
+              <Pestana href="/club/admin/uso?periodo=semana" activa={periodo === "semana"}>
+                Semana
+              </Pestana>
+              <Pestana href="/club/admin/uso?periodo=mes" activa={periodo === "mes"}>
+                Mes
+              </Pestana>
+            </Pestanas>
+          </div>
+
+          {actual && (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Dato
+                titulo="Socios activos"
+                valor={String(actual.activos)}
+                nota={porcentajeDelClub(actual.activos, vinculadas ?? 0) + " de las cuentas"}
+              />
+              <Dato
+                titulo="Nuevos"
+                valor={actual.nuevos > 0 ? `+${actual.nuevos}` : "0"}
+                nota="entran por primera vez"
+              />
+              <Dato
+                titulo="Tiempo por socio"
+                valor={tiempoPorSocio(actual.latidos, actual.activos)}
+                nota={`${tiempoDeUso(actual.latidos)} en total`}
+              />
+              <Dato
+                titulo="Conectados a la vez"
+                valor={mediaConectados(actual.latidos, diasDelGrupo(periodo))}
+                nota="de media"
+              />
+            </div>
+          )}
+        </section>
+
+        {/* ---- 3. LA TABLA, para comparar periodos ---- */}
         {grupos.length === 0 ? (
           <Tarjeta>
             <EstadoVacio
               icono="📊"
               titulo="Todavía no hay datos"
-              detalle="Los contadores empiezan a llenarse con el uso a partir de la migración 0032."
+              detalle="Los contadores se llenan con el uso; los días anteriores a estrenarlos van a cero."
             />
           </Tarjeta>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-borde bg-tarjeta">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-borde text-xs text-tinta-suave">
-                    <th className="px-3 py-2 text-left font-medium">{ventana.titulo}</th>
-                    <th className="px-3 py-2 text-right font-medium">Activos</th>
-                    <th className="px-3 py-2 text-right font-medium">Visitas</th>
-                    <th className="px-3 py-2 text-right font-medium">Tiempo</th>
-                    <th className="px-3 py-2 text-right font-medium" title="Partidas en vivo">
-                      En vivo
-                    </th>
-                    <th className="px-3 py-2 text-right font-medium">Retos</th>
-                    <th className="px-3 py-2 text-right font-medium" title="Partidas subidas al repositorio">
-                      Subidas
-                    </th>
-                    <th className="px-3 py-2 text-right font-medium">Chat</th>
-                    <th className="px-3 py-2 text-right font-medium" title="Avisos generados / push entregados">
-                      Avisos
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-borde">
-                  {grupos.map((g) => (
-                    <tr key={g.clave} className="text-tinta">
-                      <td className="whitespace-nowrap px-3 py-1.5 text-tinta-suave">
-                        {etiqueta(g.clave, periodo)}
-                      </td>
-                      <Num v={g.activos} />
-                      <Num v={g.visitas} />
-                      <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums">
-                        {g.latidos === 0 ? "—" : tiempoDeUso(g.latidos)}
-                      </td>
-                      <Num v={g.partidasVivo} />
-                      <Num v={g.retos} />
-                      <Num v={g.partidasSubidas} />
-                      <Num v={g.mensajesChat} />
-                      <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums">
-                        {g.avisos === 0 ? "—" : `${g.avisos} / ${g.pushEntregados}`}
-                      </td>
+          <section className="space-y-2">
+            <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
+              {ventana.titulo}
+            </h2>
+            <div className="overflow-hidden rounded-2xl border border-borde bg-tarjeta">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    {/* DOS FILAS DE CABECERA: "Gente" y "Actividad" son dos cosas
+                        distintas, y nueve columnas seguidas sin agrupar no se leen. */}
+                    <tr className="border-b border-borde text-[11px] uppercase tracking-wide text-tinta-suave">
+                      <th className="px-3 pt-2" />
+                      <th className="px-3 pt-2 text-center font-semibold" colSpan={4}>
+                        Gente
+                      </th>
+                      <th
+                        className="border-l border-borde px-3 pt-2 text-center font-semibold"
+                        colSpan={5}
+                      >
+                        Actividad
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                    <tr className="border-b border-borde text-xs text-tinta-suave">
+                      <th className="px-3 pb-2 text-left font-medium">Periodo</th>
+                      <th className="px-3 pb-2 text-right font-medium">Activos</th>
+                      <th className="px-3 pb-2 text-right font-medium">Nuevos</th>
+                      <th className="px-3 pb-2 text-right font-medium">Visitas</th>
+                      <th className="px-3 pb-2 text-right font-medium">Tiempo</th>
+                      <th className="border-l border-borde px-3 pb-2 text-right font-medium" title="Partidas en vivo">
+                        En vivo
+                      </th>
+                      <th className="px-3 pb-2 text-right font-medium">Retos</th>
+                      <th className="px-3 pb-2 text-right font-medium" title="Partidas subidas al repositorio">
+                        Subidas
+                      </th>
+                      <th className="px-3 pb-2 text-right font-medium">Chat</th>
+                      <th className="px-3 pb-2 text-right font-medium" title="Avisos generados / push entregados">
+                        Avisos
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-borde">
+                    {grupos.map((g) => (
+                      <tr key={g.clave} className="text-tinta">
+                        <td className="whitespace-nowrap px-3 py-1.5 text-tinta-suave">
+                          {etiqueta(g.clave, periodo)}
+                        </td>
+                        <Num v={g.activos} />
+                        <Num v={g.nuevos} />
+                        <Num v={g.visitas} />
+                        <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums">
+                          {g.latidos === 0 ? (
+                            <span className="text-tinta-suave">—</span>
+                          ) : (
+                            tiempoDeUso(g.latidos)
+                          )}
+                        </td>
+                        <td className="border-l border-borde px-3 py-1.5 text-right tabular-nums">
+                          {g.partidasVivo === 0 ? (
+                            <span className="text-tinta-suave">—</span>
+                          ) : (
+                            g.partidasVivo
+                          )}
+                        </td>
+                        <Num v={g.retos} />
+                        <Num v={g.partidasSubidas} />
+                        <Num v={g.mensajesChat} />
+                        <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums">
+                          {g.avisos === 0 ? (
+                            <span className="text-tinta-suave">—</span>
+                          ) : (
+                            `${g.avisos} / ${g.pushEntregados}`
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          </section>
         )}
 
         <p className="px-1 text-xs text-tinta-suave">
-          Visitas y tiempo salen del latido de la app (cada 5 min con la pestaña
-          delante), así que los días anteriores a estrenarlo van a cero. De cada
-          socio se guarda solo «entró tal día»: sin horas ni pantallas.
+          Una <b className="font-semibold">visita</b> es entrar en la app, y de cada
+          socio se cuenta como mucho una cada cinco horas: recargar la pantalla no
+          infla el número. El <b className="font-semibold">tiempo</b> sale del latido
+          de la app (cada 5 min con la pestaña delante), así que los días anteriores a
+          estrenarlo van a cero. De cada socio solo se guarda «entró tal día»: sin
+          horas ni pantallas.
         </p>
       </Contenedor>
     </main>
   );
 }
 
-function Dato({ titulo, valor }: { titulo: string; valor: string }) {
+function Dato({
+  titulo,
+  valor,
+  nota,
+}: {
+  titulo: string;
+  valor: string;
+  /** La línea pequeña que le da sentido al número: un dato sin referencia
+   *  ("3 activos") no dice si es bueno o malo. */
+  nota?: string;
+}) {
   return (
     <Tarjeta compacta>
       <p className="text-2xl font-bold tabular-nums text-tinta">{valor}</p>
       <p className="text-xs uppercase tracking-wide text-tinta-suave">{titulo}</p>
+      {nota && <p className="mt-0.5 text-xs text-tinta-suave">{nota}</p>}
     </Tarjeta>
   );
 }

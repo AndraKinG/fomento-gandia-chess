@@ -18,6 +18,10 @@ export type UsoDia = {
   dia: string; // "2026-08-10"
   visitas: number;
   latidos: number;
+  /** Socios que entran en la app POR PRIMERA VEZ ese día (lo calcula
+   *  `recuento_uso` en SQL). Cada socio es nuevo UNA sola vez en la historia, así
+   *  que sumarlo por semanas o meses da el número correcto sin más cuentas. */
+  nuevos: number;
   partidasVivo: number;
   retos: number;
   partidasSubidas: number;
@@ -80,6 +84,7 @@ export function agruparUso(
       activos: 0,
       visitas: 0,
       latidos: 0,
+      nuevos: 0,
       partidasVivo: 0,
       retos: 0,
       partidasSubidas: 0,
@@ -89,6 +94,7 @@ export function agruparUso(
     };
     g.visitas += d.visitas;
     g.latidos += d.latidos;
+    g.nuevos += d.nuevos;
     g.partidasVivo += d.partidasVivo;
     g.retos += d.retos;
     g.partidasSubidas += d.partidasSubidas;
@@ -136,4 +142,28 @@ export function mediaConectados(latidos: number, dias: number): string {
   if (dias <= 0) return "0";
   const media = latidos / (FRANJAS_DIA * dias);
   return media.toFixed(1).replace(".", ",");
+}
+
+/**
+ * Tiempo medio por socio activo, en texto.
+ *
+ * ES MÁS ÚTIL QUE EL TOTAL: "3 h de uso" no dice nada sin saber entre cuántos —
+ * pueden ser tres socios de una hora o veinte de nueve minutos. Con la media se
+ * ve si la gente se queda o solo asoma.
+ */
+export function tiempoPorSocio(latidos: number, activos: number): string {
+  if (activos <= 0) return "—";
+  return tiempoDeUso(Math.round(latidos / activos));
+}
+
+/**
+ * Qué parte del club ha entrado, en porcentaje entero.
+ *
+ * El denominador son las CUENTAS VINCULADAS y no las 46 fichas del club: quien no
+ * se ha registrado todavía no puede entrar, así que meterlo en el porcentaje mide
+ * el alta de socios, no el uso de la app — dos cosas distintas.
+ */
+export function porcentajeDelClub(activos: number, cuentasVinculadas: number): string {
+  if (cuentasVinculadas <= 0) return "—";
+  return `${Math.round((activos / cuentasVinculadas) * 100)} %`;
 }
