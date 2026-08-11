@@ -46,6 +46,8 @@ export function PanelTorneos({ torneos }: { torneos: TorneoAdmin[] }) {
     null
   );
   const [editando, setEditando] = useState<string | null>(null);
+  /** Qué mes de la agenda se está viendo (índice sobre los meses con torneos). */
+  const [mesVisto, setMesVisto] = useState(0);
   const [pendiente, startTransition] = useTransition();
   const router = useRouter();
 
@@ -117,11 +119,36 @@ export function PanelTorneos({ torneos }: { torneos: TorneoAdmin[] }) {
           const clave = mesDe(t.fechaInicio);
           meses.set(clave, [...(meses.get(clave) ?? []), t]);
         }
-        return [...meses.entries()].map(([mes, delMes]) => (
-          <section key={mes} className="space-y-2">
-            <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
-              {mes}
-            </h2>
+        const lista = [...meses.entries()];
+        if (lista.length === 0) return null;
+        // UN MES EN PANTALLA, no los doce: la agenda entera seguía siendo un año
+        // de alto (segunda vuelta del propietario a esta pantalla). El primero de
+        // la lista es el mes en curso, porque los torneos pasados no se traen.
+        const [mes, delMes] = lista[Math.min(mesVisto, lista.length - 1)];
+        return (
+          <section className="space-y-2">
+            <div className="flex items-center justify-between gap-2 px-1">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-tinta-suave">
+                {mes}
+                <span className="ml-2 font-normal normal-case tracking-normal">
+                  · {delMes.length} {delMes.length === 1 ? "torneo" : "torneos"}
+                </span>
+              </h2>
+              <div className="flex gap-1">
+                <FlechaMes
+                  etiqueta="Mes anterior"
+                  simbolo="◀"
+                  deshabilitada={mesVisto === 0}
+                  onClick={() => setMesVisto((m) => Math.max(0, m - 1))}
+                />
+                <FlechaMes
+                  etiqueta="Mes siguiente"
+                  simbolo="▶"
+                  deshabilitada={mesVisto >= lista.length - 1}
+                  onClick={() => setMesVisto((m) => Math.min(lista.length - 1, m + 1))}
+                />
+              </div>
+            </div>
             <div className="overflow-hidden rounded-2xl border border-borde bg-tarjeta">
               <ul className="divide-y divide-borde">
                 {delMes.map((t) => (
@@ -237,7 +264,7 @@ export function PanelTorneos({ torneos }: { torneos: TorneoAdmin[] }) {
               </ul>
             </div>
           </section>
-        ));
+        );
       })()}
     </div>
   );
@@ -273,5 +300,30 @@ function Campo({
         className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta placeholder:text-tinta-suave"
       />
     </div>
+  );
+}
+
+function FlechaMes({
+  etiqueta,
+  simbolo,
+  deshabilitada,
+  onClick,
+}: {
+  etiqueta: string;
+  simbolo: string;
+  deshabilitada: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={deshabilitada}
+      aria-label={etiqueta}
+      title={etiqueta}
+      className="rounded-lg border border-borde bg-tarjeta px-2.5 py-1 text-xs text-tinta transition duration-100 hover:bg-tarjeta-suave active:scale-[0.97] disabled:opacity-40"
+    >
+      <span aria-hidden>{simbolo}</span>
+    </button>
   );
 }
