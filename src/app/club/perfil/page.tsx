@@ -105,8 +105,11 @@ export default async function PerfilPage() {
                 <p className="text-3xl font-bold tabular-nums text-tinta">
                   {filaOrden.elo_oficial}
                 </p>
+                {/* "Orden de fuerza" y no "ELO oficial": es la foto fija de antes
+                    del Interclubs (documento del club, estático todo el año), no el
+                    ELO que el socio tiene HOY. Aclaración del propietario, 2026-08-11. */}
                 <p className="text-xs uppercase tracking-wide text-tinta-suave">
-                  ELO oficial
+                  ELO orden de fuerza
                 </p>
               </div>
             ) : null}

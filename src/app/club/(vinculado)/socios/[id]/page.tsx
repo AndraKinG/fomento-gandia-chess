@@ -101,9 +101,16 @@ export default async function SocioPage({
               <PuntoConectado ficha={socio.id} />
             </p>
             <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-tinta-suave">
+              {/* Con su apellido: es la foto fija del orden de fuerza (documento del
+                  club, estático todo el Interclubs), no el ELO que tiene HOY.
+                  Aclaración del propietario, 2026-08-11. */}
               {orden?.elo_oficial && (
-                <span className="rounded-full bg-tarjeta-suave px-2.5 py-0.5 text-xs font-semibold text-tinta ring-1 ring-borde">
-                  ELO {orden.elo_oficial}
+                <span
+                  title="Del orden de fuerza: la foto fija de antes del Interclubs"
+                  className="rounded-full bg-tarjeta-suave px-2.5 py-0.5 text-xs font-semibold text-tinta ring-1 ring-borde"
+                >
+                  ELO {orden.elo_oficial}{" "}
+                  <span className="font-normal text-tinta-suave">(orden de fuerza)</span>
                 </span>
               )}
               {orden && (
