@@ -65,7 +65,23 @@ function suscribirse(avisar: () => void): () => void {
   return () => consulta.removeEventListener("change", avisar);
 }
 
-export function InstalarApp({ compacto = false }: { compacto?: boolean }) {
+export function InstalarApp({
+  compacto = false,
+  siempre = false,
+}: {
+  compacto?: boolean;
+  /**
+   * true = DI ALGO SIEMPRE, aunque no haya nada que ofrecer.
+   *
+   * Es para el Perfil, que es donde uno va A BUSCARLO. Sin esto el componente
+   * devolvía `null` en tres casos —ya instalada, el navegador no lo ofrece, o el
+   * evento todavía no ha llegado— y desde fuera los tres se ven igual: nada. El
+   * propietario preguntó literalmente "¿y dónde está la parte de instalar?", que
+   * es la prueba de que un hueco silencioso no vale. En Inicio se queda en false:
+   * allí sí debe desaparecer cuando no hay nada que hacer, o es ruido.
+   */
+  siempre?: boolean;
+}) {
   const dispositivo = useSyncExternalStore(suscribirse, leerDispositivo, enElServidor);
   /** El evento de Chrome, cuando llega. Null = este navegador no ofrece instalar
    *  (o ya está instalada). */
@@ -89,9 +105,12 @@ export function InstalarApp({ compacto = false }: { compacto?: boolean }) {
     };
   }, []);
 
-  if (instalada || dispositivo === "pwa") return null;
-  // En Android/escritorio solo se enseña si el navegador ha dicho que puede.
-  if (dispositivo === "otro" && !evento) return null;
+  const yaEsta = instalada || dispositivo === "pwa";
+  // En Android/escritorio el botón solo existe si el navegador ha dicho que puede.
+  const puedePulsar = dispositivo === "otro" && evento !== null;
+
+  // En Inicio (siempre=false) esto desaparece cuando no hay nada que hacer.
+  if (!siempre && (yaEsta || (dispositivo === "otro" && !evento))) return null;
 
   const caja = compacto
     ? "space-y-2"
@@ -100,9 +119,16 @@ export function InstalarApp({ compacto = false }: { compacto?: boolean }) {
   return (
     <div className={caja}>
       <p className="text-sm font-semibold text-tinta">
-        <span aria-hidden>📲</span> Instala la app en el móvil
+        <span aria-hidden>{yaEsta ? "✅" : "📲"}</span>{" "}
+        {yaEsta ? "App instalada" : "Instala la app en el móvil"}
       </p>
-      {dispositivo === "apple" ? (
+
+      {yaEsta ? (
+        <p className="text-sm text-tinta-suave">
+          Ya la tienes en este dispositivo. Si quieres tenerla también en otro,
+          entra allí con tu cuenta y te lo ofrecerá.
+        </p>
+      ) : dispositivo === "apple" ? (
         <>
           <p className="text-sm text-tinta-suave">
             En iPhone se hace a mano: toca <b className="font-semibold">Compartir</b> abajo
@@ -112,7 +138,7 @@ export function InstalarApp({ compacto = false }: { compacto?: boolean }) {
             En iPhone hace falta instalarla para poder recibir los avisos del club.
           </p>
         </>
-      ) : (
+      ) : puedePulsar ? (
         <>
           <p className="text-sm text-tinta-suave">
             Se abre como una app, entras más rápido y recibes los avisos del club.
@@ -122,13 +148,28 @@ export function InstalarApp({ compacto = false }: { compacto?: boolean }) {
             onClick={() => {
               void evento?.prompt();
               // El evento sirve UNA sola vez: después el botón no haría nada, así
-              // que se retira. Si el socio dice que no, lo reencontrará en Perfil.
+              // que se retira.
               setEvento(null);
             }}
             className="rounded-xl bg-acento-fuerte px-4 py-2 text-sm font-semibold text-sobre-acento transition duration-100 hover:brightness-110 active:scale-[0.97]"
           >
             Instalar
           </button>
+        </>
+      ) : (
+        // NI INSTALADA NI INSTALABLE AQUÍ: este navegador no ofrece el diálogo.
+        // Antes esto era un hueco en blanco y parecía que la app estuviera rota.
+        <>
+          <p className="text-sm text-tinta-suave">
+            Este navegador no ofrece instalarla desde aquí. Prueba desde su menú
+            (<b className="font-semibold">⋮ → Instalar aplicación</b>), o entra
+            desde el móvil: en Android con Chrome sale un botón, y en iPhone se
+            añade desde Compartir en Safari.
+          </p>
+          <p className="text-xs text-tinta-suave">
+            Si acabas de actualizar la app, cierra la pestaña y vuelve a entrar:
+            el navegador tarda un momento en darse cuenta de que ya es instalable.
+          </p>
         </>
       )}
     </div>

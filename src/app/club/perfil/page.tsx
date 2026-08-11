@@ -188,7 +188,10 @@ export default async function PerfilPage() {
           mostrarGestion={Boolean(sesion?.esAdmin || sesion?.esJunta)}
           antes={
             <>
-              <InstalarApp compacto />
+              {/* `siempre`: en el Perfil se viene A BUSCAR esto, así que dice
+                  algo también cuando ya está instalada o cuando el navegador no
+                  ofrece el diálogo. En Inicio no lleva la prop y desaparece. */}
+              <InstalarApp compacto siempre />
               <ActivarNotificaciones />
             </>
           }
