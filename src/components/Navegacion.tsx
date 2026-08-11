@@ -86,11 +86,15 @@ const SECCIONES: Seccion[] = [
   // para responder— solo se podía comprobar cuando ya tenías algo sin leer.
   // Sexta pestaña del móvil: siguen cabiendo seis, como dice el comentario de
   // Jugar más abajo.
+  // NO VA EN LA BARRA DE ABAJO desde el 2026-08-12 (petición del propietario):
+  // en móvil vive ARRIBA, junto al perfil, que es donde todo el mundo pone la
+  // campana. De paso la barra inferior baja de seis pestañas a cinco y respira.
   {
     href: "/club/avisos",
     label: "Avisos",
     Icono: IconoAvisos,
     rutas: ["/club/avisos"],
+    enMovil: false,
   },
   // Perfil NO va en la barra de abajo: vive arriba a la derecha, fijo, en
   // `AccesoPerfil`. Es de las que menos se tocan y liberar ese hueco deja que las
@@ -248,33 +252,53 @@ export function NavLateral({ esAdmin, email }: { esAdmin: boolean; email: string
 }
 
 /**
- * Acceso al perfil: a la derecha de la cabecera, SOLO en móvil.
+ * Avisos y perfil: a la derecha de la cabecera, SOLO en móvil.
  *
- * Está aquí y no en la barra de abajo por sitio: siete pestañas no caben en un
- * teléfono y Perfil es de las que menos se tocan, así que sube arriba —donde lo
- * pone todo el mundo— y libera un hueco abajo para lo que se usa a diario.
+ * Están aquí y no en la barra de abajo por sitio: siete pestañas no caben en un
+ * teléfono, y estas dos son las que todo el mundo espera arriba a la derecha
+ * —campana y avatar—. Liberan dos huecos abajo para lo que se usa a diario.
+ * (Avisos subió aquí el 2026-08-12, a petición del propietario.)
  *
- * VA DENTRO DE LA CABECERA, no flotando encima. Flotando se comía el título en las
+ * VAN DENTRO DE LA CABECERA, no flotando encima. Flotando se comían el título en las
  * pantallas de nombre largo: la franja azul y el botón no se ponían de acuerdo
  * sobre de quién era ese trozo de pantalla. Como parte de la fila, el título
  * simplemente se corta antes de llegar.
  *
- * En escritorio no existe: la barra lateral ya lo lleva.
+ * En escritorio no existen: la barra lateral ya los lleva.
  */
 export function AccesoPerfil() {
   const pathname = usePathname();
-  const activo = pathname.startsWith("/club/perfil");
+  const pendientes = usePendientes();
+  const enPerfil = pathname.startsWith("/club/perfil");
+  const enAvisos = pathname.startsWith("/club/avisos");
+  const avisos = contadorDe("/club/avisos", pendientes);
+
   return (
-    <Link
-      href="/club/perfil"
-      aria-label="Tu perfil"
-      aria-current={activo ? "page" : undefined}
-      className={`ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition lg:hidden ${
-        activo ? "bg-white/30" : "bg-white/15 hover:bg-white/25"
-      }`}
-    >
-      <IconoPerfil className="h-5 w-5" />
-    </Link>
+    <div className="ml-auto flex shrink-0 items-center gap-1.5 lg:hidden">
+      <Link
+        href="/club/avisos"
+        // El número va en el aria-label del ENLACE y no en el badge, que es
+        // decorativo: así quien no ve el rojo se entera igual (misma decisión
+        // que en las dos barras de navegación).
+        aria-label={avisos && avisos.cuantos > 0 ? `Avisos: ${avisos.etiqueta}` : "Avisos"}
+        aria-current={enAvisos ? "page" : undefined}
+        className={`flex h-9 w-9 items-center justify-center rounded-full transition ${
+          enAvisos ? "bg-white/30" : "bg-white/15 hover:bg-white/25"
+        }`}
+      >
+        <IconoConBadge Icono={IconoAvisos} className="h-5 w-5" info={avisos} />
+      </Link>
+      <Link
+        href="/club/perfil"
+        aria-label="Tu perfil"
+        aria-current={enPerfil ? "page" : undefined}
+        className={`flex h-9 w-9 items-center justify-center rounded-full transition ${
+          enPerfil ? "bg-white/30" : "bg-white/15 hover:bg-white/25"
+        }`}
+      >
+        <IconoPerfil className="h-5 w-5" />
+      </Link>
+    </div>
   );
 }
 

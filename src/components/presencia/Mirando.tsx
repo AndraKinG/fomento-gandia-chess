@@ -76,16 +76,21 @@ export function Mirando({ sala, excluir = [] }: { sala: string; excluir?: string
   if (otros.length > 4) {
     return (
       <p className="px-1 text-xs text-tinta-suave" title={otros.join(", ")}>
-        <span aria-hidden>👀</span> {otros.length} personas viendo esto
+        <span aria-hidden>👁</span> {otros.length}
+        {/* Para quien no ve el emoji, el texto completo: un ojo y un número
+            solos no dicen nada a un lector de pantalla. */}
+        <span className="sr-only"> personas viendo esto</span>
       </p>
     );
   }
+  // EL OJO EN VEZ DE "VIENDO ESTO" (petición del propietario, 2026-08-12): el
+  // emoji ya dice qué es esto y ahorra dos palabras en una línea que va junto al
+  // tablero. Los nombres se quedan — son el dato — y el `title` los repite para
+  // cuando se truncan.
   return (
-    <p
-      className="px-1 text-xs text-tinta-suave"
-      title={otros.join(", ")}
-    >
-      <span aria-hidden>👀</span> Viendo esto: {otros.join(", ")}
+    <p className="px-1 text-xs text-tinta-suave" title={otros.join(", ")}>
+      <span aria-hidden>👁</span>
+      <span className="sr-only">Viendo esto:</span> {otros.join(", ")}
     </p>
   );
 }
