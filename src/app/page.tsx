@@ -40,9 +40,10 @@ export default function PaginaPublica() {
     <main className="flex-1 bg-fondo">
       <header className="bg-degradado-club px-6 py-16 text-sobre-acento">
         <div className="mx-auto max-w-3xl">
-          {/* Escudo completo y grande: esta es la carta de presentación del club y
-              es el único sitio donde el aro con el nombre se lee de verdad. */}
-          <Escudo version="completo" lado={128} priority />
+          {/* La marca (el caballo) y no el mural entero: el mural va grande justo
+              debajo de la cabecera, y repetirlo aquí a 128px era enseñarlo dos
+              veces, una de ellas ilegible. */}
+          <Escudo version="marca" lado={96} priority />
           <h1 className="mt-4 text-4xl font-bold sm:text-5xl">Fomento de Gandia</h1>
           <p className="mt-3 text-lg opacity-90">Club de ajedrez · Gandia</p>
           <div className="mt-8 flex flex-wrap gap-3">
