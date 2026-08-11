@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { esAdmin } from "@/lib/auth/es-admin";
-import { actualizarEloFideCore } from "@/lib/import/fide-apply";
+import { actualizarEloActualCore } from "@/lib/import/facv-elo-actual-apply";
 import { parseOrdenFuerza } from "@/lib/import/orden-fuerza-parser";
 import { sincronizarOrdenFuerzaFACVCore } from "@/lib/import/facv-of-apply";
 import { buscarFicha, indicePorNombre } from "@/lib/import/cruzar-nombres";
@@ -239,19 +239,20 @@ export async function crearFichaManual(formData: FormData): Promise<{
 }
 
 /**
- * Actualiza el ELO FIDE (el "real" mensual) de los jugadores con `fide_id`.
+ * Actualiza el ELO REAL de los socios: el FIDE de clásicas al día, descargado
+ * del ranking de la FACV filtrado por el club (facv-elo-actual.ts).
  *
- * Vivía en la antigua pantalla "Actualización de ELO", fusionada aquí el
- * 2026-08-11. Solo funciona con la app EN LOCAL: fide.com bloquea las IPs de
- * Vercel (ver docs/referencia/automatizaciones.md).
+ * SUSTITUYE al antiguo "Actualizar FIDE" que rascaba ratings.fide.com perfil a
+ * perfil y solo funcionaba en local: esta fuente es facv.org y funciona también
+ * en Vercel — la sync del viernes lo hace sola, este botón es para no esperar.
  */
-export async function actualizarEloFide(): Promise<{
+export async function actualizarEloActual(): Promise<{
   actualizados: number;
-  errores: number;
+  sinCruzar: string[];
   error?: string;
 }> {
   if (!(await esAdmin())) {
-    return { actualizados: 0, errores: 0, error: "Solo el admin puede hacer esto" };
+    return { actualizados: 0, sinCruzar: [], error: "Solo el admin puede hacer esto" };
   }
-  return actualizarEloFideCore();
+  return actualizarEloActualCore();
 }

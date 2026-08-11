@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { actualizarEloFide, crearFichaManual, importarOrdenFuerza, sincronizarOrdenFuerzaFACV } from "./actions";
+import { actualizarEloActual, crearFichaManual, importarOrdenFuerza, sincronizarOrdenFuerzaFACV } from "./actions";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Banner } from "@/components/ui/Banner";
 import { ChipElo } from "@/components/ui/ChipElo";
@@ -70,14 +70,16 @@ export default async function OrdenFuerzaPage({
     redirect(`/club/admin/orden-fuerza?${params.toString()}`);
   }
 
-  async function accionFide() {
+  async function accionEloActual() {
     "use server";
-    const resultado = await actualizarEloFide();
+    const resultado = await actualizarEloActual();
     const params = new URLSearchParams({
       msg:
         resultado.error ??
-        `ELO FIDE actualizado: ${resultado.actualizados} jugadores` +
-          (resultado.errores > 0 ? ` (${resultado.errores} sin respuesta de fide.com)` : ""),
+        `ELO actualizado: ${resultado.actualizados} socios con cambios` +
+          (resultado.sinCruzar.length > 0
+            ? ` — sin cruzar: ${resultado.sinCruzar.join("; ")}`
+            : ""),
       tipo: resultado.error ? "error" : "ok",
     });
     redirect(`/club/admin/orden-fuerza?${params.toString()}`);
@@ -140,10 +142,10 @@ export default async function OrdenFuerzaPage({
           </Banner>
         )}
 
-        {/* Las DOS fuentes de ELO, lado a lado (al fusionar aquí la antigua
-            "Actualización de ELO", 2026-08-11): la lista FACV —semanal, la sincroniza
-            también el cron del viernes— y el FIDE mensual, que fide.com solo deja
-            consultar desde un ordenador de casa, nunca desde Vercel. */}
+        {/* Las DOS fuentes, lado a lado: el orden de fuerza (posiciones y fichas
+            nuevas) y el ELO REAL actual (FIDE de clásicas, vía el ranking FACV, que
+            a diferencia de fide.com sí se puede descargar desde Vercel). El cron del
+            viernes hace las dos; los botones son para no esperar. */}
         <div className="grid gap-2 sm:grid-cols-2">
           <form action={accionSincronizar}>
             {/* Esto descarga y parsea una página de la FACV: los segundos que tarda
@@ -152,13 +154,13 @@ export default async function OrdenFuerzaPage({
               Sincronizar con la FACV
             </BotonAccion>
           </form>
-          <form action={accionFide}>
+          <form action={accionEloActual}>
             <BotonAccion
               variante="secundario"
-              trabajando="Consultando fide.com…"
+              trabajando="Consultando el ranking FACV…"
               className="w-full"
             >
-              Actualizar FIDE (solo desde casa)
+              Actualizar ELO actual
             </BotonAccion>
           </form>
         </div>

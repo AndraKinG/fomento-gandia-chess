@@ -25,10 +25,18 @@ export const LIMITE_PAGINA_GRANDE_MS = 30_000;
  */
 export function fetchConLimite(
   url: string,
-  opciones: { headers?: Record<string, string>; limiteMs?: number } = {}
+  opciones: {
+    headers?: Record<string, string>;
+    limiteMs?: number;
+    /** "POST" para los formularios (el ranking FACV filtra por club así). */
+    metodo?: "GET" | "POST";
+    cuerpo?: string;
+  } = {}
 ): Promise<Response> {
-  const { headers, limiteMs = LIMITE_PAGINA_MS } = opciones;
+  const { headers, limiteMs = LIMITE_PAGINA_MS, metodo = "GET", cuerpo } = opciones;
   return fetch(url, {
+    method: metodo,
+    body: cuerpo,
     headers: { "user-agent": "Mozilla/5.0", ...headers },
     signal: AbortSignal.timeout(limiteMs),
   });

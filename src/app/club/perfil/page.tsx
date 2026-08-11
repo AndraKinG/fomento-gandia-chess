@@ -85,9 +85,8 @@ export default async function PerfilPage() {
             <div className="min-w-0">
               <p className="text-lg font-semibold text-tinta">{p.nombre}</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                {/* FIDE y FEDA solo si los tiene: hoy no los tiene nadie, y tres
-                    chips con un guion no dicen nada. */}
-                {p.elo_fide !== null && <ChipElo valor={p.elo_fide} etiqueta="FIDE" />}
+                {/* El FIDE ya no va de chip: es la cifra grande. FEDA, solo si
+                    algún día vuelve a haber dato. */}
                 {p.elo_feda !== null && <ChipElo valor={p.elo_feda} etiqueta="FEDA" />}
                 {filaOrden && (
                   <Link
@@ -100,18 +99,19 @@ export default async function PerfilPage() {
                 )}
               </div>
             </div>
-            {filaOrden?.elo_oficial ? (
+            {/* LA CIFRA GRANDE ES EL ELO REAL: `players.elo_fide`, el FIDE de
+                clásicas al día que la sync trae del ranking FACV (la modalidad
+                predominante, dicho por el propietario). Si el socio aún no tiene
+                ELO de clásicas, se enseña el del orden de fuerza, diciéndolo:
+                mejor un número viejo etiquetado que un hueco. Regla de los tres
+                ELOs en CLAUDE.md. */}
+            {p.elo_fide || filaOrden?.elo_oficial ? (
               <div className="text-right">
                 <p className="text-3xl font-bold tabular-nums text-tinta">
-                  {filaOrden.elo_oficial}
+                  {p.elo_fide ?? filaOrden?.elo_oficial}
                 </p>
-                {/* "ELO FACV" = el ELO REAL ACTUAL: la sync semanal refresca
-                    `elo_oficial` con lo que ponga la página de la FACV, que es el
-                    que se mueve con los resultados. Lo estático del orden de fuerza
-                    son las POSICIONES (numero/bis), no este número. Regla de los
-                    tres ELOs en CLAUDE.md; segunda aclaración del propietario. */}
                 <p className="text-xs uppercase tracking-wide text-tinta-suave">
-                  ELO FACV
+                  {p.elo_fide ? "ELO clásicas" : "ELO orden de fuerza"}
                 </p>
               </div>
             ) : null}

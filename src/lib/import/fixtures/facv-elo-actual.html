@@ -1,0 +1,631 @@
+
+
+
+<style>
+    .chess-title {
+        background-color: red;    /* Fondo rojo */
+        color: white;             /* Texto en blanco */
+        font-weight: bold;        /* Texto en negrita */
+        font-size: 0.7em;         /* Un poco más pequeño que el texto normal */
+        padding: 3px;         /* Espaciado interno para que se vea como un recuadro */
+        border-radius: 3px;       /* Bordes redondeados (opcional) */
+        margin: 2px;
+        letter-spacing: 1px
+    }
+</style>
+
+
+
+
+
+<!doctype html>
+
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="icon"
+          type="image/jpg"
+          href="../../public/images/0_icon1_facv.jpg">
+
+    <meta property="og:image"
+          content="https://www.facv.org/appwebfacv/public/images/0_icon1_facv.jpg">
+
+    <link rel="stylesheet"
+          media="all"
+          href="/appwebfacv/public/stylesheets/staff.css">
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css">
+
+    <title>Ranking FACV</title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+</head>
+
+<body class="staff-no-header">
+<div class="staff-shell">
+    <main class="staff-main">
+
+
+
+<div class="container-fluid my-3">
+    <div class="row">
+        <div class="col-12 col-xl-10 mx-auto">
+
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-2">
+                <h2 class="mb-2 mb-md-0 text-warning">
+                    Ranking FACV                </h2>
+            </div>
+
+            <!-- Tabs de categorías -->
+            <ul class="nav nav-tabs mb-3 flex-wrap">
+                <li class="nav-item">
+                    <a href="/appwebfacv/public/staff/elos/ranking.php?band=1&cat=1"
+                       class="nav-link ">
+                        Absoluto
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/appwebfacv/public/staff/elos/ranking.php?band=1&cat=2"
+                       class="nav-link ">
+                        Femenino
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/appwebfacv/public/staff/elos/ranking.php?band=1&cat=3"
+                       class="nav-link ">
+                        Sub-18
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/appwebfacv/public/staff/elos/ranking.php?band=1&cat=4"
+                       class="nav-link ">
+                        Sub-16
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/appwebfacv/public/staff/elos/ranking.php?band=1&cat=5"
+                       class="nav-link ">
+                        Sub-14
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/appwebfacv/public/staff/elos/ranking.php?band=1&cat=6"
+                       class="nav-link ">
+                        Sub-12
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/appwebfacv/public/staff/elos/ranking.php?band=1&cat=7"
+                       class="nav-link ">
+                        Sub-10
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/appwebfacv/public/staff/elos/ranking.php?band=1&cat=8"
+                       class="nav-link ">
+                        +50
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/appwebfacv/public/staff/elos/ranking.php?band=1&cat=9"
+                       class="nav-link ">
+                        +65
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/appwebfacv/public/staff/elos/ranking.php?band=1&cat=cas"
+                       class="nav-link ">
+                        Castellón
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/appwebfacv/public/staff/elos/ranking.php?band=1&cat=val"
+                       class="nav-link ">
+                        Valencia
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/appwebfacv/public/staff/elos/ranking.php?band=1&cat=ali"
+                       class="nav-link ">
+                        Alicante
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Tarjeta Ranking -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2">
+                        <h3 class="mb-0">
+                            Ranking Deportistas FACV  del Club Ajedrez Fomento de Gandia                            </h3>
+
+                        <form class="d-flex align-items-center"
+                              action="/appwebfacv/public/staff/elos/ranking.php?band=1&cat="
+                              method="post">
+                            <div class='col-12 col-md-4 col-lg-4'><label for="grupo_id" class="form-label fw-bold">Club</label> <select id='grupo_id' class='form-select w-100' name='licencia_sql[grupo_id]'><option value=''>Todos</option><option value='4'>Alaquàs</option><option value='36'>Albal</option><option value='63'>Alberic</option><option value='5'>Alborache</option><option value='6'>Alcala de Chivert</option><option value='2'>Alcoy</option><option value='217'>Alcúdia</option><option value='7'>Aldaia</option><option value='8'>Alfas del Pi</option><option value='207'>Alferza</option><option value='9'>Alfil Castellonense</option><option value='50'>Algemesí</option><option value='10'>Alicante</option><option value='40'>Almussafes</option><option value='94'>Alonis</option><option value='11'>Alto Palancia</option><option value='12'>Alzira</option><option value='13'>Andreu Paterna</option><option value='144'>Arturo Pomar</option><option value='14'>Aspe</option><option value='214'>Associació Per Al Desenvolupam</option><option value='221'>Associació Per Al Desenvolupam</option><option value='48'>ASSSA Enric Valor</option><option value='16'>Ateneo Marítimo</option><option value='15'>Ateneo-elx</option><option value='18'>Basilio</option><option value='19'>Benetússer</option><option value='20'>Benifaió</option><option value='21'>Benigánim</option><option value='22'>Benimodo</option><option value='155'>Borriana</option><option value='37'>Burjassot</option><option value='25'>Calpe</option><option value='97'>Camp de Túria</option><option value='26'>Camp Morvedre</option><option value='27'>Capablanca</option><option value='28'>Capablanca Cullera</option><option value='29'>Carcaixent</option><option value='32'>Chaturanga</option><option value='98'>Chessngo</option><option value='33'>Cheste</option><option value='34'>Círculo Mercantil</option><option value='35'>Ciutat Vella</option><option value='42'>Cocentaina</option><option value='43'>Dama de Guardamar</option><option value='44'>Dama Negra</option><option value='41'>Dama Roja</option><option value='45'>Edapa</option><option value='148'>El Campello</option><option value='46'>El Drac Negre</option><option value='47'>Enguerino</option><option value='49'>Enroc</option><option value='54'>Escola Castelló</option><option value='55'> EVA Manises</option><option value='60'>FACV</option><option value='260'>FACV Escolar</option><option value='103'>Fast Carlet</option><option value='56' selected>Fomento Gandia</option><option value='57'>Gambito Benimaclet</option><option value='58'>Gestalguinos</option><option value='59'>Ibi</option><option value='61'>Jaque Mate</option><option value='149'>Jove Puzol</option><option value='111'>Jugada Torrerífica</option><option value='146'>Kai Chess</option><option value='218'>La Canal</option><option value='62'>La Creu</option><option value='101'>La Nucia</option><option value='64'>La Vila</option><option value='107'>Lo Romero</option><option value='65'>Manuel</option><option value='31'>Marines</option><option value='38'>Massanassa</option><option value='66'>Mate de Cox</option><option value='67'>Meliana</option><option value='68'>Mislata</option><option value='69'>Moncada</option><option value='70'>Monteolivete</option><option value='71'>Montserrat</option><option value='72'>Muro</option><option value='24'>Mutxamel</option><option value='17'>Narovella</option><option value='52'>Novelda</option><option value='73'>Oliva</option><option value='216'>Olivereta</option><option value='51'>Olleria</option><option value='75'>Oropesa del Mar</option><option value='76'>Primitiva Xàtiva</option><option value='3'>Quart</option><option value='77'>Rafa Bayarri</option><option value='78'>Raspeig</option><option value='30'>Riba-roja</option><option value='53'>Ribera Baixa</option><option value='150'>Ruy López de Elda</option><option value='147'>Salt del Cavall</option><option value='93'>Sant Joan d&#039;Alacant</option><option value='23'>Silla</option><option value='80'>Sueca</option><option value='81'>Tabiya Alcoy</option><option value='82'>Tablero Santapolero</option><option value='96'>Talaia Altea</option><option value='83'>Torrefiel</option><option value='39'>Tossal de la Cala</option><option value='84'>Utiel</option><option value='160'>Vallbona</option><option value='85'>Vila-real</option><option value='86'>Villena</option><option value='87'>Voltors</option><option value='88'>Xàbia</option><option value='89'>Xàtiva</option><option value='106'>Xecball</option><option value='90'>Xeraco</option><option value='91'>Xixona</option><option value='92'>Zugzwang</option></select></div>                            <button type="submit" class="btn btn-warning ms-2">
+                                Filtrar
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card-body">
+
+                                            <div class="alert alert-info mb-3">
+                            <p class="mb-2 small">
+                                Enlace público del ranking de su club:
+                            </p>
+                            <div class="input-group input-group-sm">
+                                                                <input type="text"
+                                       class="form-control"
+                                       id="miTexto"
+                                       value="https://www.facv.org/appwebfacv/public/staff/elos/ranking_club.php?grupo_id=56"
+                                       readonly>
+                                <button class="btn btn-outline-secondary"
+                                        type="button"
+                                        onclick="copiarContenido()">
+                                    Copiar enlace
+                                </button>
+                            </div>
+                        </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover align-middle">
+                            <thead class="table-dark">
+                            <tr>
+                                <th scope="col" style="width:60px;">#</th>
+                                <th scope="col">Jugador</th>
+                                <th scope="col" style="width:60px;"><i class="bi bi-flag-fill"></i></th>
+                                <th scope="col" style="width:90px;">ELO</th>
+                                <th scope="col" style="width:80px;">±</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                                                            <tr>
+                                    <td>1</td>
+                                    <td>
+                                         José Manuel Crecente Penalba
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>2081</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>2</td>
+                                    <td>
+                                         Elías Frasquet Solbes
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>2040</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>3</td>
+                                    <td>
+                                         Juan Emilio Vercher Sansaloni
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1971</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>4</td>
+                                    <td>
+                                         Santiago García Coll
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1948</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>5</td>
+                                    <td>
+                                         Manuel González Rodríguez
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1941</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>6</td>
+                                    <td>
+                                         Miguel Muñoz Martí
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1934</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>7</td>
+                                    <td>
+                                         Luis Vallalta Martínez
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1924</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>8</td>
+                                    <td>
+                                         Malte Mauelshagen
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/GER.png' title='Española'></div></td>
+                                    <td>1880</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>9</td>
+                                    <td>
+                                         Tristán Delord
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1870</td>
+                                    <td><span class='text-danger'>-64</span></td>
+                                </tr>
+                                                            <tr>
+                                    <td>10</td>
+                                    <td>
+                                         Juan Fernando Rubio Cerdá
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1869</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>11</td>
+                                    <td>
+                                         Ramón Villanueva Claramonte
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1854</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>12</td>
+                                    <td>
+                                         Jairo Manuel Hernández González
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1827</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>13</td>
+                                    <td>
+                                         Rubén Grau Peris
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1822</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>14</td>
+                                    <td>
+                                         Emilio Castillo Pla
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1820</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>15</td>
+                                    <td>
+                                         Lorenzo Mafé Coll
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/SUI.png' title='Española'></div></td>
+                                    <td>1812</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>16</td>
+                                    <td>
+                                         José Galiana Cremades
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1799</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>17</td>
+                                    <td>
+                                         Víctor Pons Gutiérrez
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1796</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>18</td>
+                                    <td>
+                                         Emilio Briz González
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1787</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>19</td>
+                                    <td>
+                                         Raphaël Delord
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1784</td>
+                                    <td><span class='text-success'>+69</span></td>
+                                </tr>
+                                                            <tr>
+                                    <td>20</td>
+                                    <td>
+                                         Borja Gregori Olivares
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1773</td>
+                                    <td><span class='text-danger'>-31</span></td>
+                                </tr>
+                                                            <tr>
+                                    <td>21</td>
+                                    <td>
+                                         Eduardo Gumbrevicius Filho
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1763</td>
+                                    <td><span class='text-success'>+11</span></td>
+                                </tr>
+                                                            <tr>
+                                    <td>22</td>
+                                    <td>
+                                         Juan Vicente Sanfélix Domínguez
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1762</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>23</td>
+                                    <td>
+                                         Miguel Cortell Canet
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1757</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>24</td>
+                                    <td>
+                                         Llorenç Pérez Barberán
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1756</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>25</td>
+                                    <td>
+                                         Rodion Romaniuk
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1732</td>
+                                    <td><span class='text-success'>+21</span></td>
+                                </tr>
+                                                            <tr>
+                                    <td>26</td>
+                                    <td>
+                                         Ximo Almiñana Almiñana
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1722</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>27</td>
+                                    <td>
+                                         Juan Beltrán Verdejo
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1714</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>28</td>
+                                    <td>
+                                         Juan Agustín Muñoz Cánoves
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1672</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>29</td>
+                                    <td>
+                                         Alex Bataller Signes
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1599</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>30</td>
+                                    <td>
+                                         Rafael Seguí Pastor
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1588</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>31</td>
+                                    <td>
+                                         Sergio Pérez Costilla
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1551</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>32</td>
+                                    <td>
+                                         Aaron Rodrigo Cáceres
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1549</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>33</td>
+                                    <td>
+                                         Álvaro Boronat Castelló
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1519</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>34</td>
+                                    <td>
+                                         Lorenzo Aladrén Giménez
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1492</td>
+                                    <td><span class='text-danger'>-60</span></td>
+                                </tr>
+                                                            <tr>
+                                    <td>35</td>
+                                    <td>
+                                         Galin Boyanov Stoyanov
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>1489</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>36</td>
+                                    <td>
+                                         Luis Vallalta Pajarón
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>0</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>37</td>
+                                    <td>
+                                         David Cresencio Soler
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>0</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>38</td>
+                                    <td>
+                                         Juan José Sabater Santonja
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>0</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>39</td>
+                                    <td>
+                                         Joan Martínez Ribes
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>0</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>40</td>
+                                    <td>
+                                         Lucas Marín Faus
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>0</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>41</td>
+                                    <td>
+                                         Hrachya Aharonyan Ghazaryan
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>0</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>42</td>
+                                    <td>
+                                         Ishak El Haouari
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>0</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>43</td>
+                                    <td>
+                                         Carlos Gascón Olivares
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>0</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>44</td>
+                                    <td>
+                                         Aarón Escrivá Hernández
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>0</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>45</td>
+                                    <td>
+                                         Marcos Castro Hueso
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>0</td>
+                                    <td></td>
+                                </tr>
+                                                            <tr>
+                                    <td>46</td>
+                                    <td>
+                                         Luca Luvisi Figueres Wright
+                                    </td>
+                                    <td><div><img src='https://www.facv.org/appwebfacv/public/staff/flag/ESP.png' title='ESPAÑOLA'></div></td>
+                                    <td>0</td>
+                                    <td></td>
+                                </tr>
+                                                        </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-center">
+                            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    const copiarContenido = async () => {
+        const input = document.getElementById('miTexto');
+        if (!input) return;
+        try {
+            await navigator.clipboard.writeText(input.value);
+        } catch (err) {
+            console.error('Error al copiar: ', err);
+        }
+    }
+</script>
+<script src="/appwebfacv/public/scripts/facv-foto-zoom.js"></script>

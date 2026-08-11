@@ -32,7 +32,7 @@ export default async function SocioPage({
 
   const { data: socio } = await supabase
     .from("players")
-    .select("id, nombre, foto_url, aperturas")
+    .select("id, nombre, foto_url, aperturas, elo_fide")
     .eq("id", id)
     .maybeSingle();
   if (!socio) redirect("/club");
@@ -101,15 +101,19 @@ export default async function SocioPage({
               <PuntoConectado ficha={socio.id} />
             </p>
             <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-tinta-suave">
-              {/* El ELO REAL ACTUAL: la sync semanal lo refresca con lo que ponga
-                  la FACV. Lo estático del orden de fuerza son las posiciones, no
-                  este número (regla de los tres ELOs en CLAUDE.md). */}
-              {orden?.elo_oficial && (
+              {/* El ELO REAL: `elo_fide` (clásicas al día, lo trae la sync del
+                  ranking FACV). Si no tiene, el del orden de fuerza, diciéndolo.
+                  Regla de los tres ELOs en CLAUDE.md. */}
+              {(socio.elo_fide || orden?.elo_oficial) && (
                 <span
-                  title="El ELO actual según la FACV; se actualiza cada semana"
+                  title={
+                    socio.elo_fide
+                      ? "FIDE de clásicas, al día (se actualiza cada semana)"
+                      : "Del orden de fuerza: aún no tiene ELO de clásicas"
+                  }
                   className="rounded-full bg-tarjeta-suave px-2.5 py-0.5 text-xs font-semibold text-tinta ring-1 ring-borde"
                 >
-                  ELO FACV {orden.elo_oficial}
+                  ELO {socio.elo_fide ?? orden?.elo_oficial}
                 </span>
               )}
               {orden && (

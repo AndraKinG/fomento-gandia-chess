@@ -10,12 +10,12 @@ _Escrito el 2026-08-11. Actualizar cuando se añada o se retire una automatizaci
 programado en `vercel.json`. Protegido por `CRON_SECRET` (con guarda de secreto
 vacío). Qué hace:
 
-| Cuándo         | Qué                                                                                                                        |
+| Cuándo         | Qué                                                                                                                          |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Todos los días | Reintento de avisos con push fallido (`reintentarAvisosFallidos`; barato: índice parcial, lo normal es 0 filas)              |
 | Lunes          | Pedir disponibilidad de la semana a los jugadores (push)                                                                     |
 | Jueves         | Recordar a quien no ha contestado                                                                                            |
-| Viernes        | La sync FACV **en cadena y en este orden**: orden de fuerza → resultados y clasificación → actas por tablero (~18 s medidos) |
+| Viernes        | La sync FACV **en cadena y en este orden**: orden de fuerza → resultados y clasificación → actas por tablero → **ELO real actual** (FIDE clásicas vía el ranking FACV, `facv-elo-actual.ts`) |
 
 El orden del viernes es una **dependencia, no un gusto**: el orden de fuerza crea
 las fichas, los otros dos cruzan nombres contra ellas, y las actas necesitan que
@@ -39,13 +39,13 @@ llaman a mano con el secreto): `elo-fide`. Ver por qué no está programado abaj
 
 ## Qué NO se puede automatizar (verificado, no volver a intentarlo)
 
-- **ELO FIDE desde Vercel: imposible.** `fide.com` bloquea IPs de centro de datos
-  (Vercel y GitHub Actions). Verificado dos veces: rascando perfiles (2026-08-05)
-  y descargando la lista mensual con la sonda `/api/cron/sonda-fide`
-  (**2026-08-11: `fetch failed` a los 10,5 s**). La sonda se borró ese día tras
-  responder su pregunta — su código está en el historial de git si hiciera falta.
-  El camino que funciona: `scripts/actualizar-elo-fide.mjs` desde un PC de casa,
-  o el botón de Admin → ELO ejecutando la app en local.
+- **fide.com desde Vercel: imposible** (bloquea IPs de datacenter; verificado dos
+  veces, perfiles y lista mensual). **PERO YA NO IMPORTA para el ELO de clásicas**:
+  el 2026-08-11 se descubrió que el ranking público de la FACV publica el FIDE de
+  clásicas AL DÍA y admite filtro por club (POST) — y facv.org sí se puede
+  descargar desde Vercel. Ese importador (`facv-elo-actual.ts`) va en el cron del
+  viernes. fide.com solo haría falta para rápidas y blitz (perfil a perfil, desde
+  casa, `scripts/actualizar-elo-fide.mjs`).
 - **ELO FEDA: RETIRADO ENTERO (2026-08-11, decisión del propietario).** La FEDA no
   publica listas desde diciembre de 2023, así que el importador solo podía traer
   datos de hace años. Se borraron el endpoint, los botones y el importador (con su
@@ -65,7 +65,7 @@ llaman a mano con el secreto): `elo-fide`. Ver por qué no está programado abaj
 
 | Candidato                                                  | Veredicto                                                                                                                                   |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Importador mensual de ELO FIDE en el cron                  | **No se puede** (bloqueo verificado hoy). Alternativa real si algún día importa: lanzar el script local el día 1 de cada mes, a mano.        |
+| Importador de ELO real en el cron                          | **RESUELTO el mismo día**: vía el ranking FACV (clásicas al día, filtrado por club, desde Vercel). Rápidas y blitz seguirían necesitando fide.com desde casa. |
 | Recordatorio al capitán de resultados sin meter            | **Buen candidato para la 2027**: el viernes la sync ya detecta discrepancias; añadir un aviso al capitán es barato. Esperar a que haya jornadas. |
 | Aviso de "convocatoria aún no publicada" días antes        | Ídem: evaluar cuando arranque la 2027 con datos reales de uso.                                                                                |
 | Limpieza de `uso_socios_dia` (> ~400 días)                 | Barato de añadir al director, pero el volumen es ínfimo (≤46 filas/día). Añadirlo cuando la tabla tenga un año.                              |
