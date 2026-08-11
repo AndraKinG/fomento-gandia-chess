@@ -16,6 +16,8 @@ export type TorneoInterno = {
   inscritos: { ficha: string; nombre: string; eloInicial: number }[];
   rondas: (RondaJugada & {
     id: string;
+    /** Cuándo se juega la ronda (migración 0037). null = sin hora puesta. */
+    fechaHora: string | null;
     pares: { id: string; mesa: number; gameId: string | null }[];
   })[];
 };
@@ -46,7 +48,7 @@ export async function leerTorneo(
       .order("elo_inicial", { ascending: false }),
     supabase
       .from("club_rounds")
-      .select("id, numero, descansa_id")
+      .select("id, numero, descansa_id, fecha_hora")
       .eq("tournament_id", id)
       .order("numero"),
   ]);
@@ -79,6 +81,7 @@ export async function leerTorneo(
       return {
         id: r.id,
         numero: r.numero,
+        fechaHora: r.fecha_hora ?? null,
         descansa: r.descansa_id,
         emparejamientos: suyos.map((p) => ({
           blancas: p.blancas_id,

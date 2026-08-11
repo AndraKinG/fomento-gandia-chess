@@ -9,12 +9,14 @@ import { Boton } from "@/components/ui/Boton";
 import { Banner } from "@/components/ui/Banner";
 import { jugarEmparejamiento } from "@/app/club/(vinculado)/jugar/actions";
 import { Mirando } from "@/components/presencia/Mirando";
+import { diaYHora } from "@/lib/torneos/hora-de-ronda";
 import {
   anotarResultado,
   borrarUltimaRonda,
   cambiarEstadoTorneo,
   cambiarInscripcion,
   generarRonda,
+  ponerHoraDeRonda,
 } from "../actions";
 
 export type ParVista = {
@@ -30,10 +32,28 @@ export type ParVista = {
 };
 
 export type RondaVista = {
+  id: string;
   numero: number;
+  /** Cuándo se juega, en ISO. null = sin hora puesta (migración 0037). */
+  fechaHora: string | null;
   descansaNombre: string | null;
   pares: ParVista[];
 };
+
+/**
+ * ISO → valor de un `<input type="datetime-local">`, en la hora del navegador.
+ *
+ * A mano y no con `toISOString().slice(0,16)`, que es el error de siempre: eso
+ * daría la hora UTC, así que una ronda de las 19:00 aparecería como las 17:00 en
+ * el propio campo donde se acaba de poner.
+ */
+function paraElInput(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const dd = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${dd(d.getMonth() + 1)}-${dd(d.getDate())}T${dd(d.getHours())}:${dd(d.getMinutes())}`;
+}
 
 export type SocioVista = { ficha: string; nombre: string; inscrito: boolean; elo: number };
 
@@ -105,6 +125,9 @@ export function GestionTorneo({
   const quedanRondas = rondasTotales === null || rondasHechas < rondasTotales;
   const rondaActual =
     rondas.find((r) => r.numero === rondaPinchada) ?? rondas[rondas.length - 1] ?? null;
+  // La hora la pone la junta mientras el torneo esté vivo: en uno cerrado no hay
+  // nada que avisar y el dato ya es histórico.
+  const puedePonerHora = esJunta && estado !== "terminado";
 
   return (
     <div className="space-y-4">
@@ -225,6 +248,49 @@ export function GestionTorneo({
           )}
         </div>
         <div className="overflow-hidden rounded-2xl border border-borde bg-tarjeta">
+          {/* LA HORA DE LA RONDA. De aquí sale el aviso de "empieza en una hora":
+              quien juega recibe el push (migración 0037) y, si está dentro de la
+              app, la tarjeta de arriba. Sin hora, la ronda no avisa a nadie — que
+              es como se comportaban todas antes de existir esta línea. */}
+          {(puedePonerHora || rondaActual.fechaHora) && (
+            <div className="flex flex-wrap items-center gap-2 border-b border-borde bg-tarjeta-suave px-3 py-1.5 text-xs">
+              {puedePonerHora ? (
+                <>
+                  <label htmlFor={`hora-${rondaActual.id}`} className="text-tinta-suave">
+                    Se juega
+                  </label>
+                  <input
+                    id={`hora-${rondaActual.id}`}
+                    // La `key` con el valor fuerza a rehacer el campo cuando el
+                    // servidor manda otra hora: un `defaultValue` a secas se
+                    // quedaría con la vieja después de guardar.
+                    key={`${rondaActual.id}-${rondaActual.fechaHora ?? ""}`}
+                    type="datetime-local"
+                    defaultValue={paraElInput(rondaActual.fechaHora)}
+                    disabled={pendiente}
+                    // Al salir del campo y no en cada tecla: mientras se escribe,
+                    // `datetime-local` da valor vacío, y eso guardaría "sin hora".
+                    onBlur={(e) => {
+                      if (e.target.value === paraElInput(rondaActual.fechaHora)) return;
+                      ejecutar(() =>
+                        ponerHoraDeRonda(tournamentId, rondaActual.id, e.target.value || null)
+                      );
+                    }}
+                    className="rounded-lg border border-borde bg-tarjeta px-2 py-1 text-xs text-tinta"
+                  />
+                  <span className="text-tinta-suave">
+                    {rondaActual.fechaHora
+                      ? "· se avisa a quien juega una hora antes"
+                      : "· sin hora no se avisa a nadie"}
+                  </span>
+                </>
+              ) : (
+                <span className="text-tinta-suave">
+                  Se juega {diaYHora(rondaActual.fechaHora!)}
+                </span>
+              )}
+            </div>
+          )}
           {rondaActual.descansaNombre && (
             <p className="border-b border-borde bg-tarjeta-suave px-3 py-1.5 text-xs text-tinta-suave">
               Descansa {rondaActual.descansaNombre} (+½)

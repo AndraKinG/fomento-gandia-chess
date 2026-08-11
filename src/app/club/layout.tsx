@@ -10,6 +10,8 @@ import { ProveedorEnPartida } from "@/components/avisos/EnPartida";
 import { Asistente } from "@/components/asistente/Asistente";
 import { ProveedorTemaTablero } from "@/components/ajedrez/TemaTablero";
 import { Latido } from "@/components/uso/Latido";
+import { ProximaRonda } from "@/components/torneos/ProximaRonda";
+import { leerProximaRonda, type ProximaRondaVista } from "@/lib/torneos/proxima-ronda";
 import { temaTablero } from "@/lib/ajedrez/temas";
 import { juegoPiezas } from "@/lib/ajedrez/piezas";
 
@@ -55,9 +57,14 @@ export default async function ClubLayout({
   // pinten sin ir cada uno a la base. Una clave desconocida cae al del club.
   let claveTema: string | null = null;
   let clavePiezas: string | null = null;
+  // La ronda de torneo que le toca al socio dentro de poco, para la tarjeta de
+  // "empieza en 43 min". Va en el layout y no en una pantalla porque la hora te
+  // pilla donde te pille; la decisión de cuándo se ve es del navegador, no de aquí
+  // (ver `ProximaRonda.tsx`).
+  let proximaRonda: ProximaRondaVista | null = null;
   if (conNavegacion) {
     const supabase = await createServerSupabase();
-    const [{ count: retos }, { count: sinLeer }, { data: preferencias }] = await Promise.all([
+    const [{ count: retos }, { count: sinLeer }, { data: preferencias }, ronda] = await Promise.all([
       // Sin ficha no hay retos posibles (son entre jugadores): el UUID de
       // relleno no matchea ninguna fila real y evita tener que ramificar la
       // consulta solo para este caso.
@@ -74,11 +81,13 @@ export default async function ClubLayout({
         .eq("profile_id", sesion.userId)
         .is("leido_en", null),
       supabase.from("profiles").select("tema_tablero, juego_piezas").eq("id", sesion.userId).maybeSingle(),
+      leerProximaRonda(supabase, sesion.playerId),
     ]);
     retosPendientes = retos ?? 0;
     avisosSinLeer = sinLeer ?? 0;
     claveTema = (preferencias?.tema_tablero as string | null) ?? null;
     clavePiezas = (preferencias?.juego_piezas as string | null) ?? null;
+    proximaRonda = ronda;
   }
 
   return (
@@ -97,6 +106,10 @@ export default async function ClubLayout({
           `pb-20` deja hueco para la barra inferior, que solo existe en móvil.
           Es un `div` y no un `main` porque cada pantalla ya trae el suyo. */}
       <div className={`min-w-0 flex-1 ${conNavegacion ? "pb-20 lg:pb-0" : ""}`}>
+        {/* Encima de la pantalla y no flotando: es un recordatorio que tiene que
+            seguir ahí media hora, no un aviso de paso. Se pinta solo cuando falta
+            menos de una hora, lo decide el navegador. */}
+        <ProximaRonda ronda={proximaRonda} />
         {children}
       </div>
       {conNavegacion && <NavInferior esAdmin={sesion.esAdmin} />}

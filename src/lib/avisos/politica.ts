@@ -15,6 +15,7 @@ export type TipoAviso =
   | "disponibilidad_recordatorio"
   | "torneo_interes"
   | "torneo_primer_apuntado"
+  | "ronda_hora"
   | "coche_plaza_libre"
   | "coche_sin_plaza"
   | "reto_aceptado"
@@ -29,6 +30,10 @@ export const GRUPO_DE: Record<TipoAviso, GrupoAviso> = {
   disponibilidad_recordatorio: "interclubs",
   torneo_interes: "torneos",
   torneo_primer_apuntado: "torneos",
+  // "Tu ronda empieza a las 19:00", una hora antes (migración 0037). Va en
+  // `torneos` y no en `partidas` porque lo manda el torneo, no un rival: quien
+  // silencia los torneos del club está silenciando también sus horarios.
+  ronda_hora: "torneos",
   coche_plaza_libre: "torneos",
   coche_sin_plaza: "torneos",
   reto_aceptado: "partidas",

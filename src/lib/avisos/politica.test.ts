@@ -56,13 +56,14 @@ describe("debePush", () => {
     ).toBe(true);
   });
 
-  it("GRUPO_DE cubre los 11 tipos y ninguno queda sin grupo", () => {
+  it("GRUPO_DE cubre los 12 tipos y ninguno queda sin grupo", () => {
     const tipos: TipoAviso[] = [
       "convocatoria",
       "disponibilidad_peticion",
       "disponibilidad_recordatorio",
       "torneo_interes",
       "torneo_primer_apuntado",
+      "ronda_hora",
       "coche_plaza_libre",
       "coche_sin_plaza",
       "reto_aceptado",
@@ -70,7 +71,7 @@ describe("debePush", () => {
       "vinculacion",
       "fichas_nuevas",
     ];
-    expect(tipos.length).toBe(11);
+    expect(tipos.length).toBe(12);
     for (const tipo of tipos) {
       expect(GRUPO_DE[tipo]).toBeDefined();
     }

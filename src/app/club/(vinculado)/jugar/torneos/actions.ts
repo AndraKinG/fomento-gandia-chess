@@ -10,6 +10,7 @@ import {
   rondasRecomendadas,
 } from "@/lib/club/emparejar";
 import { estadoParaEmparejar, rondaCompleta } from "@/lib/club/clasificacion";
+import { difundirTorneo } from "@/lib/vivo/difundir";
 import { leerTorneo } from "./datos";
 
 type Resultado = { error?: string; id?: string };
@@ -202,6 +203,50 @@ export async function generarRonda(tournamentId: string): Promise<Resultado> {
       .eq("id", tournamentId);
   }
 
+  refrescar(tournamentId);
+  return {};
+}
+
+/**
+ * Pone (o quita) la hora de juego de una ronda.
+ *
+ * DE AQUÍ SALE EL AVISO DE "EMPIEZA EN UNA HORA": la hora es lo único que hay que
+ * rellenar, el resto lo hace el programador de la migración 0037 y la tarjeta de
+ * `ProximaRonda.tsx`. Sin hora, la ronda no avisa a nadie, que es como se comportaban
+ * todas antes de esta función.
+ *
+ * AL CAMBIAR LA HORA SE BORRA LA MARCA DEL AVISO. Si no, mover una ronda de las 19:00
+ * a las 21:00 dejaría a todo el mundo sin recordatorio: la marca diría que ya se avisó
+ * —y se avisó, pero de una hora que ya no existe—.
+ */
+export async function ponerHoraDeRonda(
+  tournamentId: string,
+  roundId: string,
+  fechaHoraISO: string | null
+): Promise<Resultado> {
+  const sesion = await sesionActual();
+  if (!sesion?.esJunta) return { error: "No autorizado" };
+
+  // Lo que llega del cliente no es de fiar: una fecha basura se guardaría como null
+  // sin decir nada, y el organizador creería que ha puesto la hora.
+  let valor: string | null = null;
+  if (fechaHoraISO && fechaHoraISO.trim()) {
+    const cuando = new Date(fechaHoraISO);
+    if (Number.isNaN(cuando.getTime())) return { error: "Esa fecha no vale." };
+    valor = cuando.toISOString();
+  }
+
+  const supabase = await createServerSupabase();
+  const { error } = await supabase
+    .from("club_rounds")
+    .update({ fecha_hora: valor, aviso_enviado_en: null })
+    .eq("id", roundId)
+    .eq("tournament_id", tournamentId);
+  if (error) return { error: error.message };
+
+  // Las pantallas del torneo que estén abiertas se rehacen solas: la hora la mira
+  // todo el que juega, no solo quien la pone.
+  await difundirTorneo(tournamentId);
   refrescar(tournamentId);
   return {};
 }

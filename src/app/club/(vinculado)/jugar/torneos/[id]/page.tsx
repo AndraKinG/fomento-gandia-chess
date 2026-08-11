@@ -42,7 +42,9 @@ export default async function TorneoInternoPage({
   }));
 
   const rondas: RondaVista[] = torneo.rondas.map((r) => ({
+    id: r.id,
     numero: r.numero,
+    fechaHora: r.fechaHora,
     descansaNombre: r.descansa ? (nombrePorFicha.get(r.descansa) ?? "Socio") : null,
     pares: r.emparejamientos.map((e, i) => ({
       id: r.pares[i]?.id ?? `${r.id}-${i}`,
