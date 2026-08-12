@@ -123,7 +123,7 @@ export async function leerRanking(supabase: Cliente): Promise<FilaRanking[]> {
       .order("created_at"),
     supabase
       .from("club_tournament_players")
-      .select("player_id, elo_inicial, tournament_id, players(nombre)"),
+      .select("player_id, elo_inicial, tournament_id, players(nombre, de_prueba)"),
   ]);
 
   const idsTorneos = (torneos ?? []).map((t) => t.id);
@@ -172,7 +172,18 @@ export async function leerRanking(supabase: Cliente): Promise<FilaRanking[]> {
   // para poder quedarse con el más antiguo. Sin guardarla no hay con qué comparar.
   const desdeTorneo = new Map<string, number>();
 
-  for (const i of inscritos ?? []) {
+  // LA FICHA DE PRUEBAS NO ENTRA EN EL RANKING DEL CLUB (migración 0040), y este es
+  // el sitio donde más importa: si el propietario prueba un torneo con resultados, la
+  // ficha se ganaría un ELO de club que vería todo el mundo — y ese torneo ya no se
+  // puede borrar, porque tener resultados es justo lo que lo impide. Se descarta aquí,
+  // en el único sitio que decide quién sale en el ranking, y no en cada pantalla.
+  const dePrueba = new Set(
+    (inscritos ?? [])
+      .filter((i) => (i.players as unknown as { de_prueba?: boolean } | null)?.de_prueba)
+      .map((i) => i.player_id as string)
+  );
+
+  for (const i of (inscritos ?? []).filter((i) => !dePrueba.has(i.player_id))) {
     nombres.set(
       i.player_id,
       (i.players as unknown as { nombre: string } | null)?.nombre ?? "Socio"
@@ -196,6 +207,9 @@ export async function leerRanking(supabase: Cliente): Promise<FilaRanking[]> {
   const estado = recalcular(partidas, inicial);
 
   return Object.entries(estado)
+    // `recalcular` recorre las partidas, así que puede devolver a la ficha de pruebas
+    // aunque no esté en `inicial`: se vuelve a descartar aquí, que es la salida.
+    .filter(([ficha]) => !dePrueba.has(ficha))
     .map(([ficha, e]) => ({
       ficha,
       nombre: nombres.get(ficha) ?? "Socio",

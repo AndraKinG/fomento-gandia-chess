@@ -35,7 +35,7 @@ export default async function JugarPage() {
           .eq("estado", "pendiente")
           .order("creado_en", { ascending: false })
       : Promise.resolve({ data: [] }),
-    supabase.from("players").select("id, nombre").eq("activo", true).order("nombre"),
+    supabase.from("players").select("id, nombre, de_prueba").eq("activo", true).order("nombre"),
     // SOLO SE PUEDE RETAR A QUIEN TIENE CUENTA. Las 46 fichas del orden de fuerza
     // son socios del club, pero la mayoría todavía no se ha registrado: retar a una
     // de ellas creaba un reto que no podía aceptar nadie y se quedaba ahí colgado.
@@ -50,10 +50,38 @@ export default async function JugarPage() {
 
   const nombre = new Map((socios ?? []).map((s) => [s.id, s.nombre as string]));
   const registrados = new Set((conCuenta ?? []).map((p) => p.player_id as string));
+
+  // LA FICHA DE PRUEBAS SOLO LA VEN LOS ADMINS (migración 0040). El nombre sigue en
+  // el mapa de arriba —si aparece en una partida hay que poder escribirlo— pero no se
+  // ofrece para retar: a un socio normal, una "Cuenta de pruebas" en su lista de
+  // rivales es ruido que no puede explicar nadie.
+  const desPrueba = new Set(
+    (socios ?? []).filter((s) => s.de_prueba).map((s) => s.id as string)
+  );
+  const retables = (socios ?? []).filter(
+    (s) => sesion?.esAdmin || !desPrueba.has(s.id as string)
+  );
+
   const enJuego = (partidas ?? []).filter((p) => p.resultado === null);
   const mias = enJuego.filter((p) => p.blancas_id === yo || p.negras_id === yo);
-  const otras = enJuego.filter((p) => p.blancas_id !== yo && p.negras_id !== yo);
-  const acabadas = (partidas ?? []).filter((p) => p.resultado !== null).slice(0, 6);
+  // Y sus partidas no se anuncian en "se están jugando": una prueba del admin contra
+  // sí mismo no es una partida del club. Las tuyas propias sí las sigues viendo
+  // arriba, en "tus partidas", que es donde te hacen falta.
+  const otras = enJuego.filter(
+    (p) =>
+      p.blancas_id !== yo &&
+      p.negras_id !== yo &&
+      !desPrueba.has(p.blancas_id) &&
+      !desPrueba.has(p.negras_id)
+  );
+  const acabadas = (partidas ?? [])
+    .filter(
+      (p) =>
+        p.resultado !== null &&
+        !desPrueba.has(p.blancas_id) &&
+        !desPrueba.has(p.negras_id)
+    )
+    .slice(0, 6);
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
@@ -111,7 +139,7 @@ export default async function JugarPage() {
                   incrementoS: r.incremento_s,
                   color: r.color,
                 }))}
-                socios={(socios ?? [])
+                socios={retables
                   .filter((s) => s.id !== yo && registrados.has(s.id))
                   .map((s) => ({ id: s.id, nombre: s.nombre }))}
               />

@@ -22,7 +22,15 @@ export async function cargarOpciones(
       .select("id, nombre, fecha_inicio")
       .order("fecha_inicio", { ascending: false })
       .limit(60),
-    supabase.from("players").select("id, nombre").eq("activo", true).order("nombre"),
+    // La ficha de pruebas fuera (migración 0040): nadie juega contra ella de verdad,
+    // así que en la lista de rivales solo sería una entrada que no se explica. Se
+    // filtra en la consulta y no después, para que no viaje al navegador.
+    supabase
+      .from("players")
+      .select("id, nombre")
+      .eq("activo", true)
+      .eq("de_prueba", false)
+      .order("nombre"),
   ]);
 
   return {

@@ -92,7 +92,14 @@ export default async function ClubLayout({
 
   return (
     <ProveedorTemaTablero tema={temaTablero(claveTema)} piezas={juegoPiezas(clavePiezas)}>
-    <ProveedorPresencia yo={sesion.playerId} nombre={sesion.nombre}>
+    {/* LA FICHA DE PRUEBAS NO SE ANUNCIA (migración 0040): con `yo` a null, el canal
+        se escucha pero no se hace `track()`, así que la cuenta ve quién está mirando
+        y no aparece en la lista de nadie. Es la única forma de que revisar la app con
+        ella no le salga en la cara al club. */}
+    <ProveedorPresencia
+      yo={sesion.fichaDePrueba ? null : sesion.playerId}
+      nombre={sesion.nombre}
+    >
     <ProveedorPendientes inicial={{ avisos: avisosSinLeer, retos: retosPendientes }}>
     <ProveedorEnPartida>
     <div className="flex flex-1">

@@ -21,6 +21,15 @@ export type Sesion = {
    *  en vez de por el correo, que como saludo queda frío y además es un dato que
    *  no hace falta repetir en cada pantalla. */
   nombre: string | null;
+  /**
+   * La ficha es de pruebas (migración 0040).
+   *
+   * Sirve para que la cuenta no se anuncie: con esto puesto no se registra en la
+   * presencia, así que no sale en "quién está mirando". Y al revés, las fichas de
+   * prueba solo se ofrecen en las listas de retos y rivales a los admins, que son
+   * los únicos que tienen algo que probar con ellas.
+   */
+  fichaDePrueba: boolean;
 };
 
 
@@ -50,7 +59,7 @@ export const sesionActual = cache(async (): Promise<Sesion | null> => {
   const [{ data: profile }, { data: filasRol }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("is_admin, player_id, players(nombre)")
+      .select("is_admin, player_id, players(nombre, de_prueba)")
       .eq("id", user.id)
       .single(),
     // Si `member_roles` no existiera (migración 0011 sin aplicar), esto devuelve
@@ -72,5 +81,8 @@ export const sesionActual = cache(async (): Promise<Sesion | null> => {
     playerId: profile?.player_id ?? null,
     nombre:
       (profile?.players as unknown as { nombre: string } | null)?.nombre ?? null,
+    fichaDePrueba: Boolean(
+      (profile?.players as unknown as { de_prueba?: boolean } | null)?.de_prueba
+    ),
   };
 });
