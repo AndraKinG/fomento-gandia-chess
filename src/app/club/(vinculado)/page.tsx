@@ -109,6 +109,40 @@ export default async function Home() {
   const dentroVentanaISO = new Date(ahora.getTime() + DIEZ_DIAS_MS).toISOString();
   const hoy = hoyISO();
 
+  /**
+   * A qué torneos de fuera va alguien del club.
+   *
+   * LA PORTADA VA POR GENTE, NO POR LA MARCA "DE INTERÉS" (decisión del propietario,
+   * 2026-08-13): "no quiero que salgan en inicio cuando estén destacados; deberían
+   * salir cuando alguien pone que va o está en duda". La marca sigue teniendo su
+   * trabajo en la sección Torneos, donde decide qué se enseña de los 147 del
+   * calendario sin desplegar la lista entera; aquí lo que manda es que haya alguien.
+   *
+   * Va ANTES del bloque en paralelo porque el resto depende de estos ids. Es la tabla
+   * más pequeña de la app y solo se piden dos columnas, así que el viaje de más no se
+   * nota — y a cambio la consulta de torneos trae tres filas en vez de las cien que
+   * quedan por jugar del calendario.
+   */
+  const { data: apuntados } = await supabase
+    .from("tournament_attendance")
+    .select("tournament_id, estado")
+    .in("estado", ["voy", "duda"]);
+  const idsConGente = [
+    ...new Set((apuntados ?? []).map((a) => a.tournament_id as string)),
+  ];
+
+  // Cuántos van y cuántos dudan, por torneo. La tarjeta lo dice: si el torneo está en
+  // la portada es porque hay gente, así que callarse cuánta deja al socio sin el dato
+  // que explica por qué lo está viendo.
+  const gentePorTorneo = new Map<string, { van: number; dudan: number }>();
+  for (const a of apuntados ?? []) {
+    const id = a.tournament_id as string;
+    const cuenta = gentePorTorneo.get(id) ?? { van: 0, dudan: 0 };
+    if (a.estado === "voy") cuenta.van++;
+    else cuenta.dudan++;
+    gentePorTorneo.set(id, cuenta);
+  }
+
   const [
     { data: pendientes },
     { data: proximas },
@@ -147,10 +181,17 @@ export default async function Home() {
     // Próximos torneos a los que va el club. El Interclubs duerme de abril a
     // enero, así que fuera de esa ventana esto es lo único que la app tiene que
     // contar: sin ello, la home queda vacía media temporada.
+    //
+    // Solo los que tienen a alguien apuntado (ver `idsConGente` arriba). El UUID de
+    // relleno es para cuando no hay nadie en ningún torneo: un `in.()` vacío rompe el
+    // análisis de PostgREST, y lo que se quiere ahí es una lista vacía, no un error.
     supabase
       .from("tournaments")
       .select("id, nombre, fecha_inicio, fecha_fin, lugar")
-      .eq("de_interes", true)
+      .in(
+        "id",
+        idsConGente.length > 0 ? idsConGente : ["00000000-0000-0000-0000-000000000000"]
+      )
       .gte("fecha_fin", hoy)
       .order("fecha_inicio")
       .limit(3),
@@ -421,6 +462,16 @@ export default async function Home() {
                 <ul className="space-y-2">
                   {(torneosProximos ?? []).map((t) => {
                     const estado = asistenciaPorTorneo.get(t.id);
+                    const gente = gentePorTorneo.get(t.id);
+                    // "2 van" manda sobre "1 en duda": si hay alguien decidido, es lo
+                    // que interesa saber. Solo se dicen las dudas cuando no va nadie
+                    // todavía, que es el caso en el que hacen falta.
+                    const cuantos =
+                      gente && gente.van > 0
+                        ? `${gente.van} ${gente.van === 1 ? "va" : "van"}`
+                        : gente && gente.dudan > 0
+                          ? `${gente.dudan} en duda`
+                          : null;
                     return (
                       <li key={t.id}>
                         <Link href={`/club/torneos/facv/${t.id}`} className="block">
@@ -433,6 +484,7 @@ export default async function Home() {
                               <p className="text-sm text-tinta-suave">
                                 {formatearRangoFechas(t.fecha_inicio, t.fecha_fin)}
                                 {t.lugar ? ` · ${t.lugar}` : ""}
+                                {cuantos ? ` · ${cuantos}` : ""}
                               </p>
                             </div>
                             <span className="shrink-0 text-xs text-tinta-suave">
