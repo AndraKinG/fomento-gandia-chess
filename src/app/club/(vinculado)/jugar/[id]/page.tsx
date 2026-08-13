@@ -25,7 +25,7 @@ export default async function PartidaEnVivoPage({
   const { data: fila } = await supabase
     .from("live_games")
     .select(
-      "id, blancas_id, negras_id, jugadas, turno, blancas_ms, negras_ms, base_ms, incremento_ms, ultima_jugada_en, resultado, motivo, tablas_ofrecidas_por, vuelta_pedida_por, origen, motor_ficha"
+      "id, blancas_id, negras_id, jugadas, turno, blancas_ms, negras_ms, base_ms, incremento_ms, ultima_jugada_en, resultado, motivo, tablas_ofrecidas_por, vuelta_pedida_por, origen"
     )
     .eq("id", id)
     .maybeSingle();
@@ -71,7 +71,6 @@ export default async function PartidaEnVivoPage({
     motivo: fila.motivo,
     tablasOfrecidasPor: fila.tablas_ofrecidas_por,
     vueltaPedidaPor: fila.vuelta_pedida_por,
-    motorFicha: fila.motor_ficha,
   };
 
   const mensajes: Mensaje[] = (chat ?? []).map((m) => ({
@@ -94,21 +93,7 @@ export default async function PartidaEnVivoPage({
         medida="panel"
       />
       <Contenedor medida="panel">
-        <Mesa
-          inicial={partida}
-          mensajesIniciales={mensajes}
-          yo={sesion?.playerId ?? null}
-          // EL INTERRUPTOR DEL MOTOR (migración 0044): lo decide el SERVIDOR y solo
-          // para la ficha de `FICHA_CON_MOTOR`, en retos y jugando. Si esa variable no
-          // está puesta, esto es `false` para todo el mundo y el botón no existe. El
-          // servidor lo vuelve a comprobar al encenderlo: esto solo pinta.
-          puedeMotor={
-            Boolean(process.env.FICHA_CON_MOTOR) &&
-            sesion?.playerId === process.env.FICHA_CON_MOTOR &&
-            fila.origen === "reto" &&
-            (fila.blancas_id === sesion?.playerId || fila.negras_id === sesion?.playerId)
-          }
-        />
+        <Mesa inicial={partida} mensajesIniciales={mensajes} yo={sesion?.playerId ?? null} />
       </Contenedor>
     </main>
   );
