@@ -6,6 +6,7 @@ import { Cabecera } from "@/components/ui/Cabecera";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { Boton } from "@/components/ui/Boton";
 import { Contenedor } from "@/components/ui/Contenedor";
+import { nombreDeFila } from "@/lib/club/nombre-socio";
 
 type Estado = "disponible" | "no_disponible" | "duda";
 const ICONOS: Record<Estado, string> = { disponible: "✅", no_disponible: "❌", duda: "🤔" };
@@ -36,7 +37,7 @@ export default async function PlantillaPage({
 
   const { data: orden } = await supabase
     .from("force_order")
-    .select("numero, bis_index, player_id, players(nombre)")
+    .select("numero, bis_index, player_id, players(nombre, apodo)")
     .eq("season_id", equipo.season_id)
     .order("numero").order("bis_index");
   const propioOrden = (orden ?? []) as unknown as {
@@ -68,7 +69,7 @@ export default async function PlantillaPage({
           propiasJornadas.map((j, indice) => {
             const filas = propioOrden.map((f) => ({
               etiqueta: `${f.numero}${f.bis_index ? "bis" : ""}`,
-              nombre: f.players?.nombre ?? "—",
+              nombre: nombreDeFila(f.players),
               estado: mapaDisp.get(`${j.id}:${f.player_id}`),
             }));
             const contadores = { disponible: 0, no_disponible: 0, duda: 0, sinResponder: 0 };

@@ -12,6 +12,7 @@ import { TarjetaJornada } from "@/components/ui/TarjetaJornada";
 import { Boton } from "@/components/ui/Boton";
 import { formatearRangoFechas, hoyISO } from "@/lib/torneos/fechas";
 import { Contenedor } from "@/components/ui/Contenedor";
+import { nombreDeFila } from "@/lib/club/nombre-socio";
 
 type Estado = "disponible" | "no_disponible" | "duda";
 const ICONOS: Record<Estado, string> = { disponible: "✅", no_disponible: "❌", duda: "🤔" };
@@ -216,7 +217,7 @@ export default async function Home() {
     // Últimas partidas del repositorio compartido, para que se vea que está vivo.
     supabase
       .from("games")
-      .select("id, fecha, rival_nombre, resultado, color, players(nombre)")
+      .select("id, fecha, rival_nombre, resultado, color, players(nombre, apodo)")
       .order("created_at", { ascending: false })
       .limit(4),
   ]);
@@ -563,7 +564,7 @@ export default async function Home() {
                 <ul className="space-y-2">
                   {(ultimasPartidas ?? []).map((p) => {
                     const duenio =
-                      (p.players as unknown as { nombre: string } | null)?.nombre ?? "Socio";
+                      nombreDeFila(p.players);
                     return (
                       <li key={p.id}>
                         <Link href={`/club/partidas/${p.id}`} className="block">

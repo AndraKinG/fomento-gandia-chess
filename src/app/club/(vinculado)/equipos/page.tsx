@@ -7,6 +7,7 @@ import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { Contenedor, Rejilla } from "@/components/ui/Contenedor";
 import { SelectorTemporada } from "@/components/ui/SelectorTemporada";
 import { conTemporada, elegirTemporada, leerTemporadas } from "@/lib/temporadas";
+import { nombreDeFila } from "@/lib/club/nombre-socio";
 
 type Jornada = {
   id: string;
@@ -106,7 +107,7 @@ export default async function EquiposPage({
 
   const { data: equipos } = await supabase
     .from("teams")
-    .select("id, nombre, categoria, margen_elo, team_captains(player_id, players(nombre))")
+    .select("id, nombre, categoria, margen_elo, team_captains(player_id, players(nombre, apodo))")
     .eq("season_id", season.id)
     .order("nombre");
 
@@ -191,7 +192,7 @@ export default async function EquiposPage({
                     <p className="text-sm text-tinta-suave">
                       {capitanes.length === 0
                         ? "Sin capitán asignado"
-                        : `Capitán: ${capitanes.map((c) => c.players?.nombre ?? "—").join(", ")}`}
+                        : `Capitán: ${capitanes.map((c) => nombreDeFila(c.players)).join(", ")}`}
                     </p>
 
                     {resumen.length > 0 && (

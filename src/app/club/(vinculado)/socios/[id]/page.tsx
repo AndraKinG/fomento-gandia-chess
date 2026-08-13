@@ -8,6 +8,7 @@ import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Contenedor } from "@/components/ui/Contenedor";
 import { PuntoConectado } from "@/components/presencia/Presencia";
 import { textoResultado, type Resultado } from "@/lib/partidas/validar";
+import { nombreVisible } from "@/lib/club/nombre-socio";
 
 /**
  * La ficha pública de un socio: lo que los demás ven de él.
@@ -32,7 +33,7 @@ export default async function SocioPage({
 
   const { data: socio } = await supabase
     .from("players")
-    .select("id, nombre, foto_url, aperturas, elo_fide")
+    .select("id, nombre, apodo, foto_url, aperturas, elo_fide")
     .eq("id", id)
     .maybeSingle();
   if (!socio) redirect("/club");
@@ -75,7 +76,15 @@ export default async function SocioPage({
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo={socio.nombre} subtitulo="Socio del club" volverAtras medida="lectura" />
+      {/* EL MOTE EN EL TÍTULO y el nombre oficial de subtítulo: la ficha es la pantalla
+          donde tiene que estar el nombre con el que la FACV publica a cada uno, porque
+          es donde se viene a saber quién es alguien. */}
+      <Cabecera
+        titulo={nombreVisible(socio)}
+        subtitulo={socio.apodo ? socio.nombre : "Socio del club"}
+        volverAtras
+        medida="lectura"
+      />
       <Contenedor medida="lectura" className="space-y-4">
         <Tarjeta destacada className="flex items-center gap-4">
           {fotoFirmada ? (
@@ -84,7 +93,7 @@ export default async function SocioPage({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={fotoFirmada}
-              alt={`Foto de ${socio.nombre}`}
+              alt={`Foto de ${nombreVisible(socio)}`}
               className="h-24 w-24 shrink-0 rounded-full object-cover ring-2 ring-borde-acento"
             />
           ) : (
@@ -92,12 +101,12 @@ export default async function SocioPage({
               aria-hidden
               className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-tarjeta-suave text-3xl font-bold text-acento-texto ring-2 ring-borde"
             >
-              {socio.nombre.trim().charAt(0).toUpperCase()}
+              {nombreVisible(socio).trim().charAt(0).toUpperCase()}
             </span>
           )}
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-2 text-lg font-semibold text-tinta">
-              <span className="min-w-0 truncate">{socio.nombre}</span>
+              <span className="min-w-0 truncate">{nombreVisible(socio)}</span>
               <PuntoConectado ficha={socio.id} />
             </p>
             <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-tinta-suave">

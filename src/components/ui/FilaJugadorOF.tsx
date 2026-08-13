@@ -7,12 +7,14 @@ import { Tarjeta } from "./Tarjeta";
  * número de orden).
  */
 export function FilaJugadorOF({
-  numero, bisIndex, nombre, chips,
+  numero, bisIndex, nombre, chips, derecha,
 }: {
   numero: number;
   bisIndex: number;
   nombre: string;
   chips?: ReactNode;
+  /** Hueco a la derecha de la fila, para un control por socio (p. ej. su mote). */
+  derecha?: ReactNode;
 }) {
   return (
     <Tarjeta compacta className="flex items-center gap-3">
@@ -28,6 +30,7 @@ export function FilaJugadorOF({
         <p className="truncate font-medium text-tinta">{nombre}</p>
         {chips && <div className="mt-1 flex flex-wrap gap-2">{chips}</div>}
       </div>
+      {derecha && <div className="shrink-0">{derecha}</div>}
     </Tarjeta>
   );
 }

@@ -8,6 +8,7 @@ import { clasificar } from "@/lib/club/clasificacion";
 import { leerTorneo } from "../datos";
 import { GestionTorneo, type RondaVista, type SocioVista } from "./GestionTorneo";
 import { Contenedor } from "@/components/ui/Contenedor";
+import { nombreVisible } from "@/lib/club/nombre-socio";
 
 export default async function TorneoInternoPage({
   params,
@@ -24,19 +25,19 @@ export default async function TorneoInternoPage({
   // Todos los jugadores activos, para la lista de inscripción.
   const { data: jugadores } = await supabase
     .from("players")
-    .select("id, nombre")
+    .select("id, nombre, apodo")
     .eq("activo", true)
     .order("nombre");
 
   const nombrePorFicha = new Map<string, string>(
-    (jugadores ?? []).map((j) => [j.id, j.nombre])
+    (jugadores ?? []).map((j) => [j.id, nombreVisible(j)])
   );
   for (const i of torneo.inscritos) nombrePorFicha.set(i.ficha, i.nombre);
 
   const inscritoPorFicha = new Map(torneo.inscritos.map((i) => [i.ficha, i]));
   const socios: SocioVista[] = (jugadores ?? []).map((j) => ({
     ficha: j.id,
-    nombre: j.nombre,
+    nombre: nombreVisible(j),
     inscrito: inscritoPorFicha.has(j.id),
     elo: inscritoPorFicha.get(j.id)?.eloInicial ?? 0,
   }));

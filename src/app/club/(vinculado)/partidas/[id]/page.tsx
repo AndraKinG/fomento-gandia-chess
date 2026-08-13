@@ -13,6 +13,7 @@ import { Estrella } from "../Estrella";
 import { VisorPartida } from "@/components/ajedrez/VisorPartida";
 import { Contenedor } from "@/components/ui/Contenedor";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
+import { nombreDeFila } from "@/lib/club/nombre-socio";
 
 export default async function PartidaPage({
   params,
@@ -26,7 +27,7 @@ export default async function PartidaPage({
   const { data: p } = await supabase
     .from("games")
     .select(
-      "id, player_id, fecha, ronda, rival_nombre, rival_id, rival_elo, mi_elo, color, resultado, apertura, notas, pgn, torneo_texto, tournament_id, privada, players!games_player_id_fkey(nombre), tournaments(nombre)"
+      "id, player_id, fecha, ronda, rival_nombre, rival_id, rival_elo, mi_elo, color, resultado, apertura, notas, pgn, torneo_texto, tournament_id, privada, players!games_player_id_fkey(nombre, apodo), tournaments(nombre)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -41,7 +42,7 @@ export default async function PartidaPage({
     .maybeSingle();
 
   const resultado = p.resultado as Resultado;
-  const duenio = (p.players as unknown as { nombre: string } | null)?.nombre ?? "Socio";
+  const duenio = nombreDeFila(p.players);
   const torneo =
     (p.tournaments as unknown as { nombre: string } | null)?.nombre ?? p.torneo_texto;
   const esMia = p.player_id === sesion?.playerId;

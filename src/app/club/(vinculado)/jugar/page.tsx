@@ -8,6 +8,7 @@ import { Tarjeta } from "@/components/ui/Tarjeta";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { Retos } from "./Retos";
 import { PestanasJugar } from "@/components/ui/Pestanas";
+import { nombreVisible } from "@/lib/club/nombre-socio";
 
 /**
  * Jugar: lo que tienes en marcha, los retos y a quién retar.
@@ -35,7 +36,7 @@ export default async function JugarPage() {
           .eq("estado", "pendiente")
           .order("creado_en", { ascending: false })
       : Promise.resolve({ data: [] }),
-    supabase.from("players").select("id, nombre, de_prueba").eq("activo", true).order("nombre"),
+    supabase.from("players").select("id, nombre, apodo, de_prueba").eq("activo", true).order("nombre"),
     // SOLO SE PUEDE RETAR A QUIEN TIENE CUENTA. Las 46 fichas del orden de fuerza
     // son socios del club, pero la mayoría todavía no se ha registrado: retar a una
     // de ellas creaba un reto que no podía aceptar nadie y se quedaba ahí colgado.
@@ -48,7 +49,7 @@ export default async function JugarPage() {
     createAdminClient().from("profiles").select("player_id").not("player_id", "is", null),
   ]);
 
-  const nombre = new Map((socios ?? []).map((s) => [s.id, s.nombre as string]));
+  const nombre = new Map((socios ?? []).map((s) => [s.id, nombreVisible(s)]));
   const registrados = new Set((conCuenta ?? []).map((p) => p.player_id as string));
 
   // LA FICHA DE PRUEBAS SOLO LA VEN LOS ADMINS (migración 0040). El nombre sigue en
@@ -141,7 +142,7 @@ export default async function JugarPage() {
                 }))}
                 socios={retables
                   .filter((s) => s.id !== yo && registrados.has(s.id))
-                  .map((s) => ({ id: s.id, nombre: s.nombre }))}
+                  .map((s) => ({ id: s.id, nombre: nombreVisible(s) }))}
               />
             </div>
 

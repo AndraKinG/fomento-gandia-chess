@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { avisar } from "@/lib/avisos/enviar";
 import { horaCorta, MINUTOS_DE_AVISO, tocaAvisar } from "./hora-de-ronda";
+import { nombreDeFila } from "@/lib/club/nombre-socio";
 
 /**
  * Avisa a quien juega una ronda que empieza en una hora.
@@ -79,7 +80,7 @@ export async function avisarRondasProximas(): Promise<{
 
       const { data: cruces } = await admin
         .from("club_pairings")
-        .select("mesa, blancas_id, negras_id, blancas:blancas_id(nombre), negras:negras_id(nombre)")
+        .select("mesa, blancas_id, negras_id, blancas:blancas_id(nombre, apodo), negras:negras_id(nombre, apodo)")
         .eq("round_id", ronda.id)
         .is("resultado", null)
         .order("mesa");
@@ -112,7 +113,7 @@ export async function avisarRondasProximas(): Promise<{
         const r = await avisar(destinatarios, {
           tipo: "ronda_hora",
           titulo: `Tu ronda es a las ${hora}`,
-          cuerpo: `${nombreTorneo} · ronda ${ronda.numero}: ${par.blancas?.nombre ?? "Socio"} vs ${par.negras?.nombre ?? "Socio"}.`,
+          cuerpo: `${nombreTorneo} · ronda ${ronda.numero}: ${nombreDeFila(par.blancas)} vs ${nombreDeFila(par.negras)}.`,
           url,
         });
         avisados += r.guardados;

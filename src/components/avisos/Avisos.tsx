@@ -6,6 +6,7 @@ import { clienteEnVivo } from "@/lib/supabase/vivo";
 import { aceptarReto, rechazarReto } from "@/app/club/(vinculado)/jugar/actions";
 import { usePendientes } from "./Pendientes";
 import { useEnPartida } from "./EnPartida";
+import { nombreDeFila } from "@/lib/club/nombre-socio";
 
 /**
  * Avisos de la app, en una tarjeta que sale abajo.
@@ -135,7 +136,7 @@ export function Avisos({ yo, perfilId }: { yo: string; perfilId: string }) {
       const [{ data: paraMi }, { count: sinLeer }] = await Promise.all([
         supabase
           .from("challenges")
-          .select("id, base_min, incremento_s, color, reta_id, players:reta_id(nombre)")
+          .select("id, base_min, incremento_s, color, reta_id, players:reta_id(nombre, apodo)")
           .eq("retado_id", yo)
           .eq("estado", "pendiente"),
         // `notifications.profile_id` es el id de la CUENTA, no el de la ficha:
@@ -183,7 +184,7 @@ export function Avisos({ yo, perfilId }: { yo: string; perfilId: string }) {
       for (const r of paraMi ?? []) {
         if (vistos.current.has(r.id)) continue;
         vistos.current.add(r.id);
-        const de = (r.players as unknown as { nombre: string } | null)?.nombre ?? "Un socio";
+        const de = nombreDeFila(r.players);
         setAvisos((a) =>
           a.some((x) => x.id === r.id)
             ? a
@@ -209,7 +210,7 @@ export function Avisos({ yo, perfilId }: { yo: string; perfilId: string }) {
       // quien lo tenía delante solo veía esfumarse la tarjeta.
       const { data: cancelados } = await supabase
         .from("challenges")
-        .select("id, estado, players:reta_id(nombre)")
+        .select("id, estado, players:reta_id(nombre, apodo)")
         .eq("retado_id", yo)
         .eq("estado", "cancelado")
         .order("creado_en", { ascending: false })
@@ -219,13 +220,13 @@ export function Avisos({ yo, perfilId }: { yo: string; perfilId: string }) {
         const clave = `${r.id}-cancelado`;
         if (vistos.current.has(clave)) continue;
         vistos.current.add(clave);
-        const quien = (r.players as unknown as { nombre: string } | null)?.nombre ?? "Un socio";
+        const quien = nombreDeFila(r.players);
         informar(clave, `${quien} ha retirado su reto.`);
       }
 
       const { data: mios } = await supabase
         .from("challenges")
-        .select("id, estado, live_game_id, players:retado_id(nombre)")
+        .select("id, estado, live_game_id, players:retado_id(nombre, apodo)")
         .eq("reta_id", yo)
         .neq("estado", "pendiente")
         .order("creado_en", { ascending: false })
@@ -236,7 +237,7 @@ export function Avisos({ yo, perfilId }: { yo: string; perfilId: string }) {
         if (vistos.current.has(clave)) continue;
         vistos.current.add(clave);
         novedad = true;
-        const quien = (r.players as unknown as { nombre: string } | null)?.nombre ?? "Tu rival";
+        const quien = nombreDeFila(r.players);
         if (r.estado === "aceptado" && r.live_game_id) {
           // CON UNA PARTIDA DELANTE, NO. Si el reto se acaba de aceptar
           // mientras estás jugando (o mirando) otra, esta navegación te

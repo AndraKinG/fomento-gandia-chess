@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { esAdmin } from "@/lib/auth/es-admin";
+import { esAdmin, esJunta } from "@/lib/auth/es-admin";
 import { actualizarEloActualCore } from "@/lib/import/facv-elo-actual-apply";
 import { parseOrdenFuerza } from "@/lib/import/orden-fuerza-parser";
 import { sincronizarOrdenFuerzaFACVCore } from "@/lib/import/facv-of-apply";
@@ -255,4 +255,47 @@ export async function actualizarEloActual(): Promise<{
     return { actualizados: 0, sinCruzar: [], error: "Solo el admin puede hacer esto" };
   }
   return actualizarEloActualCore();
+}
+
+/**
+ * Pone o quita el mote del club de un socio (migración 0041).
+ *
+ * DE AQUÍ SALE EL NOMBRE QUE VE TODO EL CLUB: `nombreVisible()` enseña el mote en
+ * lugar del nombre en todas las pantallas de socios. Lo que NO se toca nunca es
+ * `players.nombre`, que es el nombre oficial de la FACV y la clave con la que se
+ * cruzan las 248 filas de acta — escribir el mote ahí dejaría a ese socio sin cruzar
+ * en la siguiente sincronización y sin decir nada.
+ *
+ * Junta y admin, que es quien conoce a los 46 y puede rellenarlos de una sentada. Con
+ * 43 socios sin cuenta todavía, dejarlo en manos de cada uno significaría no verlos
+ * durante meses.
+ */
+export async function ponerApodo(
+  playerId: string,
+  apodo: string
+): Promise<{ error?: string }> {
+  if (!(await esJunta())) return { error: "No autorizado" };
+
+  // Los espacios de más se van aquí y no en la pantalla: el mote se compara y se
+  // enseña en veinte sitios, y " Ximo" y "Ximo" tienen que ser el mismo mote.
+  const limpio = apodo.trim().replace(/\s+/g, " ");
+  // Vacío = quitar el mote. Es null y no "", que la base rechaza la cadena vacía a
+  // propósito (si no, la app enseñaría un hueco donde va un nombre).
+  const valor = limpio || null;
+  if (valor && (valor.length < 2 || valor.length > 40)) {
+    return { error: "El mote va de 2 a 40 letras." };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("players").update({ apodo: valor }).eq("id", playerId);
+  if (error) return { error: error.message };
+
+  // El mote sale en media app, así que se rehacen las pantallas que lo enseñan de
+  // listas enteras. Las demás lo cogerán en su siguiente pintado.
+  revalidatePath("/club/admin/orden-fuerza");
+  revalidatePath("/club/orden-fuerza");
+  revalidatePath("/club/jugar");
+  revalidatePath("/club/partidas");
+  revalidatePath("/club");
+  return {};
 }

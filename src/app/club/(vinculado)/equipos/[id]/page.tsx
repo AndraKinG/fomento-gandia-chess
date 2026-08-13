@@ -10,6 +10,7 @@ import { Boton } from "@/components/ui/Boton";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { Contenedor } from "@/components/ui/Contenedor";
 import { conTemporada, elegirTemporada, leerTemporadas } from "@/lib/temporadas";
+import { nombreDeFila } from "@/lib/club/nombre-socio";
 
 type Estado = "pendiente" | "jugado";
 const ESTILO_ESTADO: Record<Estado, string> = {
@@ -56,7 +57,7 @@ export default async function EquipoDetallePage({
   // que llevar a esa y no a la actual, o se pierde de dónde venías.
   const { data: equipo } = await supabase
     .from("teams")
-    .select("id, nombre, categoria, margen_elo, season_id, team_captains(player_id, players(nombre))")
+    .select("id, nombre, categoria, margen_elo, season_id, team_captains(player_id, players(nombre, apodo))")
     .eq("id", id)
     .maybeSingle();
   if (!equipo) redirect("/club/equipos");
@@ -182,7 +183,7 @@ export default async function EquipoDetallePage({
                     {capitanes.length === 1 ? "Capitán: " : "Capitanes: "}
                   </span>
                   <span className="font-medium">
-                    {capitanes.map((c) => c.players?.nombre ?? "—").join(", ")}
+                    {capitanes.map((c) => nombreDeFila(c.players)).join(", ")}
                   </span>
                 </>
               )}

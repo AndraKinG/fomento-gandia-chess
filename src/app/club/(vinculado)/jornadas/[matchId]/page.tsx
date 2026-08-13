@@ -13,6 +13,7 @@ import { ChipTablero } from "@/components/ui/ChipTablero";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { ResultadosEditor, type BoardParaEditar } from "./ResultadosEditor";
 import { Contenedor } from "@/components/ui/Contenedor";
+import { nombreDeFila } from "@/lib/club/nombre-socio";
 
 type BoardFila = {
   id: string;
@@ -169,7 +170,7 @@ export default async function JornadaPage({
     await Promise.all([
       supabase
         .from("lineups")
-        .select("id, lineup_boards(id, tablero, player_id, players(nombre))")
+        .select("id, lineup_boards(id, tablero, player_id, players(nombre, apodo))")
         .eq("match_id", matchId)
         .eq("estado", "publicada")
         .maybeSingle(),
@@ -240,7 +241,7 @@ export default async function JornadaPage({
     lineupBoardId: b.id,
     tablero: b.tablero,
     color: colorDeTablero(b.tablero, match.es_local),
-    nombre: b.players?.nombre ?? "—",
+    nombre: nombreDeFila(b.players),
     resultadoInicial: (resultadosPorBoard.get(b.id) as 1 | 0.5 | 0 | undefined) ?? null,
   }));
 
@@ -318,7 +319,7 @@ export default async function JornadaPage({
                   <div className="flex min-w-0 items-center gap-2">
                     <ChipTablero tablero={b.tablero} color={color} />
                     <span className="min-w-0 truncate text-sm font-medium text-tinta">
-                      {b.players?.nombre ?? "—"}
+                      {nombreDeFila(b.players)}
                     </span>
                   </div>
                   <span className="shrink-0 text-sm font-semibold text-tinta">

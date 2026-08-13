@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { nombreDeFila } from "@/lib/club/nombre-socio";
 
 export { nombreDePila } from "@/lib/auth/nombre";
 
@@ -59,7 +60,7 @@ export const sesionActual = cache(async (): Promise<Sesion | null> => {
   const [{ data: profile }, { data: filasRol }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("is_admin, player_id, players(nombre, de_prueba)")
+      .select("is_admin, player_id, players(nombre, apodo, de_prueba)")
       .eq("id", user.id)
       .single(),
     // Si `member_roles` no existiera (migración 0011 sin aplicar), esto devuelve
@@ -79,8 +80,11 @@ export const sesionActual = cache(async (): Promise<Sesion | null> => {
     // Por acumulación: el admin puede todo lo que puede la junta.
     esJunta: roles.has("junta") || esAdmin,
     playerId: profile?.player_id ?? null,
-    nombre:
-      (profile?.players as unknown as { nombre: string } | null)?.nombre ?? null,
+    // EL MOTE, si lo tiene: este `nombre` es el que saluda en la portada y el que
+    // aparece en "quién está mirando", así que tiene que ser el del club.
+    nombre: profile?.player_id
+      ? nombreDeFila(profile?.players)
+      : null,
     fichaDePrueba: Boolean(
       (profile?.players as unknown as { de_prueba?: boolean } | null)?.de_prueba
     ),

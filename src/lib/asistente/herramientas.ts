@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { filtroBusqueda, marcadorDesdeBlancas } from "@/lib/partidas/buscar";
 import { alcanza, type Rango } from "./rangos";
+import { nombreDeFila } from "@/lib/club/nombre-socio";
 
 /**
  * Lo que el asistente puede consultar de la base.
@@ -191,14 +192,14 @@ export async function ejecutar(
     case "solicitudes_de_alta": {
       const { data, error } = await supabase
         .from("link_requests")
-        .select("created_at, players(nombre)")
+        .select("created_at, players(nombre, apodo)")
         .eq("status", "pendiente")
         .order("created_at")
         .limit(limite(args));
       if (error) return { error: "No se han podido leer las solicitudes." };
       return {
         solicitudes: (data ?? []).map((s) => ({
-          ficha: (s.players as unknown as { nombre: string } | null)?.nombre ?? "—",
+          ficha: nombreDeFila(s.players),
           pedidaEl: s.created_at,
         })),
       };
@@ -209,7 +210,7 @@ export async function ejecutar(
       if (!season) return { error: "No hay ninguna temporada activa." };
       let consulta = supabase
         .from("force_order")
-        .select("numero, bis_index, elo_oficial, players(nombre)")
+        .select("numero, bis_index, elo_oficial, players(nombre, apodo)")
         .eq("season_id", season.id)
         .order("numero")
         .order("bis_index")
@@ -226,7 +227,7 @@ export async function ejecutar(
         temporada: season.nombre,
         jugadores: (data ?? []).map((f) => ({
           numero: f.bis_index > 0 ? `${f.numero} bis` : String(f.numero),
-          nombre: (f.players as unknown as { nombre: string } | null)?.nombre ?? "—",
+          nombre: nombreDeFila(f.players),
           elo: f.elo_oficial ?? null,
         })),
       };
@@ -324,7 +325,7 @@ export async function ejecutar(
       let consulta = supabase
         .from("games")
         .select(
-          "fecha, ronda, rival_nombre, mi_elo, rival_elo, color, resultado, apertura, pgn, torneo_texto, players!games_player_id_fkey(nombre), tournaments(nombre)"
+          "fecha, ronda, rival_nombre, mi_elo, rival_elo, color, resultado, apertura, pgn, torneo_texto, players!games_player_id_fkey(nombre, apodo), tournaments(nombre)"
         )
         .order("fecha", { ascending: false })
         .limit(limite(args));
@@ -355,7 +356,7 @@ export async function ejecutar(
       return {
         partidas: (data ?? []).map((g) => {
           const duenio =
-            (g.players as unknown as { nombre: string } | null)?.nombre ?? "Socio";
+            nombreDeFila(g.players);
           const conBlancas = g.color === "blancas";
           return {
             fecha: g.fecha,

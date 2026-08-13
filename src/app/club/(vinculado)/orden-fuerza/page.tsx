@@ -15,12 +15,16 @@ import {
   ordenarPorElo,
 } from "@/lib/elo/ranking-oficial";
 import { inicioDelTrozo, partirEnDos } from "@/lib/ui/columnas";
+import { nombreDeFila } from "@/lib/club/nombre-socio";
 
 type Fila = {
   numero: number;
   bisIndex: number;
   ficha: string;
+  /** El mote del club si lo tiene; si no, el oficial (`nombreVisible`). */
   nombre: string;
+  /** El de la FACV, siempre. Se enseña debajo del mote cuando son distintos. */
+  nombreOficial: string;
   /** Nullable de verdad: `force_order.elo_oficial` se añadió en la migración 0004
    *  sin `not null`, y un socio recién metido a mano puede no tenerlo. */
   eloOficial: number | null;
@@ -113,6 +117,15 @@ function TablaRanking({
                     >
                       {f.nombre}
                     </Link>
+                    {/* EL OFICIAL DEBAJO, y solo si el mote no es él: esta lista es el
+                        orden de fuerza que publica la FACV, así que el nombre de la
+                        federación tiene que poder leerse — si no, un capitán no sabría
+                        con qué nombre buscar a alguien en un acta. */}
+                    {f.nombreOficial !== f.nombre && (
+                      <span className="block truncate text-xs text-tinta-suave">
+                        {f.nombreOficial}
+                      </span>
+                    )}
                     {/* En el orden por ELO se enseña al lado el número de orden: es lo
                         que deja ver de un vistazo dónde los dos criterios no coinciden. */}
                     {criterio === "elo" && (
@@ -191,7 +204,7 @@ export default async function OrdenFuerzaPage({
   const { data: orden } = season
     ? await supabase
         .from("force_order")
-        .select("numero, bis_index, elo_oficial, player_id, players(nombre, elo_fide, elo_feda)")
+        .select("numero, bis_index, elo_oficial, player_id, players(nombre, apodo, elo_fide, elo_feda)")
         .eq("season_id", season.id)
         .order("numero")
         .order("bis_index")
@@ -200,6 +213,7 @@ export default async function OrdenFuerzaPage({
   const filas: Fila[] = (orden ?? []).map((f) => {
     const p = f.players as unknown as {
       nombre: string;
+      apodo: string | null;
       elo_fide: number | null;
       elo_feda: number | null;
     } | null;
@@ -207,7 +221,10 @@ export default async function OrdenFuerzaPage({
       numero: f.numero,
       bisIndex: f.bis_index,
       ficha: f.player_id,
-      nombre: p?.nombre ?? "Socio",
+      nombre: nombreDeFila(p),
+      // El OFICIAL aparte: en esta pantalla se enseña debajo del mote, porque el orden
+      // de fuerza es un documento de la FACV y ahí el nombre de la federación importa.
+      nombreOficial: p?.nombre ?? "Socio",
       eloOficial: f.elo_oficial ?? null,
       eloFide: p?.elo_fide ?? null,
       eloFeda: p?.elo_feda ?? null,

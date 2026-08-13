@@ -4,6 +4,7 @@ import { sesionActual } from "@/lib/auth/sesion";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Contenedor } from "@/components/ui/Contenedor";
 import { Mesa, type Mensaje, type Partida } from "./Mesa";
+import { nombreVisible } from "@/lib/club/nombre-socio";
 
 /**
  * Una partida en vivo.
@@ -31,7 +32,7 @@ export default async function PartidaEnVivoPage({
   if (!fila) redirect("/club/jugar");
 
   const [{ data: jugadores }, { data: chat }, { data: elos }] = await Promise.all([
-    supabase.from("players").select("id, nombre").in("id", [fila.blancas_id, fila.negras_id]),
+    supabase.from("players").select("id, nombre, apodo").in("id", [fila.blancas_id, fila.negras_id]),
     supabase
       .from("live_chat")
       .select("id, player_id, texto, evento, creado_en")
@@ -46,7 +47,7 @@ export default async function PartidaEnVivoPage({
       .eq("seasons.activa", true),
   ]);
 
-  const nombre = new Map((jugadores ?? []).map((j) => [j.id, j.nombre as string]));
+  const nombre = new Map((jugadores ?? []).map((j) => [j.id, nombreVisible(j)]));
   const elo = new Map(
     (elos ?? []).map((f) => [f.player_id as string, (f.elo_oficial as number | null) ?? null])
   );

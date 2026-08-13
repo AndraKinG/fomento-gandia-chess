@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RondaJugada } from "@/lib/club/clasificacion";
 import { recalcular, type PartidaElo } from "@/lib/club/elo";
+import { nombreDeFila } from "@/lib/club/nombre-socio";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Cliente = SupabaseClient<any, "public", any>;
@@ -45,7 +46,7 @@ export async function leerTorneo(
   const [{ data: inscritos }, { data: rondas }] = await Promise.all([
     supabase
       .from("club_tournament_players")
-      .select("player_id, elo_inicial, players(nombre)")
+      .select("player_id, elo_inicial, players(nombre, apodo)")
       .eq("tournament_id", id)
       .order("elo_inicial", { ascending: false }),
     supabase
@@ -76,7 +77,7 @@ export async function leerTorneo(
     creadoPor: t.creado_por ?? null,
     inscritos: (inscritos ?? []).map((i) => ({
       ficha: i.player_id,
-      nombre: (i.players as unknown as { nombre: string } | null)?.nombre ?? "Socio",
+      nombre: nombreDeFila(i.players),
       eloInicial: i.elo_inicial,
     })),
     rondas: (rondas ?? []).map((r) => {
@@ -123,7 +124,7 @@ export async function leerRanking(supabase: Cliente): Promise<FilaRanking[]> {
       .order("created_at"),
     supabase
       .from("club_tournament_players")
-      .select("player_id, elo_inicial, tournament_id, players(nombre, de_prueba)"),
+      .select("player_id, elo_inicial, tournament_id, players(nombre, apodo, de_prueba)"),
   ]);
 
   const idsTorneos = (torneos ?? []).map((t) => t.id);
@@ -186,7 +187,7 @@ export async function leerRanking(supabase: Cliente): Promise<FilaRanking[]> {
   for (const i of (inscritos ?? []).filter((i) => !dePrueba.has(i.player_id))) {
     nombres.set(
       i.player_id,
-      (i.players as unknown as { nombre: string } | null)?.nombre ?? "Socio"
+      nombreDeFila(i.players)
     );
     const posicion = ordenTorneo.get(i.tournament_id) ?? 0;
     // El ELO oficial de referencia: el de su inscripción más reciente.

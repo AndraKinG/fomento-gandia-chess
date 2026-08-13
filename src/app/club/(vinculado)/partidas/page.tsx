@@ -13,6 +13,7 @@ import { Estrella } from "./Estrella";
 import { Contenedor, REJILLA } from "@/components/ui/Contenedor";
 import { Pestana, Pestanas } from "@/components/ui/Pestanas";
 import { filtroBusqueda } from "@/lib/partidas/buscar";
+import { nombreDeFila } from "@/lib/club/nombre-socio";
 
 // "½" y no "=": es como se escriben las tablas en el resto de la app (el acta, el
 // marcador de una jornada y la clasificación de los torneos internos).
@@ -51,7 +52,7 @@ export default async function PartidasPage({
   let consulta = supabase
     .from("games")
     .select(
-      "id, player_id, fecha, ronda, rival_nombre, rival_elo, mi_elo, color, resultado, apertura, torneo_texto, pgn, privada, players!games_player_id_fkey(nombre), tournaments(nombre)"
+      "id, player_id, fecha, ronda, rival_nombre, rival_elo, mi_elo, color, resultado, apertura, torneo_texto, pgn, privada, players!games_player_id_fkey(nombre, apodo), tournaments(nombre)"
     )
     .order("fecha", { ascending: false })
     .limit(200);
@@ -168,7 +169,7 @@ export default async function PartidasPage({
           {(partidas ?? []).map((p) => {
             const resultado = p.resultado as Resultado;
             const duenio =
-              (p.players as unknown as { nombre: string } | null)?.nombre ?? "Socio";
+              nombreDeFila(p.players);
             const torneo =
               (p.tournaments as unknown as { nombre: string } | null)?.nombre ??
               p.torneo_texto;

@@ -5,6 +5,7 @@ import { Cabecera } from "@/components/ui/Cabecera";
 import { Banner } from "@/components/ui/Banner";
 import { ChipElo } from "@/components/ui/ChipElo";
 import { FilaJugadorOF } from "@/components/ui/FilaJugadorOF";
+import { EditorMote } from "./EditorMote";
 import { Contenedor } from "@/components/ui/Contenedor";
 import { BotonAccion } from "@/components/ui/BotonAccion";
 import { partirEnDos } from "@/lib/ui/columnas";
@@ -24,7 +25,7 @@ export default async function OrdenFuerzaPage({
   const { data: orden } = season
     ? await supabase
         .from("force_order")
-        .select("numero, bis_index, elo_oficial, players(nombre, elo_fide, elo_feda)")
+        .select("numero, bis_index, player_id, elo_oficial, players(nombre, apodo, elo_fide, elo_feda)")
         .eq("season_id", season.id)
         .order("numero").order("bis_index")
     : { data: null };
@@ -246,14 +247,25 @@ export default async function OrdenFuerzaPage({
               <ol key={n} className="space-y-2">
                 {trozo.map((f) => {
                   const p = f.players as unknown as {
-                    nombre: string; elo_fide: number | null; elo_feda: number | null;
+                    nombre: string; apodo: string | null;
+                    elo_fide: number | null; elo_feda: number | null;
                   };
                   return (
                     <li key={`${f.numero}-${f.bis_index}`}>
                       <FilaJugadorOF
                         numero={f.numero}
                         bisIndex={f.bis_index}
+                        // EL OFICIAL EN ESTA PANTALLA, no el mote: es la de gestión, y
+                        // aquí hace falta ver el nombre con el que la FACV publica a
+                        // cada uno para saber a quién le estás poniendo el mote.
                         nombre={p.nombre}
+                        derecha={
+                          <EditorMote
+                            playerId={f.player_id}
+                            apodo={p.apodo}
+                            nombreOficial={p.nombre}
+                          />
+                        }
                         chips={
                           <>
                             {/* Los DOS ELOs a propósito, que esta es la pantalla de

@@ -10,6 +10,7 @@ import { SelectorAsistencia } from "../SelectorAsistencia";
 import { BloqueCoches, type CocheVista } from "../BloqueCoches";
 import { BorrarTorneo } from "../BorrarTorneo";
 import { Contenedor } from "@/components/ui/Contenedor";
+import { nombreVisible } from "@/lib/club/nombre-socio";
 
 type Asistencia = "voy" | "no_voy" | "duda";
 
@@ -43,10 +44,10 @@ export default async function TorneoPage({
         .from("tournament_attendance")
         .select("player_id, estado")
         .eq("tournament_id", id),
-      supabase.from("players").select("id, nombre"),
+      supabase.from("players").select("id, nombre, apodo"),
     ]);
 
-  const nombre = new Map((jugadores ?? []).map((j) => [j.id, j.nombre]));
+  const nombre = new Map((jugadores ?? []).map((j) => [j.id, nombreVisible(j)]));
 
   // Mismo estado que consume el módulo de reglas, para no calcular dos veces lo
   // mismo con criterios distintos entre la pantalla y el servidor.

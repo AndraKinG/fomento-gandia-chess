@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { MINUTOS_DE_AVISO, MINUTOS_DE_GRACIA } from "./hora-de-ronda";
+import { nombreDeFila } from "@/lib/club/nombre-socio";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Cliente = SupabaseClient<any, "public", any>;
@@ -53,7 +54,7 @@ export async function leerProximaRonda(
 
   const { data: cruces } = await supabase
     .from("club_pairings")
-    .select("id, mesa, round_id, blancas_id, negras_id, blancas:blancas_id(nombre), negras:negras_id(nombre)")
+    .select("id, mesa, round_id, blancas_id, negras_id, blancas:blancas_id(nombre, apodo), negras:negras_id(nombre, apodo)")
     .in(
       "round_id",
       enJuego.map((r) => r.id)
@@ -80,7 +81,7 @@ export async function leerProximaRonda(
     numero: elegido.r.numero,
     fechaHora: elegido.r.fecha_hora!,
     mesa: elegido.c.mesa,
-    rival: (soyBlancas ? elegido.c.negras?.nombre : elegido.c.blancas?.nombre) ?? "tu rival",
+    rival: nombreDeFila(soyBlancas ? elegido.c.negras : elegido.c.blancas),
     pairingId: elegido.c.id,
   };
 }

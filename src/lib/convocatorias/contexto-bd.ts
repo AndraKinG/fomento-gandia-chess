@@ -4,6 +4,7 @@ import { fechaMadrid, limitesDiaMadrid } from "@/lib/fecha-madrid";
 import { normalizaNombre } from "@/lib/import/facv-calendario";
 import { bloqueDe, calcularIndices, calcularInicios } from "@/lib/validador/contexto";
 import type { ConfigEquipo, ContextoClub, JugadorOrden } from "@/lib/validador/tipos";
+import { nombreVisible } from "@/lib/club/nombre-socio";
 
 // SOLO SERVIDOR: usa el cliente admin (service role), que salta la RLS. NUNCA
 // importar este módulo desde un Client Component ni desde código que se
@@ -142,7 +143,7 @@ export async function cargarContextoValidacion(matchId: string): Promise<Context
   const { data: filasOrden, error: ordenError } = await admin
     .from("force_order")
     .select(
-      "player_id, numero, bis_index, elo_oficial, players(nombre, elo_fide, elo_feda, elo_otro, excepcion_tecnificacion, excepcion_veterano)"
+      "player_id, numero, bis_index, elo_oficial, players(nombre, apodo, elo_fide, elo_feda, elo_otro, excepcion_tecnificacion, excepcion_veterano)"
     )
     .eq("season_id", equipoActual.season_id);
   if (ordenError || !filasOrden) {
@@ -153,7 +154,9 @@ export async function cargarContextoValidacion(matchId: string): Promise<Context
     const jugador = f.players as unknown as JugadorFila;
     return {
       playerId: f.player_id as string,
-      nombre: jugador.nombre,
+      // El mote del club: el capitán reconoce a los suyos por él, no por el nombre
+      // con el que la FACV los publica.
+      nombre: nombreVisible(jugador),
       numero: f.numero as number,
       bisIndex: f.bis_index as number,
       // fuerza = elo_oficial (FACV) si está disponible; si no, se recurre al
