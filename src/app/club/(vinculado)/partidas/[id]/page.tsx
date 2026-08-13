@@ -7,6 +7,7 @@ import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Boton } from "@/components/ui/Boton";
 import { formatearRangoFechas } from "@/lib/torneos/fechas";
 import { textoResultado, type Resultado } from "@/lib/partidas/validar";
+import { marcadorDesdeBlancas } from "@/lib/partidas/buscar";
 import { AccionesPartida } from "./AccionesPartida";
 import { Estrella } from "../Estrella";
 import { VisorPartida } from "@/components/ajedrez/VisorPartida";
@@ -111,9 +112,18 @@ export default async function PartidaPage({
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="rounded-full bg-tarjeta px-3 py-1 text-sm font-semibold text-tinta ring-1 ring-borde">
-                    {textoResultado(resultado)} de{" "}
-                    {duenio.split(",")[0].split(" ")[0]}
+                  {/* EL MARCADOR, NO "DERROTA DE JUAN" (lo pidió un socio el
+                      2026-08-13, y tenía razón). En la base el resultado se guarda
+                      desde el punto de vista del dueño de la partida, y contarlo así
+                      —"Derrota de Juan"— obliga a saber quién es el dueño para
+                      entender quién ganó. Una partida se lee por su marcador, y las
+                      dos líneas de al lado ya dicen quién llevaba cada color.
+                      `marcadorDesdeBlancas` hace la vuelta, y tiene tests. */}
+                  <span
+                    className="rounded-full bg-tarjeta px-3 py-1 text-sm font-semibold tabular-nums text-tinta ring-1 ring-borde"
+                    title={`${textoResultado(resultado)} de ${duenio}`}
+                  >
+                    {marcadorDesdeBlancas(resultado, p.color as "blancas" | "negras")}
                   </span>
                   {/* La estrella al lado del marcador: es lo primero que se mira de la
                       partida y guardarla es una decisión que se toma justo ahí. */}
@@ -180,6 +190,17 @@ export default async function PartidaPage({
                 </Link>
               </p>
             )}
+
+            {/* VUELTA AL REPOSITORIO, explícita (lo pidió un socio el 2026-08-13).
+                Hasta ahora solo estaba la flecha de la cabecera, que en un móvil no
+                se lee como "aquí hay una lista entera de partidas" — y menos si has
+                llegado desde un torneo o desde la ficha de alguien, porque entonces la
+                flecha no te lleva al repositorio sino de vuelta a donde estabas. */}
+            <p className="px-1 pt-1 text-sm">
+              <Link href="/club/partidas" className="text-acento-texto underline">
+                Ver todas las partidas del club
+              </Link>
+            </p>
           </div>
         </div>
       </Contenedor>

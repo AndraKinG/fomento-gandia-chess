@@ -89,6 +89,25 @@ export default async function PerfilPage() {
                 {/* El FIDE ya no va de chip: es la cifra grande. FEDA, solo si
                     algún día vuelve a haber dato. */}
                 {p.elo_feda !== null && <ChipElo valor={p.elo_feda} etiqueta="FEDA" />}
+                {/* EL ID FIDE, ENLAZADO A SU FICHA OFICIAL (lo pidió un socio el
+                    2026-08-13). Lo tienen los 46, así que no es un chip que aparezca
+                    a medias. Se abre en otra pestaña porque lleva fuera de la app, y
+                    con `noopener` como cualquier enlace externo.
+
+                    El enlace lo abre el NAVEGADOR DEL SOCIO, así que no le afecta que
+                    fide.com bloquee las IP de centro de datos — eso solo impide que la
+                    app le descargue la lista mensual (ver CLAUDE.md). */}
+                {p.fide_id && (
+                  <a
+                    href={`https://ratings.fide.com/profile/${p.fide_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-full bg-tarjeta-suave px-2.5 py-0.5 text-xs font-medium text-acento-texto ring-1 ring-borde"
+                    title="Tu ficha en la FIDE"
+                  >
+                    FIDE {p.fide_id} ↗
+                  </a>
+                )}
                 {filaOrden && (
                   <Link
                     href="/club/orden-fuerza"

@@ -10,6 +10,37 @@ function j(nombre: string, eloOficial: number | null, numero = 1, bisIndex = 0):
   return { nombre, eloOficial, numero, bisIndex };
 }
 
+describe("ordenarPorElo: manda el ELO REAL, no el del orden de fuerza", () => {
+  // El fallo que se arregló el 2026-08-13: la pestaña "Por ELO" ordenaba por
+  // `eloOficial`, que es el del orden de fuerza — estático todo el año y solo para
+  // Interclubs. El que manda es el FIDE de clásicas, que la sync trae al día.
+  it("con FIDE, ordena por FIDE aunque el oficial diga otra cosa", () => {
+    const r = ordenarPorElo([
+      { nombre: "Ana", eloOficial: 2000, eloFide: 1700, numero: 1, bisIndex: 0 },
+      { nombre: "Bea", eloOficial: 1500, eloFide: 1900, numero: 2, bisIndex: 0 },
+    ]);
+    expect(r.map((x) => x.nombre)).toEqual(["Bea", "Ana"]);
+  });
+
+  it("sin FIDE cae al oficial, no al final de la lista", () => {
+    // Once de los 46 socios no tienen FIDE: mandarlos al final sería peor que
+    // ordenarlos por el número viejo que sí tenemos.
+    const r = ordenarPorElo([
+      { nombre: "Ana", eloOficial: 1600, eloFide: null, numero: 1, bisIndex: 0 },
+      { nombre: "Bea", eloOficial: 1500, eloFide: 1500, numero: 2, bisIndex: 0 },
+    ]);
+    expect(r.map((x) => x.nombre)).toEqual(["Ana", "Bea"]);
+  });
+
+  it("sin ninguno de los dos, al final", () => {
+    const r = ordenarPorElo([
+      { nombre: "SinNada", eloOficial: null, eloFide: null, numero: 1, bisIndex: 0 },
+      { nombre: "Bea", eloOficial: null, eloFide: 1500, numero: 2, bisIndex: 0 },
+    ]);
+    expect(r.map((x) => x.nombre)).toEqual(["Bea", "SinNada"]);
+  });
+});
+
 describe("ordenarPorElo", () => {
   it("ordena de mayor a menor", () => {
     const r = ordenarPorElo([j("Ana", 1800), j("Bea", 2100), j("Caro", 1500)]);

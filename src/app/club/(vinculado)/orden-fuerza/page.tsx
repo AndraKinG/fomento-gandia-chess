@@ -9,6 +9,7 @@ import { Pestana, Pestanas } from "@/components/ui/Pestanas";
 import { SelectorTemporada } from "@/components/ui/SelectorTemporada";
 import { conTemporada, elegirTemporada, leerTemporadas } from "@/lib/temporadas";
 import {
+  eloParaOrdenar,
   estadisticasClub,
   etiquetaNumero,
   ordenarPorElo,
@@ -67,15 +68,20 @@ function TablaRanking({
               <th scope="col" className="pb-1 pr-2 font-medium">
                 Jugador
               </th>
+              {/* LA COLUMNA QUE MANDA CAMBIA CON LA PESTAÑA, y esto era el fallo del
+                  2026-08-13: en "Por ELO" la única cifra que se veía en un móvil era la
+                  del orden de fuerza —estática todo el año, y solo para Interclubs—
+                  porque la de FIDE estaba escondida hasta los 640 px. Ahora en esa
+                  pestaña la primera columna es el ELO REAL (FIDE de clásicas, con el
+                  oficial de respaldo para los 11 que no lo tienen) y la del orden de
+                  fuerza pasa a ser la secundaria. En la otra pestaña, al revés: ahí el
+                  documento es el orden de fuerza. */}
               <th scope="col" className="pb-1 pr-2 text-right font-medium">
-                Oficial
+                {criterio === "elo" ? "ELO" : "Oficial"}
               </th>
-              {/* Las columnas de FIDE y FEDA solo si alguien tiene ese ELO. Estaban
-                  siempre, y con las 46 fichas sin ninguno de los dos eran dos columnas
-                  de guiones ocupando ancho. Vuelven solas en cuanto haya un dato. */}
               {conFide && (
                 <th scope="col" className="hidden pb-1 pr-2 text-right font-medium sm:table-cell">
-                  FIDE
+                  {criterio === "elo" ? "Oficial" : "FIDE"}
                 </th>
               )}
               {conFeda && (
@@ -116,11 +122,11 @@ function TablaRanking({
                     )}
                   </td>
                   <td className="py-1.5 pr-2 text-right font-semibold tabular-nums text-tinta">
-                    {f.eloOficial || "—"}
+                    {(criterio === "elo" ? eloParaOrdenar(f) : f.eloOficial) || "—"}
                   </td>
                   {conFide && (
                     <td className="hidden py-1.5 pr-2 text-right tabular-nums text-tinta-suave sm:table-cell">
-                      {f.eloFide ?? "—"}
+                      {(criterio === "elo" ? f.eloOficial : f.eloFide) ?? "—"}
                     </td>
                   )}
                   {conFeda && (
