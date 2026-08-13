@@ -16,6 +16,8 @@ export type TipoAviso =
   | "torneo_interes"
   | "torneo_primer_apuntado"
   | "ronda_hora"
+  | "mote_pedido"
+  | "mote_resuelto"
   | "coche_plaza_libre"
   | "coche_sin_plaza"
   | "reto_aceptado"
@@ -34,6 +36,10 @@ export const GRUPO_DE: Record<TipoAviso, GrupoAviso> = {
   // `torneos` y no en `partidas` porque lo manda el torneo, no un rival: quien
   // silencia los torneos del club está silenciando también sus horarios.
   ronda_hora: "torneos",
+  // Los motes son gestión del club: "X pide llamarse Ximo" va a la junta y la
+  // respuesta al socio. No es de partidas ni de torneos.
+  mote_pedido: "gestion",
+  mote_resuelto: "gestion",
   coche_plaza_libre: "torneos",
   coche_sin_plaza: "torneos",
   reto_aceptado: "partidas",

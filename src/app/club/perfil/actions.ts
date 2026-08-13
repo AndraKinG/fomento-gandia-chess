@@ -7,6 +7,8 @@ import { sesionActual } from "@/lib/auth/sesion";
 import { esTemaValido } from "@/lib/ajedrez/temas";
 import { esJuegoValido } from "@/lib/ajedrez/piezas";
 import type { GrupoAviso } from "@/lib/avisos/politica";
+import { moteOcupado, textoOcupado, validarMote } from "@/lib/club/mote";
+import { avisar } from "@/lib/avisos/enviar";
 
 /** Los únicos cuatro valores válidos. Cualquier otra cosa que llegue del
  *  cliente se descarta antes de tocar la base (ver comentario más abajo). */
@@ -211,4 +213,81 @@ export async function elegirPiezas(clave: string): Promise<{ error?: string }> {
 
   revalidatePath("/club", "layout");
   return {};
+}
+
+/**
+ * El socio PIDE su mote; la junta lo aprueba (migraciones 0041 y 0043).
+ *
+ * POR QUÉ SE PIDE Y NO SE PONE (decisión del propietario, 2026-08-13): el mote lo ve el
+ * club entero en todas las pantallas, así que un campo libre en manos de 46 personas
+ * acaba con alguien llamándose algo que no toca. Y al revés, nadie sabe mejor que uno
+ * mismo cómo le llaman: pedirlo tú y que lo aprueben es lo que respeta las dos cosas.
+ *
+ * ESCRIBE EN `apodo_solicitado`, NUNCA EN `apodo`: hasta que la junta lo apruebe, el
+ * club sigue viendo el nombre de antes. El socio ve su solicitud pendiente en su perfil.
+ *
+ * EL MISMO VALIDADOR QUE USA LA JUNTA (`validarMote`), y la comprobación de que esté
+ * libre cuenta también los motes PEDIDOS y sin aprobar: si no, dos socios piden "Ximo"
+ * el mismo día, a los dos se les dice que perfecto, y el problema aparece cuando la
+ * junta aprueba el segundo. Quien pide primero, reserva.
+ */
+export async function solicitarMote(mote: string): Promise<{ error?: string; ok?: string }> {
+  const sesion = await sesionActual();
+  if (!sesion?.playerId) return { error: "Necesitas tener ficha del club." };
+
+  const revisado = validarMote(mote);
+  if (!revisado.ok) return { error: revisado.error };
+  const valor = revisado.valor || null;
+
+  const admin = createAdminClient();
+
+  if (valor) {
+    // Las 46 filas y se decide con el módulo puro: la regla cruza dos columnas y
+    // expresarla en PostgREST daría un filtro ilegible para ahorrar una lectura mínima.
+    const { data: otros } = await admin
+      .from("players")
+      .select("nombre, apodo, apodo_solicitado")
+      .neq("id", sesion.playerId);
+    const ocupado = moteOcupado(
+      valor,
+      (otros ?? []).map((p) => ({
+        nombre: p.nombre as string,
+        apodo: p.apodo as string | null,
+        apodoSolicitado: p.apodo_solicitado as string | null,
+      }))
+    );
+    if (ocupado) return { error: textoOcupado(ocupado) };
+  }
+
+  const { error } = await admin
+    .from("players")
+    .update({ apodo_solicitado: valor })
+    .eq("id", sesion.playerId);
+  if (error) return { error: "No se pudo guardar la solicitud." };
+
+  // A la junta, para que lo vea sin tener que pasar por la pantalla a mirar. Si el socio
+  // retira su solicitud (valor null) no se avisa de nada: no hay nada que aprobar.
+  if (valor) {
+    const { data: junta } = await admin.from("member_roles").select("profile_id");
+    const { data: admins } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("is_admin", true);
+    const destinatarios = [
+      ...new Set([
+        ...(junta ?? []).map((r) => r.profile_id as string),
+        ...(admins ?? []).map((p) => p.id as string),
+      ]),
+    ].filter((id) => id !== sesion.userId);
+    await avisar(destinatarios, {
+      tipo: "mote_pedido",
+      titulo: "Un socio pide su mote",
+      cuerpo: `${sesion.nombre ?? "Un socio"} quiere llamarse "${valor}".`,
+      url: "/club/admin/orden-fuerza",
+    });
+  }
+
+  revalidatePath("/club/perfil");
+  revalidatePath("/club/admin/orden-fuerza");
+  return { ok: valor ? "Pedido. La junta lo tiene que aprobar." : "Solicitud retirada." };
 }

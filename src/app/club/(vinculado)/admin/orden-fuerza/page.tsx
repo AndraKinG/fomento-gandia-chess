@@ -25,7 +25,7 @@ export default async function OrdenFuerzaPage({
   const { data: orden } = season
     ? await supabase
         .from("force_order")
-        .select("numero, bis_index, player_id, elo_oficial, players(nombre, apodo, elo_fide, elo_feda)")
+        .select("numero, bis_index, player_id, elo_oficial, players(nombre, apodo, apodo_solicitado, elo_fide, elo_feda)")
         .eq("season_id", season.id)
         .order("numero").order("bis_index")
     : { data: null };
@@ -247,7 +247,7 @@ export default async function OrdenFuerzaPage({
               <ol key={n} className="space-y-2">
                 {trozo.map((f) => {
                   const p = f.players as unknown as {
-                    nombre: string; apodo: string | null;
+                    nombre: string; apodo: string | null; apodo_solicitado: string | null;
                     elo_fide: number | null; elo_feda: number | null;
                   };
                   return (
@@ -263,6 +263,7 @@ export default async function OrdenFuerzaPage({
                           <EditorMote
                             playerId={f.player_id}
                             apodo={p.apodo}
+                            apodoSolicitado={p.apodo_solicitado}
                             nombreOficial={p.nombre}
                           />
                         }

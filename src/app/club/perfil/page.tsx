@@ -15,6 +15,7 @@ import { logout } from "@/app/(auth)/actions";
 import { Contenedor } from "@/components/ui/Contenedor";
 import { BotonAccion } from "@/components/ui/BotonAccion";
 import { PreferenciasAvisos } from "./PreferenciasAvisos";
+import { MiMote } from "./MiMote";
 import { FotoPerfil } from "./FotoPerfil";
 import { Aperturas } from "./Aperturas";
 import { EligeTablero } from "./EligeTablero";
@@ -29,7 +30,7 @@ export default async function PerfilPage() {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "email, player_id, avisos_silenciados, tema_tablero, juego_piezas, players(nombre, elo_fide, elo_feda, elo_otro, fide_id, feda_id, foto_url, aperturas)"
+      "email, player_id, avisos_silenciados, tema_tablero, juego_piezas, players(nombre, apodo, apodo_solicitado, elo_fide, elo_feda, elo_otro, fide_id, feda_id, foto_url, aperturas)"
     )
     .eq("id", user!.id)
     .single();
@@ -62,7 +63,8 @@ export default async function PerfilPage() {
         .eq("estado", "pendiente")
     : { count: 0 };
   const p = profile?.players as unknown as {
-    nombre: string; elo_fide: number | null; elo_feda: number | null;
+    nombre: string; apodo: string | null; apodo_solicitado: string | null;
+    elo_fide: number | null; elo_feda: number | null;
     elo_otro: number | null; fide_id: string | null; feda_id: string | null;
     foto_url: string | null; aperturas: string | null;
   } | null;
@@ -172,6 +174,11 @@ export default async function PerfilPage() {
               </Link>
             </div>
             <FotoPerfil fotoUrl={fotoFirmada} nombre={p.nombre} />
+            {/* EL MOTE VA AQUÍ y no en "cómo ves tú la app": es cómo te ven los
+                DEMÁS, igual que la foto y las aperturas. */}
+            <div className="border-t border-borde pt-4">
+              <MiMote apodo={p.apodo} apodoSolicitado={p.apodo_solicitado} />
+            </div>
             <Aperturas inicial={p.aperturas ?? ""} />
           </Tarjeta>
         )}

@@ -8,6 +8,8 @@ import { parseOrdenFuerza } from "@/lib/import/orden-fuerza-parser";
 import { sincronizarOrdenFuerzaFACVCore } from "@/lib/import/facv-of-apply";
 import { buscarFicha, indicePorNombre } from "@/lib/import/cruzar-nombres";
 import { colocarFichaManual, eloOficialDe } from "@/lib/elo/colocar-ficha";
+import { moteOcupado, textoOcupado, validarMote } from "@/lib/club/mote";
+import { avisar } from "@/lib/avisos/enviar";
 
 /**
  * Descarga la página pública del orden de fuerza oficial FACV del club y la
@@ -276,15 +278,14 @@ export async function ponerApodo(
 ): Promise<{ error?: string }> {
   if (!(await esJunta())) return { error: "No autorizado" };
 
-  // Los espacios de más se van aquí y no en la pantalla: el mote se compara y se
-  // enseña en veinte sitios, y " Ximo" y "Ximo" tienen que ser el mismo mote.
-  const limpio = apodo.trim().replace(/\s+/g, " ");
+  // EL FORMATO LO DECIDE UN SOLO SITIO, `validarMote`, porque desde el 2026-08-13 hay
+  // dos puertas: esta y la solicitud del socio desde su perfil. Validar por separado
+  // acabaría con el socio pidiendo un mote que al aprobarse da error.
+  const revisado = validarMote(apodo);
+  if (!revisado.ok) return { error: revisado.error };
   // Vacío = quitar el mote. Es null y no "", que la base rechaza la cadena vacía a
   // propósito (si no, la app enseñaría un hueco donde va un nombre).
-  const valor = limpio || null;
-  if (valor && (valor.length < 2 || valor.length > 40)) {
-    return { error: "El mote va de 2 a 40 letras." };
-  }
+  const valor = revisado.valor || null;
 
   const admin = createAdminClient();
 
@@ -296,18 +297,8 @@ export async function ponerApodo(
   // el mote. El índice contestaría con un error de Postgres ilegible, y su trabajo es
   // otro: que la regla siga siendo verdad si algún día se escribe desde otro sitio.
   if (valor) {
-    const { data: chocan } = await admin
-      .from("players")
-      .select("id, nombre, apodo")
-      .neq("id", playerId)
-      .not("apodo", "is", null);
-    const clave = valor.toLowerCase();
-    const duenio = (chocan ?? []).find(
-      (p) => (p.apodo as string).trim().toLowerCase() === clave
-    );
-    if (duenio) {
-      return { error: `Ese mote ya es de ${duenio.nombre}.` };
-    }
+    const ocupado = await quienTieneElMote(admin, valor, playerId);
+    if (ocupado) return { error: textoOcupado(ocupado) };
   }
 
   const { error } = await admin.from("players").update({ apodo: valor }).eq("id", playerId);
@@ -324,6 +315,111 @@ export async function ponerApodo(
   revalidatePath("/club/orden-fuerza");
   revalidatePath("/club/jugar");
   revalidatePath("/club/partidas");
+  revalidatePath("/club");
+  return {};
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type ClienteAdmin = ReturnType<typeof createAdminClient>;
+
+/**
+ * ¿Tiene ya alguien este mote, puesto o pedido?
+ *
+ * Se traen las 46 filas y se decide con `moteOcupado()` (puro, con tests) en vez de
+ * montar el filtro en la consulta: la regla cruza DOS columnas —`apodo` y
+ * `apodo_solicitado`— y expresarla en PostgREST daría un `or()` ilegible para ahorrar
+ * una lectura de 46 filas de tres columnas, que a escala de club no se nota.
+ */
+async function quienTieneElMote(
+  admin: ClienteAdmin,
+  mote: string,
+  exceptoFicha: string
+): Promise<{ nombre: string; pedido: boolean } | null> {
+  const { data } = await admin
+    .from("players")
+    .select("id, nombre, apodo, apodo_solicitado")
+    .neq("id", exceptoFicha);
+  return moteOcupado(
+    mote,
+    ((data ?? []) as any[]).map((p) => ({
+      nombre: p.nombre as string,
+      apodo: p.apodo as string | null,
+      apodoSolicitado: p.apodo_solicitado as string | null,
+    }))
+  );
+}
+
+/**
+ * Aprueba o rechaza el mote que ha pedido un socio (migración 0043).
+ *
+ * SE VUELVE A COMPROBAR QUE ESTÉ LIBRE al aprobar, aunque ya se comprobara al pedirlo:
+ * entre una cosa y otra pueden pasar días, y en ese hueco la junta puede haberle puesto
+ * ese mismo mote a otro a mano. Aprobar a ciegas dejaría el error para el índice de la
+ * 0042, que contesta en jerga de Postgres.
+ *
+ * SE AVISA AL SOCIO EN LOS DOS CASOS. Un rechazo sin explicación es peor que no poder
+ * pedirlo: la solicitud desaparecería de su perfil sin que nadie le diga nada.
+ */
+export async function resolverMote(
+  playerId: string,
+  aprobar: boolean
+): Promise<{ error?: string }> {
+  if (!(await esJunta())) return { error: "No autorizado" };
+
+  const admin = createAdminClient();
+  const { data: ficha } = await admin
+    .from("players")
+    .select("id, nombre, apodo, apodo_solicitado")
+    .eq("id", playerId)
+    .maybeSingle();
+  if (!ficha) return { error: "Esa ficha no existe." };
+
+  const pedido = (ficha.apodo_solicitado as string | null)?.trim();
+  if (!pedido) return { error: "Ese socio no tiene ningún mote pendiente." };
+
+  if (aprobar) {
+    const ocupado = await quienTieneElMote(admin, pedido, playerId);
+    if (ocupado) {
+      return {
+        error: `${textoOcupado(ocupado)} Rechaza este y que pida otro.`,
+      };
+    }
+  }
+
+  const { error } = await admin
+    .from("players")
+    .update({
+      apodo: aprobar ? pedido : (ficha.apodo as string | null),
+      apodo_solicitado: null,
+    })
+    .eq("id", playerId);
+  if (error) {
+    if (error.code === "23505") return { error: "Ese mote ya lo tiene otro socio." };
+    return { error: error.message };
+  }
+
+  // Al socio, por su cuenta. Si no se ha registrado todavía no hay a quién avisar, y no
+  // es un fallo: alguien le habrá puesto el mote por él.
+  const { data: cuenta } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("player_id", playerId)
+    .maybeSingle();
+  if (cuenta) {
+    await avisar([cuenta.id as string], {
+      tipo: "mote_resuelto",
+      titulo: aprobar ? `Ya eres ${pedido}` : "Tu mote no se ha aprobado",
+      cuerpo: aprobar
+        ? `La junta ha aprobado tu mote. En el club te verán como ${pedido}.`
+        : `El mote "${pedido}" no se ha aprobado. Puedes pedir otro desde tu perfil.`,
+      url: "/club/perfil",
+    });
+  }
+
+  revalidatePath("/club/admin/orden-fuerza");
+  revalidatePath("/club/orden-fuerza");
+  revalidatePath("/club/perfil");
+  revalidatePath("/club/jugar");
   revalidatePath("/club");
   return {};
 }
