@@ -10,7 +10,6 @@ import { Banner } from "@/components/ui/Banner";
 import { jugarEmparejamiento } from "@/app/club/(vinculado)/jugar/actions";
 import { Mirando } from "@/components/presencia/Mirando";
 import { diaYHora } from "@/lib/torneos/hora-de-ronda";
-import { ELO_POR_DEFECTO } from "@/lib/club/elo";
 import {
   anotarResultado,
   borrarTorneoInterno,
@@ -197,10 +196,10 @@ export function GestionTorneo({
         {editandoInscritos && (
           <Tarjeta>
             <p className="mb-2 text-xs text-tinta-suave">
-              {/* Decía que el ELO de partida sale del ELO oficial de cada uno, y desde
-                  la decisión de arrancar todos en 1000 eso era mentira en pantalla. */}
-              Todos empiezan con {ELO_POR_DEFECTO} en el ELO del club. La lista se cierra
-              al generar la primera ronda.
+              {/* Aquí se decía con qué ELO empieza cada uno. Fuera desde el 2026-08-13:
+                  el ELO del club se apagó para no confundirlo con el de la FACV (ver
+                  `ranking/page.tsx`). Se sigue guardando en la base, solo no se enseña. */}
+              La lista se cierra al generar la primera ronda.
             </p>
             <ul className="max-h-72 space-y-1 overflow-auto">
               {socios.map((s) => (
@@ -220,12 +219,9 @@ export function GestionTorneo({
                     <span className="min-w-0 flex-1 truncate text-sm text-tinta">
                       {s.nombre}
                     </span>
-                    {/* Solo el ELO de quien ESTÁ inscrito: a los demás se les pintaba
-                        un "0" que parecía un dato suyo y no lo era —el ELO de partida
-                        no existe hasta que te apuntas—. */}
-                    <span className="shrink-0 text-xs tabular-nums text-tinta-suave">
-                      {s.inscrito ? s.elo : "—"}
-                    </span>
+                    {/* Sin cifra al lado del nombre: era el ELO del club, apagado el
+                        2026-08-13. Antes de eso se pintaba un "0" a quien no estaba
+                        inscrito, que parecía un dato suyo y no lo era. */}
                   </label>
                 </li>
               ))}

@@ -543,11 +543,15 @@ export default async function Home() {
                   <p className="text-sm text-tinta-suave">
                     No hay ningún torneo del club en marcha.
                   </p>
+                  {/* Aquí había un enlace al ranking de ELO del club. Fuera desde el
+                      2026-08-13: el ELO interno se apagó para no confundirlo con el de
+                      la FACV (ver `jugar/torneos/ranking/page.tsx`). Se enlaza la lista
+                      de torneos, que es lo que de verdad se puede hacer desde aquí. */}
                   <Link
-                    href="/club/jugar/torneos/ranking"
+                    href="/club/jugar/torneos"
                     className="mt-2 inline-block text-sm text-acento-texto underline"
                   >
-                    Ver el ranking de ELO del club
+                    Ver los torneos del club
                   </Link>
                 </Tarjeta>
               )}

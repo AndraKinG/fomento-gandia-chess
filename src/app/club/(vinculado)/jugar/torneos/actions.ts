@@ -354,8 +354,10 @@ export async function borrarTorneoInterno(tournamentId: string): Promise<Resulta
       .limit(1);
     if ((jugados ?? []).length > 0) {
       return {
-        error:
-          "Este torneo ya tiene resultados y cuentan para el ELO del club: ciérralo en vez de borrarlo.",
+        // Sin mencionar el ELO del club: está apagado en pantalla (2026-08-13), así que
+      // nombrarlo en un error sería hablarle al socio de algo que no ve. El motivo de
+      // fondo no cambia y sigue en el comentario de la cabecera.
+      error: "Este torneo ya tiene resultados: ciérralo en vez de borrarlo.",
       };
     }
 

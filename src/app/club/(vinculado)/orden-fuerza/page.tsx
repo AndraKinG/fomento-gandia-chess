@@ -323,9 +323,10 @@ export default async function OrdenFuerzaPage({
                 <b className="font-semibold">bis</b>: entró después de publicarse la
                 lista.
               </p>
-              <p className="mt-2 text-xs text-tinta-suave">
-                El ELO propio del club está en Torneos → Del club.
-              </p>
+              {/* Aquí decía dónde ver "el ELO propio del club". Fuera desde el
+                  2026-08-13, con el ELO interno: era la única frase de la app que
+                  mandaba a buscarlo, así que dejarla habría sido enviar al socio a una
+                  pantalla que ya no existe. Ver `jugar/torneos/ranking/page.tsx`. */}
             </Tarjeta>
           </>
         )}

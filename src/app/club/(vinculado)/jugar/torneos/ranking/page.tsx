@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { sesionActual } from "@/lib/auth/sesion";
 import { Cabecera } from "@/components/ui/Cabecera";
@@ -81,7 +82,27 @@ function TablaClub({
   );
 }
 
+/**
+ * EL ELO DEL CLUB ESTÁ APAGADO desde el 2026-08-13.
+ *
+ * Decisión del propietario después de hablarlo con otro socio: "de momento no poner
+ * ELO interno en las partidas, porque puede liar". Y el motivo es bueno: cada socio
+ * ya tiene su ELO de la FACV, y un segundo número que arranca en 1000 para todos y se
+ * mueve con cuatro partidas del club se lee como si fuera aquel, o peor, como si lo
+ * corrigiera.
+ *
+ * SE APAGA, NO SE BORRA, porque dijo "de momento": esta pantalla y el módulo de ELO
+ * (`src/lib/club/elo.ts`, con sus tests) siguen enteros, `club_tournament_players`
+ * sigue guardando el ELO de partida de cada inscrito y `leerRanking` sigue calculando.
+ * Para volver a encenderlo: quitar el `redirect` de aquí y devolver los dos enlaces
+ * que llevaban a esta página (la lista de torneos y la portada).
+ *
+ * Lo que NO se toca es la clasificación de cada torneo: esa va por PUNTOS, y los
+ * puntos de un torneo no se confunden con ningún ELO.
+ */
 export default async function RankingPage() {
+  redirect("/club/jugar/torneos");
+
   const supabase = await createServerSupabase();
   const sesion = await sesionActual();
   const ranking = await leerRanking(supabase);

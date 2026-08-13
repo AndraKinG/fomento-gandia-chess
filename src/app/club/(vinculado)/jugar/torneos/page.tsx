@@ -41,7 +41,7 @@ export default async function InternoPage() {
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera
         titulo="Torneos del club"
-        subtitulo="Los que organizamos nosotros, con ELO propio"
+        subtitulo="Los que organizamos nosotros"
         medida="panel"
       />
       <Contenedor medida="panel" className="space-y-4">
@@ -50,13 +50,9 @@ export default async function InternoPage() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <PestanasJugar activa="torneos" />
           <div className="flex flex-wrap items-center gap-2">
-            <Boton
-              variante="secundario"
-              href="/club/jugar/torneos/ranking"
-              className="text-sm"
-            >
-              Ranking de ELO
-            </Boton>
+            {/* El botón del ranking de ELO del club está fuera desde el 2026-08-13:
+                el ELO interno se apagó para no confundirlo con el de la FACV. El
+                motivo entero, y cómo volver a encenderlo, en `ranking/page.tsx`. */}
             {sesion?.esJunta && (
               <Boton
                 variante="secundario"

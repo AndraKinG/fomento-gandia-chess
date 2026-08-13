@@ -125,18 +125,12 @@ export const HERRAMIENTAS: Herramienta[] = [
       },
     },
   },
-  {
-    name: "ranking_del_club",
-    rango: "jugador",
-    description:
-      "Ranking de ELO INTERNO del club, el que sale solo de los torneos que organiza el club. No confundir con el orden de fuerza oficial de la FACV.",
-    parameters: {
-      type: "object",
-      properties: {
-        limite: { type: "number", description: "Cuántas filas como máximo. Por defecto 6, que es lo que cabe en un chat; sube hasta 15 solo si te piden la lista entera." },
-      },
-    },
-  },
+  // AQUÍ ESTABA `ranking_del_club` (ELO interno). Fuera desde el 2026-08-13: el ELO
+  // del club se apagó para no confundirlo con el de la FACV, y la herramienta era la
+  // vía por la que el asistente lo habría seguido contando —la más peligrosa de todas,
+  // porque el socio no la busca: se la encuentra en una respuesta—. Lo que el modelo
+  // no ve, no lo puede llamar ni mencionar (ver `declaracionesPara`). El motivo entero
+  // y cómo volver a encenderlo, en `jugar/torneos/ranking/page.tsx`.
   {
     name: "solicitudes_de_alta",
     rango: "junta",
@@ -383,21 +377,9 @@ export async function ejecutar(
       };
     }
 
-    case "ranking_del_club": {
-      const { leerRanking } = await import(
-        "@/app/club/(vinculado)/jugar/torneos/datos"
-      );
-      const filas = await leerRanking(supabase);
-      return {
-        aviso: "Este es el ELO INTERNO del club, no el oficial de la FACV.",
-        jugadores: filas.slice(0, limite(args)).map((f, i) => ({
-          puesto: i + 1,
-          nombre: f.nombre,
-          eloDelClub: f.elo,
-          partidas: f.partidas,
-        })),
-      };
-    }
+    // El `case "ranking_del_club"` se fue con su declaración (ver arriba). No hace
+    // falta dejar uno que conteste "apagado": sin declaración el modelo no puede
+    // pedirlo, y si algún día llegara igual, cae en el `default` de este switch.
 
     default:
       return { error: `No existe ninguna herramienta llamada ${nombre}.` };

@@ -77,7 +77,10 @@ export const GUIA: readonly SeccionGuia[] = [
     puntos: [
       "Retar a cualquier socio conectado (el punto verde lo dice)",
       "Cadencia de siempre o a tu medida, y color a elegir o al azar",
-      "Torneos del club: inscribirte, rondas, clasificación y ranking de ELO propio",
+      // Decía "y ranking de ELO propio". Fuera con el ELO interno el 2026-08-13: la
+      // guía es lo primero que lee un socio nuevo, así que prometer una pantalla que
+      // ya no existe es peor aquí que en cualquier otro sitio.
+      "Torneos del club: inscribirte, rondas y clasificación",
       "Al acabar, la partida entra sola en el repositorio",
     ],
   },
