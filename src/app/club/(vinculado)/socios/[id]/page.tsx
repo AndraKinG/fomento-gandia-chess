@@ -33,7 +33,7 @@ export default async function SocioPage({
 
   const { data: socio } = await supabase
     .from("players")
-    .select("id, nombre, apodo, foto_url, aperturas, elo_fide")
+    .select("id, nombre, apodo, foto_url, aperturas, elo_fide, fide_id")
     .eq("id", id)
     .maybeSingle();
   if (!socio) redirect("/club");
@@ -130,6 +130,24 @@ export default async function SocioPage({
                   Nº {orden.numero}
                   {orden.bis_index ? "bis" : ""} del club
                 </span>
+              )}
+              {/* EL ID FIDE, ENLAZADO, TAMBIÉN AQUÍ (2026-08-13): estaba solo en el
+                  perfil propio, así que servía para verte tú y no para ver a los
+                  demás — que es justo para lo que se pidió. Esta es la pantalla donde
+                  se viene a saber quién es alguien.
+
+                  Lo abre el navegador del socio, así que el bloqueo de fide.com a las
+                  IP de centro de datos no le afecta (ver CLAUDE.md). */}
+              {socio.fide_id && (
+                <a
+                  href={`https://ratings.fide.com/profile/${socio.fide_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Ficha en la FIDE"
+                  className="rounded-full bg-tarjeta-suave px-2.5 py-0.5 text-xs font-medium text-acento-texto ring-1 ring-borde"
+                >
+                  FIDE {socio.fide_id} ↗
+                </a>
               )}
             </div>
             {socio.aperturas && (

@@ -287,8 +287,36 @@ export async function ponerApodo(
   }
 
   const admin = createAdminClient();
+
+  // DOS SOCIOS NO PUEDEN TENER EL MISMO MOTE (pedido del propietario el 2026-08-13,
+  // poniéndolos): un mote existe para reconocer a alguien de un vistazo, y dos "Ximo"
+  // en la lista de retos son peores que el nombre oficial, que al menos era distinto.
+  //
+  // Se comprueba aquí ADEMÁS del índice único de la 0042 para poder decir DE QUIÉN es
+  // el mote. El índice contestaría con un error de Postgres ilegible, y su trabajo es
+  // otro: que la regla siga siendo verdad si algún día se escribe desde otro sitio.
+  if (valor) {
+    const { data: chocan } = await admin
+      .from("players")
+      .select("id, nombre, apodo")
+      .neq("id", playerId)
+      .not("apodo", "is", null);
+    const clave = valor.toLowerCase();
+    const duenio = (chocan ?? []).find(
+      (p) => (p.apodo as string).trim().toLowerCase() === clave
+    );
+    if (duenio) {
+      return { error: `Ese mote ya es de ${duenio.nombre}.` };
+    }
+  }
+
   const { error } = await admin.from("players").update({ apodo: valor }).eq("id", playerId);
-  if (error) return { error: error.message };
+  if (error) {
+    // Red de seguridad del índice: si dos personas guardan el mismo mote a la vez, la
+    // comprobación de arriba puede pasar en las dos y la base rechaza la segunda.
+    if (error.code === "23505") return { error: "Ese mote ya lo tiene otro socio." };
+    return { error: error.message };
+  }
 
   // El mote sale en media app, así que se rehacen las pantallas que lo enseñan de
   // listas enteras. Las demás lo cogerán en su siguiente pintado.
