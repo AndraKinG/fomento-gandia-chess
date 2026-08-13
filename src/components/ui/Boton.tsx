@@ -29,7 +29,7 @@ export function Boton({
   onClick?: MouseEventHandler<HTMLButtonElement>;
   type?: "button" | "submit";
   disabled?: boolean;
-  /** Para botones cuyo texto visible ("Ir", "Marcar leído"...) no basta para
+  /** Para botones cuyo texto visible ("Ver", "Marcar leído"...) no basta para
    *  un lector de pantalla: qué es y qué va a pasar, en una frase. */
   ariaLabel?: string;
   ariaDescribedby?: string;

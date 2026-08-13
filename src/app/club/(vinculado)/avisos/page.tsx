@@ -89,7 +89,13 @@ function FilaAviso({ aviso }: { aviso: AvisoVista }) {
       <div className="flex shrink-0 items-center gap-2 pl-4 sm:pl-0 sm:pt-0.5">
         {aviso.url &&
           (aviso.sinLeer ? (
-            // Sin leer + con url: ir marca leído por el camino, como siempre.
+            // Sin leer + con url: abrirlo marca leído por el camino, como siempre.
+            //
+            // DICE "VER" Y NO "IR" (corrección de un socio, 2026-08-13): en un aviso de
+            // torneo, "Ir" se lee como decir que vas — que es literalmente lo que se
+            // contesta en la pantalla del torneo ("¿Vas?" / "Voy") — y el botón solo
+            // abre la pantalla. Un botón que parece comprometerte a algo es peor que uno
+            // aburrido.
             <form action={irYMarcarLeido}>
               <BotonAccion
                 variante="secundario"
@@ -98,7 +104,7 @@ function FilaAviso({ aviso }: { aviso: AvisoVista }) {
                 ariaLabel={`${estado}: ${aviso.titulo}. Abre la pantalla relacionada y lo marca como leído.`}
                 ariaDescribedby={idCuerpo}
               >
-                Ir
+                Ver
               </BotonAccion>
             </form>
           ) : (
@@ -111,7 +117,7 @@ function FilaAviso({ aviso }: { aviso: AvisoVista }) {
               aria-describedby={idCuerpo}
               className="rounded-xl border border-borde bg-tarjeta px-3 py-1.5 text-xs font-medium text-tinta transition hover:bg-tarjeta-suave"
             >
-              Ir
+              Ver
             </Link>
           ))}
         {aviso.sinLeer && (
