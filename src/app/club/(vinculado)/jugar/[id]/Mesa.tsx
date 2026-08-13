@@ -23,6 +23,7 @@ import {
   reclamarPorTiempo,
   responderVolverJugada,
 } from "../actions";
+import { PanelMotor } from "./PanelMotor";
 
 /**
  * La mesa: tablero, los dos relojes y el chat.
@@ -78,6 +79,9 @@ export type Partida = {
   motivo: string | null;
   tablasOfrecidasPor: string | null;
   vueltaPedidaPor: string | null;
+  /** Ficha que jugó con motor, si alguien lo encendió (migración 0044). Solo se
+   *  enseña CUANDO LA PARTIDA ACABA, y entonces a los dos. */
+  motorFicha: string | null;
 };
 
 export type Mensaje = {
@@ -105,11 +109,14 @@ export function Mesa({
   inicial,
   mensajesIniciales,
   yo,
+  puedeMotor = false,
 }: {
   inicial: Partida;
   mensajesIniciales: Mensaje[];
   /** Ficha de quien mira. null = está de espectador. */
   yo: string | null;
+  /** Lo decide el servidor (ver `page.tsx`): una sola ficha, en retos y jugando. */
+  puedeMotor?: boolean;
 }) {
   const [p, setP] = useState(inicial);
   const [mensajes, setMensajes] = useState(mensajesIniciales);
@@ -806,6 +813,28 @@ export function Mesa({
           <div className="rounded-2xl border border-borde-acento bg-tarjeta-suave p-4">
             <ContenidoResumen partida={p} />
           </div>
+        )}
+
+        {/* AL ACABAR, SE CUENTA. A los dos, sin depender de que nadie se acuerde de
+            decirlo: es lo que convierte encender el motor en un vacile con final en vez
+            de en otra cosa. Durante la partida esto no se pinta —la condición es que
+            haya resultado— que si no, no habría broma. */}
+        {p.resultado && p.motorFicha && (
+          <p className="rounded-2xl border border-borde bg-tarjeta px-4 py-3 text-sm text-tinta">
+            🤖 Esta partida se ha jugado con Stockfish por{" "}
+            <b className="font-semibold">
+              {p.motorFicha === p.blancasId ? p.blancasNombre : p.negrasNombre}
+            </b>
+            .
+          </p>
+        )}
+
+        {/* EL MOTOR. Solo lo ve una ficha (lo decide el servidor, ver `page.tsx`), solo
+            en retos y solo jugando. Encenderlo deja marca para siempre en la partida:
+            apagarlo aquí deja de pedirle jugadas, pero el aviso de arriba saldrá igual
+            al terminar. */}
+        {puedeMotor && enJuego && (
+          <PanelMotor partidaId={p.id} fen={juego.fen()} yaMarcado={Boolean(p.motorFicha)} />
         )}
 
         {meOfrecenTablas && (
