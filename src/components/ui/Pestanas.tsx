@@ -8,7 +8,10 @@ import Link from "next/link";
  * dentro de un mes no se parecieran.
  */
 export function Pestanas({ children }: { children: React.ReactNode }) {
-  return <div className="flex gap-2">{children}</div>;
+  // `flex-wrap` como red de seguridad del `whitespace-nowrap` de cada pastilla: si
+  // algún día no caben (pantalla estrecha, cuatro pestañas, un idioma más largo), baja
+  // una entera a la línea siguiente en vez de partirle el texto o desbordar la fila.
+  return <div className="flex flex-wrap gap-2">{children}</div>;
 }
 
 export function Pestana({
@@ -26,7 +29,14 @@ export function Pestana({
       aria-current={activa ? "page" : undefined}
       // A lo ancho en móvil, donde importa el tamaño del toque; compacta desde `sm`.
       // Estiradas ocupaban media pantalla cada una y competían con el contenido.
-      className={`flex-1 rounded-xl px-4 py-2 text-center text-sm font-semibold transition duration-100 sm:flex-initial sm:px-5 ${
+      //
+      // `whitespace-nowrap` y `px-3` en móvil por un fallo visto en un Redmi 9 Pro con
+      // tres pestañas: "★ Favoritas" no cabía y se partía en dos líneas (la estrella
+      // arriba y la palabra debajo), lo que estiraba esa pastilla y dejaba a las otras
+      // dos pegadas arriba con un hueco debajo. Con tres pestañas el reparto a partes
+      // iguales es estrecho, así que el texto no puede romper: antes se aprieta el
+      // relleno. El `min-w-0` deja que la pastilla se encoja en vez de desbordar.
+      className={`min-w-0 flex-1 whitespace-nowrap rounded-xl px-3 py-2 text-center text-sm font-semibold transition duration-100 sm:flex-initial sm:px-5 ${
         activa
           ? "bg-acento-fuerte text-sobre-acento"
           : "border border-borde bg-tarjeta text-tinta-suave hover:bg-tarjeta-suave"

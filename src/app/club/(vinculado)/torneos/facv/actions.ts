@@ -294,9 +294,44 @@ export async function marcarAsistencia(
   // Si acaba de abrir plan donde no había nadie, se lo cuenta al club.
   if (estado === "voy" || estado === "duda") {
     await avisarPrimerApuntado(tournamentId, yo.playerId);
+    await marcarDeInteres(tournamentId);
   }
   refrescar(tournamentId);
   return {};
+}
+
+/**
+ * "De interés" = alguien del club va a este torneo.
+ *
+ * QUÉ ESTABA ROTO (visto el 2026-08-13): la portada solo enseña los torneos con este
+ * interruptor, y solo lo ponía un admin a mano desde el panel. Un socio dijo que
+ * quizá iba al Festival Benimodo y el torneo no llegó a la portada de nadie — el
+ * único sitio donde el club mira qué pasa. El interruptor existía para no enterrar
+ * los tres torneos que importan bajo los 147 del calendario, y esa sigue siendo la
+ * regla: lo que cambia es QUIÉN lo enciende. Si alguien dice que va, ya importa.
+ *
+ * NO SE APAGA SOLO cuando el último se baja, a propósito: el interruptor es también
+ * la decisión manual del admin ("a este vamos como club", aunque no haya nadie
+ * apuntado todavía), y apagarlo automáticamente la borraría sin avisar. Para
+ * esconder un torneo está su interruptor en el panel.
+ *
+ * CON CLAVE DE SERVICIO porque `tournaments` solo la escribe un admin (0010) y esto
+ * lo dispara un socio cualquiera. Se toca UNA columna y solo para encenderla.
+ */
+async function marcarDeInteres(tournamentId: string): Promise<void> {
+  const admin = createAdminClient();
+  const { data: torneo } = await admin
+    .from("tournaments")
+    .select("de_interes")
+    .eq("id", tournamentId)
+    .maybeSingle();
+  if (!torneo || torneo.de_interes) return;
+
+  await admin.from("tournaments").update({ de_interes: true }).eq("id", tournamentId);
+  // La portada y el panel leen esta columna: si no se rehacen, el torneo no aparece
+  // hasta la siguiente navegación completa.
+  revalidatePath("/club");
+  revalidatePath("/club/admin/torneos");
 }
 
 /**

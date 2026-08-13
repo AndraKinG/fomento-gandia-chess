@@ -91,6 +91,7 @@ export default async function UsoPage({
     { count: fichas },
     { count: dispositivos },
     { data: todosLosDias },
+    { data: deHoy },
   ] = await Promise.all([
     admin.rpc("recuento_uso", { desde: desdeIso }),
     admin.from("uso_diario").select("dia, visitas, latidos").gte("dia", desdeIso),
@@ -120,6 +121,18 @@ export default async function UsoPage({
     // socios por día: una consulta ligera que cabe de sobra en el tope de mil filas
     // mientras el club sea el que es.
     admin.from("uso_socios_dia").select("profile_id"),
+    // QUIÉN HA ENTRADO HOY, por nombre (lo pidió el propietario el 2026-08-13). El dato
+    // ya existía —`uso_socios_dia` tiene una fila por socio y día desde la 0032— y solo
+    // faltaba enseñarlo. Sigue sin haber horas ni pantallas: es "hoy ha entrado", no un
+    // registro de lo que hace cada uno.
+    //
+    // `dia` lo escribe Postgres con `current_date`, que en Supabase va en UTC, así que
+    // aquí se pide la fecha en UTC y no la de Madrid: buscar la de Madrid dejaría fuera
+    // a quien entre entre medianoche y las 2:00.
+    admin
+      .from("uso_socios_dia")
+      .select("profile_id, visitas, latidos")
+      .eq("dia", new Date().toISOString().slice(0, 10)),
   ]);
 
   // "Cuentas creadas" tampoco cuenta las de prueba. Se resta en vez de filtrarse en
@@ -154,6 +167,31 @@ export default async function UsoPage({
   const grupos = agruparUso(dias, pares, periodo);
   const actual = grupos[0];
   const hanEntradoAlguna = new Set((todosLosDias ?? []).map((f) => f.profile_id as string)).size;
+
+  // Los nombres de quien ha entrado hoy. Se resuelven en una segunda consulta y no con
+  // un embed sobre `uso_socios_dia`: esa tabla no tiene relación declarada con
+  // `profiles` (la 0032 la dejó suelta a propósito, es un contador), así que PostgREST
+  // no puede incrustarla.
+  const idsDeHoy = (deHoy ?? []).map((f) => f.profile_id as string);
+  const { data: quienes } =
+    idsDeHoy.length > 0
+      ? await admin.from("profiles").select("id, email, players(nombre)").in("id", idsDeHoy)
+      : { data: [] as { id: string; email: string; players: unknown }[] };
+
+  const visitasPorCuenta = new Map(
+    (deHoy ?? []).map((f) => [f.profile_id as string, Number(f.visitas)])
+  );
+  const hoyHanEntrado = (quienes ?? [])
+    .map((p) => ({
+      // El correo como respaldo: una cuenta recién creada aún no tiene ficha, y
+      // "Socio" repetido tres veces no distingue a nadie.
+      nombre:
+        (p.players as unknown as { nombre: string } | null)?.nombre ??
+        (p.email as string) ??
+        "Cuenta sin ficha",
+      visitas: visitasPorCuenta.get(p.id as string) ?? 0,
+    }))
+    .sort((a, b) => b.visitas - a.visitas || a.nombre.localeCompare(b.nombre));
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
@@ -194,6 +232,28 @@ export default async function UsoPage({
               nota="dispositivos"
             />
           </div>
+
+          {/* QUIÉN HA ENTRADO HOY, con nombre. Va en este bloque y no en el del periodo
+              porque es siempre de hoy, como el resto de la foto de arriba: con el
+              selector en "mes" seguiría diciendo lo de hoy y ahí confundiría. */}
+          <Tarjeta compacta>
+            <p className="text-xs font-semibold uppercase tracking-wide text-tinta-suave">
+              Hoy han entrado ({hoyHanEntrado.length})
+            </p>
+            {hoyHanEntrado.length === 0 ? (
+              <p className="mt-1 text-sm text-tinta-suave">Todavía nadie.</p>
+            ) : (
+              <p className="mt-1 text-sm text-tinta">
+                {hoyHanEntrado
+                  .map((p) => (p.visitas > 1 ? `${p.nombre} (${p.visitas})` : p.nombre))
+                  .join(" · ")}
+              </p>
+            )}
+            <p className="mt-1.5 text-xs text-tinta-suave">
+              Entre paréntesis, las veces que ha entrado (una visita cada 5 h como
+              máximo). No se guarda a qué hora ni qué pantallas ha visto.
+            </p>
+          </Tarjeta>
         </section>
 
         {/* ---- 2. EL PERIODO EN CURSO, en grande ---- */}
