@@ -1,217 +1,305 @@
 "use client";
 
-import { Suspense, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useLoader } from "@react-three/fiber";
 import * as THREE from "three";
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js";
+import gsap from "gsap";
 import {
-  bandoDe,
-  COLOR_PIEZA,
-  PIEZAS_HERO,
-  spritesUnicos,
-  type PiezaEscena,
-} from "@/lib/inicio/escena3d";
+  ALTURA_CAIDA,
+  CAMPO_VISION,
+  PLANO_CENITAL,
+  PLANO_INICIAL,
+  PLANO_MEDIO,
+  retrasoDeCaida,
+} from "@/lib/inicio/coreografia";
+import { PERFILES, type TipoPieza } from "@/lib/inicio/piezas3d";
 
 const JUEGO = "celtic";
-/** El SVG mide 933 unidades de alto; esto lo lleva a ~1,6 casillas de alto. */
-const ESCALA = 1.6 / 933;
+const COLOR = { w: "#e9dfc9", b: "#26313f" } as const;
 
-/**
- * Una pieza: la silueta del SVG, extruida y con volumen de verdad.
- *
- * DE DÓNDE SALE EL MATERIAL, que era el problema de fondo: no hay modelos 3D ni hay que
- * comprarlos. Se coge el MISMO SVG que usa la app para el tablero de los socios y se
- * extruye — una silueta plana pasa a ser una figura con grosor, cantos biselados y caras
- * que reciben luz. Queda como una pieza de madera cortada a láser, que es un estilo
- * honesto y coherente con el resto de la app, y no depende de la licencia de nadie.
- */
-function Pieza({
-  forma,
-  pieza,
-}: {
-  forma: THREE.ExtrudeGeometry;
-  pieza: PiezaEscena;
-}) {
-  const color = COLOR_PIEZA[bandoDe(pieza.sprite)];
-  return (
-    <mesh
-      geometry={forma}
-      position={[pieza.x, 0, pieza.z]}
-      rotation={[0, pieza.giro, 0]}
-      castShadow
-      receiveShadow
-    >
-      {/* `roughness` alto y `metalness` cero: madera y marfil, no plástico ni metal. El
-          bisel del extruido es lo que atrapa la luz en los cantos y da el volumen.
+/** La posición inicial, fila a fila. */
+const ORDEN = ["R", "N", "B", "Q", "K", "B", "N", "R"] as const;
+type Colocada = { id: string; tipo: TipoPieza | "N"; bando: "w" | "b"; x: number; z: number; retraso: number };
 
-          `DoubleSide` ES UN SEGURO, no un capricho: al voltear la geometría en Y para
-          pasar del sistema del SVG (Y hacia abajo) al de 3D, el orden de los vértices
-          queda invertido y las caras pueden acabar mirando hacia dentro — una pieza
-          invisible o con agujeros. Pintando las dos caras eso no puede pasar. */}
-      <meshStandardMaterial
-        color={color}
-        roughness={0.62}
-        metalness={0.04}
-        side={THREE.DoubleSide}
-      />
-    </mesh>
-  );
+const PIEZAS: Colocada[] = [8, 7, 2, 1].flatMap((fila) => {
+  const bando: "w" | "b" = fila >= 7 ? "b" : "w";
+  const tipos = fila === 7 || fila === 2 ? Array(8).fill("P") : [...ORDEN];
+  return tipos.map((tipo, columna) => ({
+    id: `${bando}${tipo}-${fila}-${columna}`,
+    tipo: tipo as TipoPieza | "N",
+    bando,
+    // El tablero va centrado en el origen: la fila 1 (blancas) queda hacia la cámara.
+    x: columna - 3.5,
+    z: 4.5 - fila,
+    retraso: retrasoDeCaida(columna, fila),
+  }));
+});
+
+/** Torneado: el perfil girado sobre su eje, que es como se hace una pieza de verdad. */
+function geometriaTorneada(tipo: TipoPieza): THREE.LatheGeometry {
+  const puntos = PERFILES[tipo].map((p) => new THREE.Vector2(p.radio, p.altura));
+  const geo = new THREE.LatheGeometry(puntos, 48);
+  geo.computeVertexNormals();
+  return geo;
 }
 
 /**
- * Carga los SVG y los convierte en geometrías con volumen.
- *
- * UNA GEOMETRÍA POR SILUETA, no por pieza: los dos peones negros comparten la misma. Cada
- * extrusión cuesta parsear el SVG y triangular el contorno, así que repetirla por
- * instancia sería pagar el trabajo dos veces para el mismo resultado.
+ * El caballo, que NO se puede tornear: no es un sólido de revolución. Sale de la silueta
+ * del SVG extruida y puesta de perfil, que además es como se mira un caballo de ajedrez.
  */
-function Piezas() {
-  const rutas = spritesUnicos().map((s) => `/piezas/${JUEGO}/${s}.svg`);
-  const cargados = useLoader(SVGLoader, rutas);
-
-  const formas = useMemo(() => {
-    const mapa = new Map<string, THREE.ExtrudeGeometry>();
-    spritesUnicos().forEach((sprite, i) => {
-      const datos = cargados[i];
-      // Todas las subformas del SVG en una sola geometría: una pieza puede venir en
-      // varios trazos (el corte de la corona, el ojo del caballo…).
-      const shapes = datos.paths.flatMap((p) => SVGLoader.createShapes(p));
-      const geo = new THREE.ExtrudeGeometry(shapes, {
-        depth: 90,
-        bevelEnabled: true,
-        bevelThickness: 14,
-        bevelSize: 10,
-        bevelSegments: 3,
-      });
-      // El SVG tiene la Y hacia abajo y el origen arriba a la izquierda; en 3D la Y va
-      // hacia arriba. Se voltea y se centra sobre su base, que es lo que la deja de pie
-      // sobre el tablero en vez de hundida o flotando.
-      geo.scale(ESCALA, -ESCALA, ESCALA);
-      geo.computeBoundingBox();
-      const caja = geo.boundingBox!;
-      geo.translate(
-        -(caja.min.x + caja.max.x) / 2,
-        -caja.min.y,
-        -(caja.min.z + caja.max.z) / 2
-      );
-      // De canto no se leería: se giran para mirar a la cámara, como una figura recortada
-      // puesta de pie.
-      geo.rotateY(0);
-      geo.computeVertexNormals();
-      mapa.set(sprite, geo);
+function useGeometriaCaballo(): THREE.ExtrudeGeometry | null {
+  const cargado = useLoader(SVGLoader, `/piezas/${JUEGO}/wN.svg`);
+  return useMemo(() => {
+    const shapes = cargado.paths.flatMap((p) => SVGLoader.createShapes(p));
+    if (shapes.length === 0) return null;
+    const geo = new THREE.ExtrudeGeometry(shapes, {
+      depth: 120,
+      bevelEnabled: true,
+      bevelThickness: 18,
+      bevelSize: 12,
+      bevelSegments: 2,
     });
-    return mapa;
-  }, [cargados]);
-
-  return (
-    <>
-      {PIEZAS_HERO.map((p) => {
-        const forma = formas.get(p.sprite);
-        return forma ? <Pieza key={p.id} forma={forma} pieza={p} /> : null;
-      })}
-    </>
-  );
+    // El SVG mide 933 de alto y tiene la Y hacia abajo; se lleva a la altura de un alfil
+    // y se apoya en su base.
+    const escala = 0.78 / 933;
+    geo.scale(escala, -escala, escala);
+    geo.computeBoundingBox();
+    const c = geo.boundingBox!;
+    geo.translate(-(c.min.x + c.max.x) / 2, -c.min.y, -(c.min.z + c.max.z) / 2);
+    geo.computeVertexNormals();
+    return geo;
+  }, [cargado]);
 }
 
-/** El tablero: un plano con la textura del damero dibujada en un canvas. */
-function Tablero() {
-  const textura = useMemo(() => {
+/** El damero, dibujado en un canvas y pegado a un plano. */
+function useTexturaTablero(): THREE.CanvasTexture {
+  return useMemo(() => {
     const lienzo = document.createElement("canvas");
-    lienzo.width = 512;
-    lienzo.height = 512;
+    lienzo.width = lienzo.height = 1024;
     const ctx = lienzo.getContext("2d")!;
-    const lado = 512 / 8;
+    const lado = 1024 / 8;
     for (let f = 0; f < 8; f++) {
       for (let c = 0; c < 8; c++) {
-        ctx.fillStyle = (f + c) % 2 === 0 ? "#e9f2fb" : "#5c8bb5";
+        ctx.fillStyle = (f + c) % 2 === 0 ? "#dce7f2" : "#42688c";
         ctx.fillRect(c * lado, f * lado, lado, lado);
       }
     }
     const t = new THREE.CanvasTexture(lienzo);
     t.colorSpace = THREE.SRGBColorSpace;
-    // Sin esto, las casillas del fondo se convierten en una papilla de píxeles al
-    // verse en escorzo: la anisotropía es lo que las mantiene rectas hasta el horizonte.
+    // Sin anisotropía, las casillas del fondo se convierten en papilla al verse en
+    // escorzo, que es justo el plano medio de la animación.
     t.anisotropy = 8;
     return t;
   }, []);
+}
+
+/**
+ * Los tres actos, en una línea de tiempo.
+ *
+ * ES UNA COREOGRAFÍA, no un bucle: empieza, pasa y termina en el cenital, que es donde se
+ * queda. Los números —dónde está la cámara en cada acto y cuándo cae cada pieza— viven en
+ * `lib/inicio/coreografia.ts` y tienen tests: que el tablero quepa en cuadro y que la
+ * cámara no acabe entre las piezas son las dos cosas que salieron mal en los intentos
+ * anteriores, y ahora se comprueban sin abrir el navegador.
+ */
+function Coreografia({
+  piezas,
+  quieto,
+}: {
+  piezas: React.RefObject<(THREE.Group | null)[]>;
+  quieto: boolean;
+}) {
+
+  const camara = useRef({
+    x: PLANO_INICIAL.posicion[0],
+    y: PLANO_INICIAL.posicion[1],
+    z: PLANO_INICIAL.posicion[2],
+    mx: PLANO_INICIAL.objetivo[0],
+    my: PLANO_INICIAL.objetivo[1],
+    mz: PLANO_INICIAL.objetivo[2],
+  });
+
+  // MUTACIÓN IMPERATIVA A PROPÓSITO, y por eso se apaga la regla aquí. Este componente
+  // no pinta nada: mueve objetos de Three.js —la cámara y la posición de cada pieza—
+  // desde una línea de tiempo de GSAP. El compilador de React prohíbe mutar valores
+  // vivos después de pintar, y tiene razón en un componente normal; aquí la mutación ES
+  // el trabajo, y la alternativa sería copiar la escena a estado de React y
+  // sincronizarla sesenta veces por segundo: más código y peor.
+  // eslint-disable-next-line react-hooks/immutability
+  useEffect(() => {
+    // SIN ALIAS del ref: el compilador de React no deja mutar una variable local
+    // capturada después de pintar, y `const c = camara.current` es exactamente eso.
+    // Se toca `camara.current` en su sitio, que además deja claro que es estado vivo.
+    if (quieto) {
+      // Sin animación se entrega el plano final directamente: el tablero puesto, visto
+      // desde arriba. La información sin el espectáculo.
+      camara.current.x = PLANO_CENITAL.posicion[0];
+      camara.current.y = PLANO_CENITAL.posicion[1];
+      camara.current.z = PLANO_CENITAL.posicion[2];
+      camara.current.mx = PLANO_CENITAL.objetivo[0];
+      camara.current.my = PLANO_CENITAL.objetivo[1];
+      camara.current.mz = PLANO_CENITAL.objetivo[2];
+      // Las piezas, directamente en su sitio: sin animación no hay caída que animar.
+      // eslint-disable-next-line react-hooks/immutability
+      for (const g of piezas.current ?? []) if (g) g.position.y = 0;
+      return;
+    }
+
+    const tl = gsap.timeline();
+
+    // ACTO 1: la cámara va hacia atrás y aparece el tablero.
+    tl.to(camara.current, {
+      x: PLANO_MEDIO.posicion[0], y: PLANO_MEDIO.posicion[1], z: PLANO_MEDIO.posicion[2],
+      my: PLANO_MEDIO.objetivo[1],
+      duration: 2.2,
+      ease: "power2.inOut",
+    });
+
+    // ACTO 2: las piezas caen. Empieza ANTES de que la cámara termine de retroceder
+    // (el `-=1.1`): los planos de cine se solapan, y esperar a que un movimiento acabe
+    // para empezar el siguiente es lo que hace que una animación parezca una lista de
+    // pasos en vez de una escena.
+    (piezas.current ?? []).forEach((grupo, i) => {
+      if (!grupo) return;
+      tl.fromTo(
+        grupo.position,
+        { y: ALTURA_CAIDA },
+        {
+          y: 0,
+          duration: 0.75,
+          // Rebote seco al aterrizar: una pieza de madera sobre un tablero no frena
+          // suave, da un golpe.
+          ease: "bounce.out",
+        },
+        1.1 + PIEZAS[i].retraso
+      );
+    });
+
+    // ACTO 3: a cenital, cuando ya han caído todas.
+    tl.to(
+      camara.current,
+      {
+        x: PLANO_CENITAL.posicion[0], y: PLANO_CENITAL.posicion[1], z: PLANO_CENITAL.posicion[2],
+        my: PLANO_CENITAL.objetivo[1],
+        duration: 2.6,
+        ease: "power2.inOut",
+      },
+      "+=0.5"
+    );
+
+    return () => {
+      tl.kill();
+    };
+  }, [piezas, quieto]);
+
+  useFrame((estado) => {
+    const { x, y, z, mx, my, mz } = camara.current;
+    estado.camera.position.set(x, y, z);
+    estado.camera.lookAt(mx, my, mz);
+  });
+
+  return null;
+}
+
+function Escena({ quieto }: { quieto: boolean }) {
+  const textura = useTexturaTablero();
+  const caballo = useGeometriaCaballo();
+  const grupos = useRef<(THREE.Group | null)[]>([]);
+
+  const torneadas = useMemo(() => {
+    const m = new Map<TipoPieza, THREE.LatheGeometry>();
+    for (const t of ["P", "R", "B", "Q", "K"] as TipoPieza[]) m.set(t, geometriaTorneada(t));
+    return m;
+  }, []);
 
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[1.2, 0, 0]} receiveShadow>
-      <planeGeometry args={[8, 8]} />
-      <meshStandardMaterial map={textura} roughness={0.85} metalness={0} />
-    </mesh>
+    <>
+      <hemisphereLight args={["#d8e8f7", "#0a1826", 0.9]} />
+      {/* La luz que manda: alta y de lado, como la lámpara de una mesa de club. Es la
+          que dibuja las sombras largas y la que da el volumen. */}
+      <directionalLight
+        position={[-6, 10, 5]}
+        intensity={2.6}
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+        shadow-camera-left={-7}
+        shadow-camera-right={7}
+        shadow-camera-top={7}
+        shadow-camera-bottom={-7}
+      />
+      {/* Contraluz: separa las piezas oscuras del fondo oscuro. */}
+      <directionalLight position={[6, 4, -7]} intensity={0.8} color="#8fc0ea" />
+
+      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[8, 8]} />
+        <meshStandardMaterial map={textura} roughness={0.8} metalness={0} />
+      </mesh>
+
+      {PIEZAS.map((p, i) => {
+        const geo = p.tipo === "N" ? caballo : torneadas.get(p.tipo);
+        if (!geo) return null;
+        return (
+          <group
+            key={p.id}
+            ref={(el) => {
+              grupos.current[i] = el;
+            }}
+            position={[p.x, quieto ? 0 : ALTURA_CAIDA, p.z]}
+          >
+            <mesh
+              geometry={geo}
+              castShadow
+              receiveShadow
+              // Las negras miran a las blancas: un caballo de perfil tiene que mirar al
+              // rival, no al mismo lado que el de enfrente.
+              rotation={[0, p.bando === "b" ? Math.PI : 0, 0]}
+            >
+              <meshStandardMaterial
+                color={COLOR[p.bando]}
+                roughness={0.55}
+                metalness={0.05}
+                side={THREE.DoubleSide}
+              />
+            </mesh>
+          </group>
+        );
+      })}
+
+      <Coreografia piezas={grupos} quieto={quieto} />
+      <fog attach="fog" args={["#081726", 12, 26]} />
+    </>
   );
 }
 
 /**
- * La cámara, que respira.
+ * El hero: la cámara retrocede, las piezas caen y todo acaba en vista cenital.
  *
- * Un vaivén de dos décimas de unidad en catorce segundos. No se mira, se siente: es lo
- * que separa una escena de una foto, y es lo que faltaba en la versión de CSS.
+ * EL PLANO LO PIDIÓ EL PROPIETARIO con esas palabras, y esa es la diferencia con los
+ * cuatro intentos anteriores: un plano descrito se puede construir con números y probar
+ * sin verlo, mientras que "que quede como Apple" no. Los números están en
+ * `lib/inicio/coreografia.ts`, con tests.
+ *
+ * LAS PIEZAS VAN TORNEADAS (`lib/inicio/piezas3d.ts`): un perfil girado sobre su eje, que
+ * es como se fabrica una pieza de ajedrez. El intento anterior extruía la silueta plana
+ * del SVG y en pantalla se veía lo que era, cartón recortado. El caballo es la excepción
+ * —no es un sólido de revolución— y ese sí sale de la silueta, puesta de perfil.
+ *
+ * FONDO OSCURO Y PROPIO, no el degradado del club: con el degradado claro por detrás las
+ * piezas no se recortaban y la escena se veía lavada.
  */
-function Camara() {
-  const { current: origen } = useRef(new THREE.Vector3(1.1, 2.9, 6.2));
-  useFrame((estado) => {
-    const t = estado.clock.elapsedTime;
-    estado.camera.position.x = origen.x + Math.sin(t * 0.18) * 0.35;
-    estado.camera.position.y = origen.y + Math.sin(t * 0.13) * 0.12;
-    estado.camera.lookAt(1.2, 0.45, 0);
-  });
-  return null;
-}
-
-/**
- * La escena 3D del hero: piezas con volumen, luz de verdad y sombras proyectadas.
- *
- * POR QUÉ 3D DE VERDAD Y NO MÁS CSS. Las versiones anteriores pintaban siluetas planas
- * con perspectiva calculada: por bien iluminadas que estén, una silueta plana nunca
- * parece madera, y el propietario lo dijo con todas las letras mirando el resultado. Lo
- * que faltaba no era técnica de animación, era MATERIAL. Aquí hay luz direccional con
- * sombras, un material con rugosidad y piezas con grosor y bisel: la luz hace el trabajo
- * que antes intentaban hacer tres degradados.
- *
- * POCAS PIEZAS Y GRANDES (ver `escena3d.ts`): ocho bien colocadas y cerca se leen; las
- * treinta y dos serían manchas de cuatro píxeles.
- *
- * SE PAGA EN PESO: Three.js son unos cientos de kilobytes. Va solo en la portada pública
- * y detrás de `Suspense`, así que el texto y los botones se pintan sin esperarlo.
- */
-export function EscenaHero3D() {
+export function EscenaHero3D({ quieto = false }: { quieto?: boolean }) {
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0">
+    <div aria-hidden className="pointer-events-none absolute inset-0 bg-[#081726]">
       <Canvas
         shadows
-        // Tope de resolución en 1,5: en un móvil con pantalla a 3x, renderizar a 3x
-        // triplica el trabajo para una diferencia que no se ve en una escena borrosa.
         dpr={[1, 1.5]}
-        camera={{ position: [1.1, 2.9, 6.2], fov: 34 }}
-        gl={{ antialias: true, alpha: true }}
+        camera={{ position: PLANO_INICIAL.posicion, fov: CAMPO_VISION }}
+        gl={{ antialias: true }}
       >
-        {/* Luz de relleno fría, para que las sombras no sean agujeros negros. */}
-        <hemisphereLight args={["#cfe2f5", "#0b1f33", 1.1]} />
-        {/* LA LUZ QUE MANDA: una sola, alta y de lado, como la lámpara de un club. Es la
-            que dibuja las sombras largas y la que da el volumen. */}
-        <directionalLight
-          position={[-4, 7, 4]}
-          intensity={2.4}
-          castShadow
-          shadow-mapSize={[1024, 1024]}
-          shadow-camera-left={-8}
-          shadow-camera-right={8}
-          shadow-camera-top={8}
-          shadow-camera-bottom={-8}
-        />
-        {/* Contraluz suave: separa las piezas oscuras del fondo oscuro. */}
-        <directionalLight position={[5, 3, -6]} intensity={0.7} color="#7fb2e0" />
-
         <Suspense fallback={null}>
-          <Tablero />
-          <Piezas />
+          <Escena quieto={quieto} />
         </Suspense>
-        <Camara />
-        {/* Niebla del color del hero: funde el fondo del tablero con la cabecera, que es
-            la versión 3D de la viñeta que tenía la escena de CSS. */}
-        <fog attach="fog" args={["#0b1f33", 7, 15]} />
       </Canvas>
     </div>
   );
