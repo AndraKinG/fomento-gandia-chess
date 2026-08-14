@@ -51,7 +51,7 @@ export default function PaginaPublica() {
           casi a ras, con foco, viñeta y profundidad de campo. El degradado del club
           sigue debajo de todo como color de fondo, para que no haya un salto mientras
           carga la escena y para que el texto tenga contraste desde el primer píxel. */}
-      <header className="relative isolate flex min-h-[88vh] items-center overflow-hidden bg-degradado-club px-6 py-20 text-sobre-acento">
+      <header className="relative isolate flex min-h-screen items-center overflow-hidden bg-degradado-club px-6 py-20 text-sobre-acento">
         <EscenaHero3D />
         {/* LA CAPA NEGRA, sobre TODA la cabecera y no un panel alrededor del texto.
             El primer intento fue un recuadro con desenfoque detrás del título y tapaba

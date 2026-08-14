@@ -46,25 +46,23 @@ export const PLANO_MEDIO: Plano = {
 };
 
 /**
- * ACTO 3 — vista alta que LLENA la cabecera, porque el tablero es el fondo.
+ * ACTO 3 — vista alta con el tablero ENTERO en cuadro.
  *
- * NO ES CENITAL PURO, y no por gusto: desde justo encima, para cubrir el ancho de una
- * cabecera apaisada habría que acercarse tanto que solo se verían las filas centrales —
- * que son precisamente las vacías. Inclinando la cámara, el tablero desborda el cuadro
- * por arriba y por abajo (que es lo que se quiere de un fondo) y además las piezas se
- * ven de perfil en vez de como círculos.
+ * AQUÍ HUBO UN TIRA Y AFLOJA QUE CONVIENE DEJAR ESCRITO, porque son dos deseos que no
+ * caben juntos: "que el tablero sea el fondo de la cabecera" pide que desborde hasta los
+ * bordes, y "que no se corte abajo" pide que quepa entero. Es lo uno o lo otro.
  *
- * Aquí el tablero NO cabe entero a propósito: eso es lo que lo convierte en fondo y no
- * en un objeto flotando con márgenes oscuros alrededor.
+ * Gana VERLO ENTERO, que es lo que pidió el propietario después de ver las dos: un
+ * tablero cortado parte por la mitad la primera fila de piezas, y una fila de piezas
+ * serradas se ve como un fallo. Un margen oscuro alrededor, en cambio, se lee como la
+ * mesa sobre la que está el tablero — que es lo que es.
+ *
+ * NO ES CENITAL PURO: desde justo encima las piezas son círculos y no se distingue
+ * ninguna. En escorzo se ven de perfil.
  */
 export const PLANO_FINAL: Plano = {
-  // MÁS ALTO QUE LEJOS, y la proporción importa: subir la cámara sin alejarla hace la
-  // vista más picada, y eso sube el borde CERCANO dentro del cuadro. Con el ángulo
-  // anterior, la primera fila de piezas quedaba cortada por el borde de abajo — el
-  // tablero llenaba la cabecera, sí, pero partiendo las piezas por la mitad. Ahora lo
-  // que se sale de cuadro es el fondo del tablero, que es madera y no molesta.
-  posicion: [0, 9, 5.4],
-  objetivo: [0, 0.2, 0],
+  posicion: [0, 10.6, 7.2],
+  objetivo: [0, 0, 0],
 };
 
 /** Nombre viejo, por si algo lo sigue importando. */

@@ -24,11 +24,13 @@ describe("los tres planos del hero", () => {
     expect(cabeElTablero(PLANO_MEDIO)).toBe(true);
   });
 
-  it("en el FINAL el tablero DESBORDA, que es lo que lo hace fondo", () => {
-    // Al revés que el plano medio: aquí no cabe a propósito. Un tablero con márgenes
-    // oscuros alrededor se lee como un objeto flotando; desbordando, se lee como el
-    // fondo de la cabecera, que es lo que pidió el propietario.
-    expect(cabeElTablero(PLANO_FINAL)).toBe(false);
+  it("en el FINAL el tablero cabe ENTERO: no se corta la primera fila", () => {
+    // Este test estuvo al revés durante una versión, y el cambio fue a propósito: se
+    // probó que desbordara —para que hiciera de fondo hasta los bordes— y lo que pasaba
+    // era que el borde de abajo serraba por la mitad la primera fila de piezas. Una fila
+    // de piezas cortadas se lee como un fallo; un margen oscuro alrededor se lee como la
+    // mesa. Gana verlo entero.
+    expect(cabeElTablero(PLANO_FINAL)).toBe(true);
   });
 
   it("la cámara SUBE en cada acto: nunca se queda entre las piezas", () => {
