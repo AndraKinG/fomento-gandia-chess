@@ -77,3 +77,33 @@ export function tipoDeSprite(sprite: string): TipoPieza | "N" {
   const letra = sprite[1] as TipoPieza | "N";
   return letra;
 }
+
+/**
+ * La base del caballo, torneada como la de las demás.
+ *
+ * POR QUÉ EXISTE: el caballo es la única pieza que no es un sólido de revolución, así que
+ * su silueta sale extruida del SVG — y puesta entera sobre el tablero desentonaba entre
+ * piezas torneadas, que fue exactamente lo que dijo el propietario ("el caballo no me
+ * convence").
+ *
+ * LA SOLUCIÓN ES LA DE UN JUEGO DE VERDAD: un caballo de madera tampoco se tornea entero.
+ * Se tornea la base y se TALLA la cabeza encima. Así que aquí va la base, igual que la de
+ * sus compañeras, y la silueta extruida se queda solo para el cuello y la cabeza, que es
+ * justo la parte que en un juego real también está tallada.
+ */
+export const PERFIL_BASE_CABALLO: PuntoPerfil[] = [
+  { radio: 0, altura: 0 },
+  { radio: 0.32, altura: 0 },
+  { radio: 0.32, altura: 0.06 },
+  { radio: 0.26, altura: 0.11 },
+  { radio: 0.19, altura: 0.16 },
+  { radio: 0.18, altura: 0.24 },
+  { radio: 0.21, altura: 0.28 },
+  { radio: 0.20, altura: 0.31 },
+  { radio: 0, altura: 0.31 },
+];
+
+/** Dónde apoya la cabeza tallada: justo encima de la base. */
+export const ALTURA_BASE_CABALLO = 0.31;
+/** Alto de la cabeza. Sumado a la base deja el caballo entre la torre y el alfil. */
+export const ALTURA_CABEZA_CABALLO = 0.42;

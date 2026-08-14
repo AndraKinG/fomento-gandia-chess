@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { alturaDe, PERFILES, tipoDeSprite, type TipoPieza } from "./piezas3d";
+import {
+  alturaDe,
+  ALTURA_BASE_CABALLO,
+  ALTURA_CABEZA_CABALLO,
+  PERFIL_BASE_CABALLO,
+  PERFILES,
+  tipoDeSprite,
+  type TipoPieza,
+} from "./piezas3d";
 
 const TIPOS: TipoPieza[] = ["P", "R", "B", "Q", "K"];
 
@@ -83,5 +91,37 @@ describe("tipoDeSprite", () => {
 
   it("el caballo se distingue, porque ese no se puede tornear", () => {
     expect(tipoDeSprite("wN")).toBe("N");
+  });
+});
+
+describe("el caballo: base torneada y cabeza tallada", () => {
+  it("su base cumple las mismas reglas que las demás", () => {
+    expect(PERFIL_BASE_CABALLO[0]).toEqual({ radio: 0, altura: 0 });
+    expect(PERFIL_BASE_CABALLO.at(-1)!.radio).toBe(0);
+    const alturas = PERFIL_BASE_CABALLO.map((p) => p.altura);
+    for (let i = 1; i < alturas.length; i++) {
+      expect(alturas[i]).toBeGreaterThanOrEqual(alturas[i - 1]);
+    }
+  });
+
+  it("la base es lo más ancho, como en las torneadas", () => {
+    const abajo = Math.max(
+      ...PERFIL_BASE_CABALLO.filter((p) => p.altura <= 0.06).map((p) => p.radio)
+    );
+    const arriba = Math.max(
+      ...PERFIL_BASE_CABALLO.filter((p) => p.altura > 0.06).map((p) => p.radio)
+    );
+    expect(abajo).toBeGreaterThan(arriba);
+  });
+
+  it("el caballo entero queda entre la torre y el alfil", () => {
+    // Es su sitio en un juego de verdad, y es lo que hace que no desentone en la fila.
+    const total = ALTURA_BASE_CABALLO + ALTURA_CABEZA_CABALLO;
+    expect(total).toBeGreaterThan(alturaDe("R"));
+    expect(total).toBeLessThan(alturaDe("B"));
+  });
+
+  it("no es más ancho que su casilla", () => {
+    expect(Math.max(...PERFIL_BASE_CABALLO.map((p) => p.radio))).toBeLessThan(0.42);
   });
 });

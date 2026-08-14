@@ -15,7 +15,14 @@ import {
   EASE_CAIDA,
   planoQueEncuadra,
 } from "@/lib/inicio/coreografia";
-import { PERFILES, type TipoPieza } from "@/lib/inicio/piezas3d";
+import {
+  ALTURA_BASE_CABALLO,
+  ALTURA_CABEZA_CABALLO,
+  PERFIL_BASE_CABALLO,
+  PERFILES,
+  type PuntoPerfil,
+  type TipoPieza,
+} from "@/lib/inicio/piezas3d";
 
 const JUEGO = "celtic";
 const COLOR = { w: "#e9dfc9", b: "#26313f" } as const;
@@ -39,8 +46,8 @@ const PIEZAS: Colocada[] = [8, 7, 2, 1].flatMap((fila) => {
 });
 
 /** Torneado: el perfil girado sobre su eje, que es como se hace una pieza de verdad. */
-function geometriaTorneada(tipo: TipoPieza): THREE.LatheGeometry {
-  const puntos = PERFILES[tipo].map((p) => new THREE.Vector2(p.radio, p.altura));
+function tornear(perfil: readonly PuntoPerfil[]): THREE.LatheGeometry {
+  const puntos = perfil.map((p) => new THREE.Vector2(p.radio, p.altura));
   const geo = new THREE.LatheGeometry(puntos, 48);
   geo.computeVertexNormals();
   return geo;
@@ -53,6 +60,8 @@ function geometriaTorneada(tipo: TipoPieza): THREE.LatheGeometry {
 function useGeometriaCaballo(): THREE.ExtrudeGeometry | null {
   const cargado = useLoader(SVGLoader, `/piezas/${JUEGO}/wN.svg`);
   return useMemo(() => {
+    // SOLO LA CABEZA, no el caballo entero: el resto lo pone la base torneada. Un caballo
+    // de madera tampoco se talla completo — se tornea la base y se talla la cabeza.
     const shapes = cargado.paths.flatMap((p) => SVGLoader.createShapes(p));
     if (shapes.length === 0) return null;
     const geo = new THREE.ExtrudeGeometry(shapes, {
@@ -65,9 +74,9 @@ function useGeometriaCaballo(): THREE.ExtrudeGeometry | null {
       bevelSize: 18,
       bevelSegments: 3,
     });
-    // El SVG mide 933 de alto y tiene la Y hacia abajo; se lleva a la altura de un alfil
-    // y se apoya en su base.
-    const escala = 0.78 / 933;
+    // El SVG mide 933 de alto y tiene la Y hacia abajo. Se escala a la altura de la
+    // CABEZA, no del caballo entero.
+    const escala = ALTURA_CABEZA_CABALLO / 933;
     geo.scale(escala, -escala, escala);
     geo.computeBoundingBox();
     const c = geo.boundingBox!;
@@ -279,9 +288,10 @@ function Escena({ quieto }: { quieto: boolean }) {
 
   const torneadas = useMemo(() => {
     const m = new Map<TipoPieza, THREE.LatheGeometry>();
-    for (const t of ["P", "R", "B", "Q", "K"] as TipoPieza[]) m.set(t, geometriaTorneada(t));
+    for (const t of ["P", "R", "B", "Q", "K"] as TipoPieza[]) m.set(t, tornear(PERFILES[t]));
     return m;
   }, []);
+  const baseCaballo = useMemo(() => tornear(PERFIL_BASE_CABALLO), []);
 
   return (
     <>
@@ -315,7 +325,8 @@ function Escena({ quieto }: { quieto: boolean }) {
       </mesh>
 
       {PIEZAS.map((p, i) => {
-        const geo = p.tipo === "N" ? caballo : torneadas.get(p.tipo);
+        const esCaballo = p.tipo === "N";
+        const geo = esCaballo ? caballo : torneadas.get(p.tipo as TipoPieza);
         if (!geo) return null;
         return (
           <group
@@ -325,10 +336,25 @@ function Escena({ quieto }: { quieto: boolean }) {
             }}
             position={[p.x, quieto ? 0 : ALTURA_CAIDA, p.z]}
           >
+            {/* EL CABALLO LLEVA BASE TORNEADA, igual que sus compañeras: sin ella era la
+                única pieza plana de la fila y cantaba. Con la base redonda abajo y solo
+                la cabeza tallada encima, se lee como un juego de verdad. */}
+            {esCaballo && (
+              <mesh geometry={baseCaballo} castShadow receiveShadow>
+                <meshPhysicalMaterial
+                  color={COLOR[p.bando]}
+                  roughness={p.bando === "w" ? 0.38 : 0.44}
+                  metalness={0.02}
+                  clearcoat={0.6}
+                  clearcoatRoughness={0.32}
+                />
+              </mesh>
+            )}
             <mesh
               geometry={geo}
               castShadow
               receiveShadow
+              position={[0, esCaballo ? ALTURA_BASE_CABALLO : 0, 0]}
               // Las negras miran a las blancas: un caballo de perfil tiene que mirar al
               // rival, no al mismo lado que el de enfrente.
               rotation={[0, p.bando === "b" ? Math.PI : 0, 0]}
