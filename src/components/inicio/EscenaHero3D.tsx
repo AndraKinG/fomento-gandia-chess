@@ -8,7 +8,7 @@ import gsap from "gsap";
 import {
   ALTURA_CAIDA,
   CAMPO_VISION,
-  PLANO_CENITAL,
+  PLANO_FINAL,
   PLANO_INICIAL,
   PLANO_MEDIO,
   retrasoDeCaida,
@@ -54,11 +54,14 @@ function useGeometriaCaballo(): THREE.ExtrudeGeometry | null {
     const shapes = cargado.paths.flatMap((p) => SVGLoader.createShapes(p));
     if (shapes.length === 0) return null;
     const geo = new THREE.ExtrudeGeometry(shapes, {
-      depth: 120,
+      // GRUESO DE VERDAD. Estaba en 120 sobre 933 de alto: una lámina de un octavo del
+      // tamaño de la pieza, y en pantalla se veía eso — un caballo de papel entre piezas
+      // torneadas. 520 lo deja del ancho de una pieza de verdad.
+      depth: 520,
       bevelEnabled: true,
-      bevelThickness: 18,
-      bevelSize: 12,
-      bevelSegments: 2,
+      bevelThickness: 26,
+      bevelSize: 18,
+      bevelSegments: 3,
     });
     // El SVG mide 933 de alto y tiene la Y hacia abajo; se lleva a la altura de un alfil
     // y se apoya en su base.
@@ -158,12 +161,12 @@ function Coreografia({
     if (quieto) {
       // Sin animación se entrega el plano final directamente: el tablero puesto, visto
       // desde arriba. La información sin el espectáculo.
-      camara.current.x = PLANO_CENITAL.posicion[0];
-      camara.current.y = PLANO_CENITAL.posicion[1];
-      camara.current.z = PLANO_CENITAL.posicion[2];
-      camara.current.mx = PLANO_CENITAL.objetivo[0];
-      camara.current.my = PLANO_CENITAL.objetivo[1];
-      camara.current.mz = PLANO_CENITAL.objetivo[2];
+      camara.current.x = PLANO_FINAL.posicion[0];
+      camara.current.y = PLANO_FINAL.posicion[1];
+      camara.current.z = PLANO_FINAL.posicion[2];
+      camara.current.mx = PLANO_FINAL.objetivo[0];
+      camara.current.my = PLANO_FINAL.objetivo[1];
+      camara.current.mz = PLANO_FINAL.objetivo[2];
       // Las piezas, directamente en su sitio: sin animación no hay caída que animar.
       // eslint-disable-next-line react-hooks/immutability
       for (const g of piezas.current ?? []) if (g) g.position.y = 0;
@@ -206,8 +209,8 @@ function Coreografia({
     tl.to(
       camara.current,
       {
-        x: PLANO_CENITAL.posicion[0], y: PLANO_CENITAL.posicion[1], z: PLANO_CENITAL.posicion[2],
-        my: PLANO_CENITAL.objetivo[1],
+        x: PLANO_FINAL.posicion[0], y: PLANO_FINAL.posicion[1], z: PLANO_FINAL.posicion[2],
+        my: PLANO_FINAL.objetivo[1],
         duration: 2.6,
         ease: "power2.inOut",
       },

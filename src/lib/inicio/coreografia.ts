@@ -46,13 +46,24 @@ export const PLANO_MEDIO: Plano = {
 };
 
 /**
- * ACTO 3 — cenital. Ligeramente descentrada en z para que las piezas no se vean
- * exactamente de canto y se distinga su silueta.
+ * ACTO 3 — vista alta que LLENA la cabecera, porque el tablero es el fondo.
+ *
+ * NO ES CENITAL PURO, y no por gusto: desde justo encima, para cubrir el ancho de una
+ * cabecera apaisada habría que acercarse tanto que solo se verían las filas centrales —
+ * que son precisamente las vacías. Inclinando la cámara, el tablero desborda el cuadro
+ * por arriba y por abajo (que es lo que se quiere de un fondo) y además las piezas se
+ * ven de perfil en vez de como círculos.
+ *
+ * Aquí el tablero NO cabe entero a propósito: eso es lo que lo convierte en fondo y no
+ * en un objeto flotando con márgenes oscuros alrededor.
  */
-export const PLANO_CENITAL: Plano = {
-  posicion: [0, 14, 0.9],
-  objetivo: [0, 0, 0],
+export const PLANO_FINAL: Plano = {
+  posicion: [0, 7.4, 6.2],
+  objetivo: [0, 0.2, 0],
 };
+
+/** Nombre viejo, por si algo lo sigue importando. */
+export const PLANO_CENITAL = PLANO_FINAL;
 
 /** Desde qué altura caen las piezas. Alto para que la caída se vea, no tanto como para
  *  que salgan de cuadro en el plano medio. */

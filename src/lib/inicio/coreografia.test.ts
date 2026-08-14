@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ALTURA_CAIDA,
   cabeElTablero,
-  PLANO_CENITAL,
+  PLANO_FINAL,
   PLANO_INICIAL,
   PLANO_MEDIO,
   retrasoDeCaida,
@@ -22,15 +22,18 @@ describe("los tres planos del hero", () => {
     expect(cabeElTablero(PLANO_MEDIO)).toBe(true);
   });
 
-  it("en el CENITAL también cabe", () => {
-    expect(cabeElTablero(PLANO_CENITAL)).toBe(true);
+  it("en el FINAL el tablero DESBORDA, que es lo que lo hace fondo", () => {
+    // Al revés que el plano medio: aquí no cabe a propósito. Un tablero con márgenes
+    // oscuros alrededor se lee como un objeto flotando; desbordando, se lee como el
+    // fondo de la cabecera, que es lo que pidió el propietario.
+    expect(cabeElTablero(PLANO_FINAL)).toBe(false);
   });
 
   it("la cámara SUBE en cada acto: nunca se queda entre las piezas", () => {
     // El error de la versión anterior: la cámara acabó a la altura de las piezas y
     // salían gigantes y cortadas, tapando el título.
     expect(PLANO_MEDIO.posicion[1]).toBeGreaterThan(PLANO_INICIAL.posicion[1]);
-    expect(PLANO_CENITAL.posicion[1]).toBeGreaterThan(PLANO_MEDIO.posicion[1]);
+    expect(PLANO_FINAL.posicion[1]).toBeGreaterThan(PLANO_MEDIO.posicion[1]);
   });
 
   it("la cámara se ALEJA del tablero en el segundo acto", () => {
@@ -40,11 +43,12 @@ describe("los tres planos del hero", () => {
     expect(dist(PLANO_MEDIO)).toBeGreaterThan(dist(PLANO_INICIAL));
   });
 
-  it("el cenital mira casi recto hacia abajo", () => {
-    // Casi, no del todo: de canto exacto las piezas no se distinguirían.
-    const [x, , z] = PLANO_CENITAL.posicion;
-    expect(Math.hypot(x, z)).toBeLessThan(2);
-    expect(PLANO_CENITAL.posicion[1]).toBeGreaterThan(10);
+  it("el plano final mira desde ALTO pero en escorzo", () => {
+    // Alto para que domine la planta del tablero, en escorzo para que las piezas se
+    // vean de perfil: desde justo encima son círculos y no se distingue ninguna.
+    const [x, y, z] = PLANO_FINAL.posicion;
+    expect(y).toBeGreaterThan(Math.hypot(x, z)); // más alto que lejos: es vista alta
+    expect(Math.hypot(x, z)).toBeGreaterThan(3); // pero no cenital pura
   });
 
   it("las piezas caen desde encima del tablero pero sin salirse de cuadro", () => {

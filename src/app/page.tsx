@@ -53,19 +53,19 @@ export default function PaginaPublica() {
           carga la escena y para que el texto tenga contraste desde el primer píxel. */}
       <header className="relative isolate flex min-h-[88vh] items-center overflow-hidden bg-degradado-club px-6 py-20 text-sobre-acento">
         <EscenaHero3D />
-        {/* EL FILTRO DETRÁS DEL TEXTO (lo pidió el propietario viendo el hero): el
-            título va encima del tablero, y sobre las casillas claras el blanco se comía
-            a sí mismo. Es un panel oscuro translúcido con desenfoque por detrás — el
-            mismo recurso que usan iOS y macOS para poner texto sobre una foto: no tapa
-            la escena, la atenúa lo justo.
+        {/* LA CAPA NEGRA, sobre TODA la cabecera y no un panel alrededor del texto.
+            El primer intento fue un recuadro con desenfoque detrás del título y tapaba
+            medio tablero, que era peor que el problema que venía a resolver. Así el
+            tablero se comporta como lo que es —el fondo de la cabecera— y la capa solo
+            lo baja de intensidad para que el texto se lea encima.
 
-            `supports-[backdrop-filter]`: donde el navegador no sepa desenfocar, el panel
-            se queda algo más opaco. Antes de eso el texto se leía por suerte. */}
+            Más oscura arriba y abajo que en el centro: los bordes es donde el texto y el
+            resto de la página se encuentran con la escena. */}
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(6,16,28,0.86)_0%,rgba(6,16,28,0.55)_45%,rgba(6,16,28,0.88)_100%)]"
+        />
         <div className="relative mx-auto w-full max-w-3xl">
-          <div
-            aria-hidden
-            className="absolute -inset-x-6 -inset-y-8 rounded-3xl bg-[#081726]/65 supports-[backdrop-filter]:bg-[#081726]/40 supports-[backdrop-filter]:backdrop-blur-md sm:-inset-x-10"
-          />
           <div className="relative">
           {/* La marca (el caballo) y no el mural entero: el mural va grande justo
               debajo de la cabecera, y repetirlo aquí a 128px era enseñarlo dos
