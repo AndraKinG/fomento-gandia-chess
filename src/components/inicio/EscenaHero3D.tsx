@@ -85,6 +85,30 @@ function useTexturaTablero(): THREE.CanvasTexture {
         ctx.fillRect(c * lado, f * lado, lado, lado);
       }
     }
+    // LA VETA. Un damero de color plano se lee como un dibujo; unas rayas finas y
+    // desiguales bastan para que se lea como una superficie con material. Es el mismo
+    // truco que el grano de una foto: la irregularidad es lo que dice "esto es real".
+    ctx.globalAlpha = 0.055;
+    ctx.strokeStyle = "#000";
+    // CON SEMILLA FIJA y no con `Math.random()`, por dos motivos: el compilador de React
+    // no admite funciones impuras durante el pintado, y además así la veta es la MISMA en
+    // cada carga — un tablero que cambia de grano al recargar se nota, aunque nadie sepa
+    // decir por qué.
+    let semilla = 20260814;
+    const azar = () => {
+      semilla = (semilla * 1103515245 + 12345) % 2147483648;
+      return semilla / 2147483648;
+    };
+    for (let i = 0; i < 420; i++) {
+      const y = azar() * 1024;
+      ctx.lineWidth = 0.5 + azar() * 1.6;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      // Ligeramente ondulada: una veta recta parece una raya impresa.
+      ctx.bezierCurveTo(340, y + (azar() - 0.5) * 7, 680, y + (azar() - 0.5) * 7, 1024, y);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
     const t = new THREE.CanvasTexture(lienzo);
     t.colorSpace = THREE.SRGBColorSpace;
     // Sin anisotropía, las casillas del fondo se convierten en papilla al verse en
@@ -167,10 +191,12 @@ function Coreografia({
         { y: ALTURA_CAIDA },
         {
           y: 0,
-          duration: 0.75,
-          // Rebote seco al aterrizar: una pieza de madera sobre un tablero no frena
-          // suave, da un golpe.
-          ease: "bounce.out",
+          duration: 1.05,
+          // MÁS SUAVE QUE UN REBOTE (lo pidió el propietario viéndolo): `bounce.out`
+          // da un pique de pelota de goma, tres botes y a correr. Una pieza de madera
+          // que alguien POSA sobre el tablero frena y se asienta. `back.out(1.15)` baja,
+          // se pasa un pelo y vuelve: un solo asentamiento, que es lo que hace la mano.
+          ease: "back.out(1.15)",
         },
         1.1 + PIEZAS[i].retraso
       );
@@ -231,9 +257,17 @@ function Escena({ quieto }: { quieto: boolean }) {
       {/* Contraluz: separa las piezas oscuras del fondo oscuro. */}
       <directionalLight position={[6, 4, -7]} intensity={0.8} color="#8fc0ea" />
 
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      {/* EL TABLERO CON GROSOR Y MARCO. Un plano sin canto se lee como una imagen
+          pegada al suelo; una caja con su marco de madera alrededor se lee como un
+          objeto que está encima de una mesa. Es de lo que más cambia la sensación de
+          realidad, y cuesta dos mallas. */}
+      <mesh position={[0, -0.13, 0]} receiveShadow castShadow>
+        <boxGeometry args={[9.1, 0.26, 9.1]} />
+        <meshStandardMaterial color="#3d2f22" roughness={0.7} metalness={0.02} />
+      </mesh>
+      <mesh position={[0, 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[8, 8]} />
-        <meshStandardMaterial map={textura} roughness={0.8} metalness={0} />
+        <meshStandardMaterial map={textura} roughness={0.62} metalness={0.02} />
       </mesh>
 
       {PIEZAS.map((p, i) => {
@@ -255,10 +289,17 @@ function Escena({ quieto }: { quieto: boolean }) {
               // rival, no al mismo lado que el de enfrente.
               rotation={[0, p.bando === "b" ? Math.PI : 0, 0]}
             >
-              <meshStandardMaterial
+              {/* `meshPhysicalMaterial` con `clearcoat`: una capa de barniz por encima
+                  del color, que es exactamente lo que tiene una pieza de ajedrez de
+                  verdad. El brillo especular que aporta es lo que separa "madera
+                  barnizada" de "plástico mate", y desde arriba —donde acaba el plano—
+                  es lo único que da relieve a los anillos del torneado. */}
+              <meshPhysicalMaterial
                 color={COLOR[p.bando]}
-                roughness={0.55}
-                metalness={0.05}
+                roughness={p.bando === "w" ? 0.38 : 0.44}
+                metalness={0.02}
+                clearcoat={0.6}
+                clearcoatRoughness={0.32}
                 side={THREE.DoubleSide}
               />
             </mesh>

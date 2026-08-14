@@ -53,7 +53,20 @@ export default function PaginaPublica() {
           carga la escena y para que el texto tenga contraste desde el primer píxel. */}
       <header className="relative isolate flex min-h-[88vh] items-center overflow-hidden bg-degradado-club px-6 py-20 text-sobre-acento">
         <EscenaHero3D />
+        {/* EL FILTRO DETRÁS DEL TEXTO (lo pidió el propietario viendo el hero): el
+            título va encima del tablero, y sobre las casillas claras el blanco se comía
+            a sí mismo. Es un panel oscuro translúcido con desenfoque por detrás — el
+            mismo recurso que usan iOS y macOS para poner texto sobre una foto: no tapa
+            la escena, la atenúa lo justo.
+
+            `supports-[backdrop-filter]`: donde el navegador no sepa desenfocar, el panel
+            se queda algo más opaco. Antes de eso el texto se leía por suerte. */}
         <div className="relative mx-auto w-full max-w-3xl">
+          <div
+            aria-hidden
+            className="absolute -inset-x-6 -inset-y-8 rounded-3xl bg-[#081726]/65 supports-[backdrop-filter]:bg-[#081726]/40 supports-[backdrop-filter]:backdrop-blur-md sm:-inset-x-10"
+          />
+          <div className="relative">
           {/* La marca (el caballo) y no el mural entero: el mural va grande justo
               debajo de la cabecera, y repetirlo aquí a 128px era enseñarlo dos
               veces, una de ellas ilegible. */}
@@ -80,6 +93,7 @@ export default function PaginaPublica() {
             >
               Quiero jugar
             </Link>
+          </div>
           </div>
         </div>
       </header>
