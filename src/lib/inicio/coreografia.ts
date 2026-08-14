@@ -126,3 +126,120 @@ export const EASES_QUE_SE_PASAN = ["back", "bounce", "elastic"] as const;
 export function sePasaDelDestino(ease: string): boolean {
   return EASES_QUE_SE_PASAN.some((f) => ease.startsWith(f));
 }
+
+/* ---------------------------------------------------------------------------
+ * ENCUADRE DE VERDAD
+ *
+ * `cabeElTablero` de arriba está MAL para lo que se usaba, y costó tres vueltas
+ * descubrirlo: mide el alto visible a la distancia del CENTRO del tablero y lo compara
+ * con su tamaño. Pero un tablero visto en escorzo no está a una sola distancia — su
+ * borde cercano está mucho más próximo a la cámara y por eso se proyecta más abajo y más
+ * grande, saliéndose del cuadro. Los tests decían "cabe" y en pantalla se cortaba la
+ * primera fila.
+ *
+ * Lo de aquí abajo proyecta LAS CUATRO ESQUINAS de verdad y calcula la distancia a la
+ * que hay que poner la cámara, en vez de probar números a ojo.
+ * ------------------------------------------------------------------------ */
+
+type Vec3 = [number, number, number];
+
+const resta = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const escalar = (a: Vec3, k: number): Vec3 => [a[0] * k, a[1] * k, a[2] * k];
+const suma = (a: Vec3, b: Vec3): Vec3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+const punto = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cruz = (a: Vec3, b: Vec3): Vec3 => [
+  a[1] * b[2] - a[2] * b[1],
+  a[2] * b[0] - a[0] * b[2],
+  a[0] * b[1] - a[1] * b[0],
+];
+const largo = (a: Vec3): number => Math.sqrt(punto(a, a));
+const normal = (a: Vec3): Vec3 => escalar(a, 1 / (largo(a) || 1));
+
+/** El tablero con su marco, un pelo más para dejar aire. */
+const MEDIO_LADO = 4.75;
+
+/** Las cuatro esquinas del tablero, a ras de suelo. */
+export const ESQUINAS: Vec3[] = [
+  [-MEDIO_LADO, 0, -MEDIO_LADO],
+  [MEDIO_LADO, 0, -MEDIO_LADO],
+  [-MEDIO_LADO, 0, MEDIO_LADO],
+  [MEDIO_LADO, 0, MEDIO_LADO],
+];
+
+/**
+ * Cuánto se sale del cuadro el punto que peor esté, en tanto por uno.
+ *
+ * 1 es justo el borde; por encima de 1, fuera. Se mira el alto y el ancho por separado,
+ * porque en una pantalla apaisada aprieta el alto y en un móvil vertical el ancho.
+ */
+export function desbordeMaximo(
+  plano: Plano,
+  aspecto: number,
+  campoVision = CAMPO_VISION,
+  /**
+   * Solo mirar el alto.
+   *
+   * ES LA REGLA BUENA para el hero, y sale de las dos quejas juntas: "el tablero debe ser
+   * el fondo de la cabecera" y "se corta abajo". Ajustando SOLO en vertical, los bordes
+   * cercano y lejano —donde están las piezas— siempre entran, y lo que se sale es por los
+   * lados, que es tablero vacío y se lee como que la mesa sigue más allá del cuadro.
+   *
+   * Ajustar también el ancho obligaba a alejarse tanto en un móvil vertical (30 unidades
+   * contra 14) que el tablero quedaba diminuto con medio hueco negro arriba y abajo.
+   */
+  soloVertical = false
+): number {
+  const cam = plano.posicion as Vec3;
+  const adelante = normal(resta(plano.objetivo as Vec3, cam));
+  const derecha = normal(cruz(adelante, [0, 1, 0]));
+  const arriba = cruz(derecha, adelante);
+  const tanV = Math.tan(((campoVision / 2) * Math.PI) / 180);
+  const tanH = tanV * aspecto;
+
+  let peor = 0;
+  for (const e of ESQUINAS) {
+    const v = resta(e, cam);
+    const fondo = punto(v, adelante);
+    if (fondo <= 0.001) return Infinity; // detrás de la cámara
+    peor = Math.max(peor, Math.abs(punto(v, arriba)) / (fondo * tanV));
+    if (!soloVertical) peor = Math.max(peor, Math.abs(punto(v, derecha)) / (fondo * tanH));
+  }
+  return peor;
+}
+
+/**
+ * La cámara, colocada a la distancia JUSTA para que el tablero entre entero.
+ *
+ * Conserva la DIRECCIÓN del plano que se le pase —el ángulo picado es una decisión de
+ * encuadre— y solo ajusta cuánto se aleja. Búsqueda binaria en vez de fórmula: la
+ * proyección de un plano en escorzo no se despeja en una línea, y veinte iteraciones de
+ * esto son microsegundos.
+ *
+ * `margen` deja aire alrededor: 0,92 significa que el tablero ocupa el 92% del cuadro.
+ */
+export function planoQueEncuadra(
+  base: Plano,
+  aspecto: number,
+  margen = 0.92,
+  campoVision = CAMPO_VISION,
+  soloVertical = false
+): Plano {
+  const objetivo = base.objetivo as Vec3;
+  const direccion = normal(resta(base.posicion as Vec3, objetivo));
+
+  let cerca = 1;
+  let lejos = 200;
+  for (let i = 0; i < 40; i++) {
+    const medio = (cerca + lejos) / 2;
+    const prueba: Plano = {
+      posicion: suma(objetivo, escalar(direccion, medio)) as [number, number, number],
+      objetivo: base.objetivo,
+    };
+    if (desbordeMaximo(prueba, aspecto, campoVision, soloVertical) > margen) cerca = medio;
+    else lejos = medio;
+  }
+  return {
+    posicion: suma(objetivo, escalar(direccion, lejos)) as [number, number, number],
+    objetivo: base.objetivo,
+  };
+}

@@ -8,6 +8,8 @@ import {
   retrasoDeCaida,
   EASE_CAIDA,
   sePasaDelDestino,
+  desbordeMaximo,
+  planoQueEncuadra,
 } from "./coreografia";
 
 describe("los tres planos del hero", () => {
@@ -105,5 +107,80 @@ describe("la curva de la caída", () => {
     for (const e of ["power2.out", "power3.out", "sine.out", "expo.out", "none"]) {
       expect(sePasaDelDestino(e)).toBe(false);
     }
+  });
+});
+
+describe("encuadre de verdad: proyectando las esquinas", () => {
+  // ESTOS TESTS SON LA RESPUESTA A TRES VUELTAS FALLIDAS. `cabeElTablero` medía el alto
+  // visible a la distancia del CENTRO del tablero, pero el borde cercano está mucho más
+  // próximo a la cámara y se proyecta fuera: los tests decían "cabe" y en pantalla se
+  // cortaba la primera fila de piezas, una y otra vez.
+
+  const APAISADA = 1905 / 720; // el monitor del propietario
+  const MOVIL = 390 / 780; // un teléfono en vertical
+
+  it("el plano final encuadra el tablero entero en pantalla apaisada", () => {
+    const p = planoQueEncuadra(PLANO_FINAL, APAISADA);
+    expect(desbordeMaximo(p, APAISADA)).toBeLessThanOrEqual(1);
+  });
+
+  it("y también en un móvil en vertical, donde aprieta el ANCHO y no el alto", () => {
+    const p = planoQueEncuadra(PLANO_FINAL, MOVIL);
+    expect(desbordeMaximo(p, MOVIL)).toBeLessThanOrEqual(1);
+  });
+
+  it("en un móvil la cámara tiene que alejarse MÁS que en un monitor", () => {
+    // Es la razón de que esto se calcule en vez de fijarse: con una sola distancia, o el
+    // tablero sale diminuto en el monitor o se sale por los lados en el teléfono.
+    const dist = (p: ReturnType<typeof planoQueEncuadra>) =>
+      Math.hypot(...p.posicion.map((v, i) => v - p.objetivo[i]));
+    expect(dist(planoQueEncuadra(PLANO_FINAL, MOVIL))).toBeGreaterThan(
+      dist(planoQueEncuadra(PLANO_FINAL, APAISADA))
+    );
+  });
+
+  it("conserva el ángulo: solo cambia lo lejos que está, no desde dónde mira", () => {
+    const p = planoQueEncuadra(PLANO_FINAL, APAISADA);
+    const anguloDe = (v: readonly number[]) => Math.atan2(v[1], Math.hypot(v[0], v[2]));
+    expect(anguloDe(p.posicion)).toBeCloseTo(anguloDe(PLANO_FINAL.posicion), 4);
+  });
+
+  it("no deja el tablero diminuto: llena al menos tres cuartos del cuadro", () => {
+    // Sin esto, "que quepa" se cumpliría poniendo la cámara a doscientas unidades.
+    const p = planoQueEncuadra(PLANO_FINAL, APAISADA);
+    expect(desbordeMaximo(p, APAISADA)).toBeGreaterThan(0.75);
+  });
+
+  it("detecta cuando algo queda detrás de la cámara", () => {
+    expect(desbordeMaximo({ posicion: [0, 0, 0], objetivo: [0, 0, -1] }, 1.5)).toBe(Infinity);
+  });
+});
+
+describe("ajuste solo vertical, que es la regla del hero", () => {
+  const APAISADA = 1905 / 720;
+  const MOVIL = 390 / 780;
+
+  it("en vertical entra siempre: nunca se corta la primera fila", () => {
+    for (const a of [APAISADA, MOVIL, 1440 / 900, 820 / 1180]) {
+      const p = planoQueEncuadra(PLANO_FINAL, a, 0.94, undefined, true);
+      expect(desbordeMaximo(p, a, undefined, true)).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("en un móvil el tablero desborda POR LOS LADOS, que es lo que se quiere", () => {
+    // Tablero vacío saliéndose por los lados se lee como que la mesa sigue; piezas
+    // cortadas por abajo se leen como un fallo.
+    const p = planoQueEncuadra(PLANO_FINAL, MOVIL, 0.94, undefined, true);
+    expect(desbordeMaximo(p, MOVIL)).toBeGreaterThan(1);
+  });
+
+  it("y así la cámara NO se aleja de más en el móvil", () => {
+    // Ajustando también el ancho, en un móvil vertical había que irse a 30 unidades
+    // contra 14 en un monitor: el tablero quedaba diminuto.
+    const dist = (a: number) => {
+      const p = planoQueEncuadra(PLANO_FINAL, a, 0.94, undefined, true);
+      return Math.hypot(...p.posicion.map((v, i) => v - p.objetivo[i]));
+    };
+    expect(dist(MOVIL)).toBeLessThan(dist(APAISADA) * 1.35);
   });
 });

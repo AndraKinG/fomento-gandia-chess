@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useRef } from "react";
-import { Canvas, useFrame, useLoader } from "@react-three/fiber";
+import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js";
 import gsap from "gsap";
@@ -13,6 +13,7 @@ import {
   PLANO_MEDIO,
   retrasoDeCaida,
   EASE_CAIDA,
+  planoQueEncuadra,
 } from "@/lib/inicio/coreografia";
 import { PERFILES, type TipoPieza } from "@/lib/inicio/piezas3d";
 
@@ -139,6 +140,18 @@ function Coreografia({
   quieto: boolean;
 }) {
 
+  // EL ENCUADRE SE CALCULA CON LA PROPORCIÓN REAL DE LA VENTANA, no se fija a ojo. Es
+  // lo que arregla el corte de abajo de una vez: la distancia sale de proyectar las
+  // cuatro esquinas del tablero (ver `planoQueEncuadra`), y en un móvil vertical la
+  // cámara se aleja más porque ahí aprieta el ancho y no el alto. Con una distancia
+  // fija, o el tablero sale diminuto en el monitor o se sale por los lados en el
+  // teléfono.
+  const { size } = useThree();
+  const aspecto = size.width / Math.max(1, size.height);
+  const planoMedio = useMemo(() => planoQueEncuadra(PLANO_MEDIO, aspecto, 0.86, undefined, true), [aspecto]);
+  const planoFinal = useMemo(() => planoQueEncuadra(PLANO_FINAL, aspecto, 0.94, undefined, true), [aspecto]);
+  const linea = useRef<gsap.core.Timeline | null>(null);
+
   const camara = useRef({
     x: PLANO_INICIAL.posicion[0],
     y: PLANO_INICIAL.posicion[1],
@@ -162,12 +175,12 @@ function Coreografia({
     if (quieto) {
       // Sin animación se entrega el plano final directamente: el tablero puesto, visto
       // desde arriba. La información sin el espectáculo.
-      camara.current.x = PLANO_FINAL.posicion[0];
-      camara.current.y = PLANO_FINAL.posicion[1];
-      camara.current.z = PLANO_FINAL.posicion[2];
-      camara.current.mx = PLANO_FINAL.objetivo[0];
-      camara.current.my = PLANO_FINAL.objetivo[1];
-      camara.current.mz = PLANO_FINAL.objetivo[2];
+      camara.current.x = planoFinal.posicion[0];
+      camara.current.y = planoFinal.posicion[1];
+      camara.current.z = planoFinal.posicion[2];
+      camara.current.mx = planoFinal.objetivo[0];
+      camara.current.my = planoFinal.objetivo[1];
+      camara.current.mz = planoFinal.objetivo[2];
       // Las piezas, directamente en su sitio: sin animación no hay caída que animar.
       // eslint-disable-next-line react-hooks/immutability
       for (const g of piezas.current ?? []) if (g) g.position.y = 0;
@@ -178,8 +191,8 @@ function Coreografia({
 
     // ACTO 1: la cámara va hacia atrás y aparece el tablero.
     tl.to(camara.current, {
-      x: PLANO_MEDIO.posicion[0], y: PLANO_MEDIO.posicion[1], z: PLANO_MEDIO.posicion[2],
-      my: PLANO_MEDIO.objetivo[1],
+      x: planoMedio.posicion[0], y: planoMedio.posicion[1], z: planoMedio.posicion[2],
+      my: planoMedio.objetivo[1],
       duration: 2.2,
       ease: "power2.inOut",
     });
@@ -215,18 +228,40 @@ function Coreografia({
     tl.to(
       camara.current,
       {
-        x: PLANO_FINAL.posicion[0], y: PLANO_FINAL.posicion[1], z: PLANO_FINAL.posicion[2],
-        my: PLANO_FINAL.objetivo[1],
+        x: planoFinal.posicion[0], y: planoFinal.posicion[1], z: planoFinal.posicion[2],
+        my: planoFinal.objetivo[1],
         duration: 2.6,
         ease: "power2.inOut",
       },
       "+=0.5"
     );
 
+    linea.current = tl;
     return () => {
       tl.kill();
+      linea.current = null;
     };
+    // `planoMedio`/`planoFinal` NO van en las dependencias a propósito: cambian con cada
+    // redimensionado —y en un móvil eso pasa solo con esconder la barra del navegador—,
+    // y rehacer la línea de tiempo reiniciaría la animación entera cada vez. El
+    // reencuadre en caliente lo hace el efecto de abajo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [piezas, quieto]);
+
+  // REENCUADRE AL REDIMENSIONAR, pero solo cuando la coreografía YA ha terminado: durante
+  // la animación manda la línea de tiempo, y dos cosas moviendo la cámara a la vez es un
+  // tirón asegurado.
+  useEffect(() => {
+    if (quieto) return;
+    const tl = linea.current;
+    if (!tl || tl.progress() < 1) return;
+    gsap.to(camara.current, {
+      x: planoFinal.posicion[0], y: planoFinal.posicion[1], z: planoFinal.posicion[2],
+      my: planoFinal.objetivo[1],
+      duration: 0.5,
+      ease: "power2.out",
+    });
+  }, [planoFinal, quieto]);
 
   useFrame((estado) => {
     const { x, y, z, mx, my, mz } = camara.current;
