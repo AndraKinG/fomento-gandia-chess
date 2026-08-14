@@ -47,7 +47,6 @@ const JUEGO = "celtic";
  */
 const INCLINACION_INICIAL = 62;
 const INCLINACION_FINAL = 38;
-
 /**
  * El momento de la portada: un tablero EN PERSPECTIVA donde se juega una partida al
  * ritmo de tu scroll.
