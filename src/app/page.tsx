@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { Escudo } from "@/components/ui/Escudo";
+import { Revelar } from "@/components/inicio/Revelar";
+import { Parallax } from "@/components/inicio/Parallax";
+import { TableroMiniatura } from "@/components/inicio/TableroMiniatura";
 
 /**
  * Web pública del club. Esqueleto: existe para que la zona de socios pueda vivir
@@ -71,17 +74,22 @@ export default function PaginaPublica() {
           prefijo es la zona de socios y el proxy manda la petición al login
           (pasó: el optimizador de imágenes recibía el HTML del login). */}
       <section className="mx-auto max-w-3xl px-6 pt-12">
-        <Image
-          src="/logo-club.jpg"
-          alt="Logo del Club de Ajedrez Fomento Gandia: el Puente del Fomento construido con piezas de ajedrez"
-          width={1128}
-          height={712}
-          className="w-full rounded-2xl border border-borde shadow-sm"
-          priority
-        />
+        {/* El marco recorta, así que el parallax de dentro no deja franjas. La imagen
+            sigue siendo `priority`: es lo primero grande que se ve y no puede esperar
+            a que cargue una animación. */}
+        <Parallax className="rounded-2xl border border-borde shadow-sm" recorrido={36}>
+          <Image
+            src="/logo-club.jpg"
+            alt="Logo del Club de Ajedrez Fomento Gandia: el Puente del Fomento construido con piezas de ajedrez"
+            width={1128}
+            height={712}
+            className="w-full"
+            priority
+          />
+        </Parallax>
       </section>
 
-      <section className="mx-auto max-w-3xl px-6 py-12">
+      <Revelar className="mx-auto max-w-3xl px-6 py-12">
         <h2 className="text-2xl font-bold text-tinta">Competimos todo el año</h2>
         <p className="mt-3 text-tinta-suave">
           Jugamos los Interclubs de la Federación de Ajedrez de la Comunitat
@@ -99,9 +107,13 @@ export default function PaginaPublica() {
             </li>
           ))}
         </ul>
-      </section>
+      </Revelar>
 
-      <section className="mx-auto max-w-3xl px-6 pb-12">
+      {/* EL MOMENTO DE LA PORTADA. Va justo detrás de "competimos todo el año" porque
+          es su demostración: acabas de leer que el club juega, y aquí ves ajedrez. */}
+      <TableroMiniatura />
+
+      <Revelar className="mx-auto max-w-3xl px-6 pb-12">
         <h2 className="text-2xl font-bold text-tinta">Dónde jugamos</h2>
         <div className="mt-4 rounded-2xl border border-borde bg-tarjeta p-5 shadow-sm">
           <p className="font-semibold text-tinta">
@@ -123,9 +135,9 @@ export default function PaginaPublica() {
             📍 Cómo llegar (Google Maps)
           </a>
         </div>
-      </section>
+      </Revelar>
 
-      <section id="unirse" className="mx-auto max-w-3xl px-6 pb-16">
+      <Revelar id="unirse" className="mx-auto max-w-3xl px-6 pb-16">
         <div className="rounded-2xl border border-borde-acento bg-tarjeta-suave p-6">
           <h2 className="text-2xl font-bold text-tinta">¿Quieres unirte?</h2>
           <p className="mt-3 text-tinta-suave">
@@ -148,7 +160,7 @@ export default function PaginaPublica() {
             .
           </p>
         </div>
-      </section>
+      </Revelar>
 
       <footer className="border-t border-borde px-6 py-8">
         <p className="mx-auto max-w-3xl text-sm text-tinta-suave">
