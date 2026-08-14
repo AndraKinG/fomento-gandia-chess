@@ -6,6 +6,8 @@ import { Revelar } from "@/components/inicio/Revelar";
 import { Parallax } from "@/components/inicio/Parallax";
 import { TableroMiniatura } from "@/components/inicio/TableroMiniatura";
 import { ScrollSuave } from "@/components/inicio/ScrollSuave";
+import { EscenaHero } from "@/components/inicio/EscenaHero";
+import { Linea, TituloHero } from "@/components/inicio/TituloHero";
 
 /**
  * Web pública del club. Esqueleto: existe para que la zona de socios pueda vivir
@@ -45,15 +47,27 @@ export default function PaginaPublica() {
       {/* El scroll con inercia, SOLO en la web pública: dentro de /club hay tableros y
           relojes corriendo, y ahí la inercia estorba. No pinta nada. */}
       <ScrollSuave />
-      <header className="bg-degradado-club px-6 py-16 text-sobre-acento">
-        <div className="mx-auto max-w-3xl">
+      {/* EL HERO ES UNA ESCENA, no un degradado: detrás hay una mesa de ajedrez vista
+          casi a ras, con foco, viñeta y profundidad de campo. El degradado del club
+          sigue debajo de todo como color de fondo, para que no haya un salto mientras
+          carga la escena y para que el texto tenga contraste desde el primer píxel. */}
+      <header className="relative isolate flex min-h-[88vh] items-center overflow-hidden bg-degradado-club px-6 py-20 text-sobre-acento">
+        <EscenaHero />
+        <div className="relative mx-auto w-full max-w-3xl">
           {/* La marca (el caballo) y no el mural entero: el mural va grande justo
               debajo de la cabecera, y repetirlo aquí a 128px era enseñarlo dos
               veces, una de ellas ilegible. */}
           <Escudo version="marca" lado={96} priority />
-          <h1 className="mt-4 text-4xl font-bold sm:text-5xl">Fomento de Gandia</h1>
-          <p className="mt-3 text-lg opacity-90">Club de ajedrez · Gandia</p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <TituloHero>
+            <h1 className="mt-4 text-5xl font-bold tracking-tight drop-shadow-sm sm:text-7xl">
+              <Linea>Fomento</Linea>
+              <Linea>de Gandia</Linea>
+            </h1>
+            <p className="mt-4 text-lg opacity-90">
+              <Linea>Club de ajedrez · Gandia</Linea>
+            </p>
+          </TituloHero>
+          <div className="mt-10 flex flex-wrap gap-3">
             <Link
               href="/login"
               className="rounded-xl bg-sobre-acento px-5 py-3 font-semibold text-acento-fuerte transition duration-100 hover:brightness-95 active:scale-[0.97]"
