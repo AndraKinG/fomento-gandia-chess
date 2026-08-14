@@ -6,7 +6,7 @@ import { Revelar } from "@/components/inicio/Revelar";
 import { Parallax } from "@/components/inicio/Parallax";
 import { TableroMiniatura } from "@/components/inicio/TableroMiniatura";
 import { ScrollSuave } from "@/components/inicio/ScrollSuave";
-import { EscenaHero } from "@/components/inicio/EscenaHero";
+import { EscenaHero3D } from "@/components/inicio/EscenaHero3D";
 import { Linea, TituloHero } from "@/components/inicio/TituloHero";
 
 /**
@@ -52,7 +52,7 @@ export default function PaginaPublica() {
           sigue debajo de todo como color de fondo, para que no haya un salto mientras
           carga la escena y para que el texto tenga contraste desde el primer píxel. */}
       <header className="relative isolate flex min-h-[88vh] items-center overflow-hidden bg-degradado-club px-6 py-20 text-sobre-acento">
-        <EscenaHero />
+        <EscenaHero3D />
         <div className="relative mx-auto w-full max-w-3xl">
           {/* La marca (el caballo) y no el mural entero: el mural va grande justo
               debajo de la cabecera, y repetirlo aquí a 128px era enseñarlo dos
