@@ -12,6 +12,7 @@ import {
   PLANO_INICIAL,
   PLANO_MEDIO,
   retrasoDeCaida,
+  EASE_CAIDA,
 } from "@/lib/inicio/coreografia";
 import { PERFILES, type TipoPieza } from "@/lib/inicio/piezas3d";
 
@@ -194,12 +195,17 @@ function Coreografia({
         { y: ALTURA_CAIDA },
         {
           y: 0,
-          duration: 1.05,
-          // MÁS SUAVE QUE UN REBOTE (lo pidió el propietario viéndolo): `bounce.out`
-          // da un pique de pelota de goma, tres botes y a correr. Una pieza de madera
-          // que alguien POSA sobre el tablero frena y se asienta. `back.out(1.15)` baja,
-          // se pasa un pelo y vuelve: un solo asentamiento, que es lo que hace la mano.
-          ease: "back.out(1.15)",
+          duration: 1.5,
+          // NADA DE EASES QUE SE PASAN DEL DESTINO, y esto es lo que fallaba: `back.out`
+          // rebasa el valor final y vuelve. Como el valor final es la SUPERFICIE del
+          // tablero, "pasarse" significa meterse dentro — el propietario lo describió
+          // exactamente así, "se comen un poco el tablero y luego se ponen bien".
+          // `bounce.out` tenía el mismo problema y encima botaba.
+          //
+          // `power3.out` solo frena: la pieza baja deprisa, desacelera y se para EN el
+          // tablero, sin atravesarlo nunca. Es además lo que hace una pieza de verdad
+          // cuando la posas.
+          ease: EASE_CAIDA,
         },
         1.1 + PIEZAS[i].retraso
       );

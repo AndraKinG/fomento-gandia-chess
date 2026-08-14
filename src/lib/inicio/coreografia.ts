@@ -58,7 +58,12 @@ export const PLANO_MEDIO: Plano = {
  * en un objeto flotando con márgenes oscuros alrededor.
  */
 export const PLANO_FINAL: Plano = {
-  posicion: [0, 7.4, 6.2],
+  // MÁS ALTO QUE LEJOS, y la proporción importa: subir la cámara sin alejarla hace la
+  // vista más picada, y eso sube el borde CERCANO dentro del cuadro. Con el ángulo
+  // anterior, la primera fila de piezas quedaba cortada por el borde de abajo — el
+  // tablero llenaba la cabecera, sí, pero partiendo las piezas por la mitad. Ahora lo
+  // que se sale de cuadro es el fondo del tablero, que es madera y no molesta.
+  posicion: [0, 9, 5.4],
   objetivo: [0, 0.2, 0],
 };
 
@@ -83,7 +88,7 @@ export function retrasoDeCaida(columna: number, fila: number): number {
   const ordenFila = fila >= 7 ? 8 - fila : 2 + (2 - fila) + 1;
   // Dentro de la fila, de los bordes al centro.
   const desdeElBorde = Math.min(columna, 7 - columna);
-  return ordenFila * 0.26 + desdeElBorde * 0.07;
+  return ordenFila * 0.34 + desdeElBorde * 0.09;
 }
 
 /**
@@ -100,4 +105,26 @@ export function cabeElTablero(plano: Plano, campoVision = CAMPO_VISION): boolean
   const mitadAngulo = ((campoVision / 2) * Math.PI) / 180;
   const alturaVisible = 2 * distancia * Math.tan(mitadAngulo);
   return alturaVisible >= LADO_TABLERO;
+}
+
+/**
+ * La curva con la que cae una pieza, y las que NO valen.
+ *
+ * ESTÁ AQUÍ Y CON TEST porque es un error fácil de reintroducir y difícil de ver: las
+ * curvas de la familia `back` y `bounce` REBASAN el valor final y vuelven. Como el valor
+ * final de una caída es la superficie del tablero, rebasarlo significa que la pieza se
+ * mete DENTRO de la madera y sale luego. Se probó con las dos y las dos hicieron lo
+ * mismo; el propietario lo describió como "se comen un poco el tablero y luego se ponen
+ * bien", que es exactamente eso.
+ *
+ * Solo valen curvas que se acercan al destino sin pasarse.
+ */
+export const EASE_CAIDA = "power3.out";
+
+/** Familias de curva que rebasan el destino: prohibidas para algo que aterriza. */
+export const EASES_QUE_SE_PASAN = ["back", "bounce", "elastic"] as const;
+
+/** ¿Esta curva se pasa del destino? */
+export function sePasaDelDestino(ease: string): boolean {
+  return EASES_QUE_SE_PASAN.some((f) => ease.startsWith(f));
 }

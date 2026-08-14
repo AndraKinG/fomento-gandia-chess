@@ -6,6 +6,8 @@ import {
   PLANO_INICIAL,
   PLANO_MEDIO,
   retrasoDeCaida,
+  EASE_CAIDA,
+  sePasaDelDestino,
 } from "./coreografia";
 
 describe("los tres planos del hero", () => {
@@ -79,6 +81,27 @@ describe("retrasoDeCaida", () => {
       for (let c = 0; c < 8; c++) {
         expect(retrasoDeCaida(c, fila)).toBeLessThan(3);
       }
+    }
+  });
+});
+
+describe("la curva de la caída", () => {
+  it("la que se usa NO se pasa del destino", () => {
+    // El fallo que costó una vuelta: `back.out` y `bounce.out` rebasan el valor final y
+    // vuelven, y como el valor final es la superficie del tablero, eso son piezas
+    // metiéndose dentro de la madera y saliendo después.
+    expect(sePasaDelDestino(EASE_CAIDA)).toBe(false);
+  });
+
+  it("reconoce las familias que sí se pasan", () => {
+    expect(sePasaDelDestino("back.out(1.15)")).toBe(true);
+    expect(sePasaDelDestino("bounce.out")).toBe(true);
+    expect(sePasaDelDestino("elastic.out(1, 0.3)")).toBe(true);
+  });
+
+  it("las que solo frenan valen", () => {
+    for (const e of ["power2.out", "power3.out", "sine.out", "expo.out", "none"]) {
+      expect(sePasaDelDestino(e)).toBe(false);
     }
   });
 });
