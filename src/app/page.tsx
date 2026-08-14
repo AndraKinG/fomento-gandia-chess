@@ -5,6 +5,7 @@ import { Escudo } from "@/components/ui/Escudo";
 import { Revelar } from "@/components/inicio/Revelar";
 import { Parallax } from "@/components/inicio/Parallax";
 import { TableroMiniatura } from "@/components/inicio/TableroMiniatura";
+import { ScrollSuave } from "@/components/inicio/ScrollSuave";
 
 /**
  * Web pública del club. Esqueleto: existe para que la zona de socios pueda vivir
@@ -41,6 +42,9 @@ const EQUIPOS = [
 export default function PaginaPublica() {
   return (
     <main className="flex-1 bg-fondo">
+      {/* El scroll con inercia, SOLO en la web pública: dentro de /club hay tableros y
+          relojes corriendo, y ahí la inercia estorba. No pinta nada. */}
+      <ScrollSuave />
       <header className="bg-degradado-club px-6 py-16 text-sobre-acento">
         <div className="mx-auto max-w-3xl">
           {/* La marca (el caballo) y no el mural entero: el mural va grande justo
