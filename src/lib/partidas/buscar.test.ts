@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { filtroBusqueda, marcadorDesdeBlancas, valorSeguro } from "./buscar";
+import {
+  filtroBusqueda,
+  filtroSocioPorNombreOMote,
+  marcadorDesdeBlancas,
+  valorSeguro,
+} from "./buscar";
 
 describe("valorSeguro", () => {
   it("usa el comodín de PostgREST, que es * y no %", () => {
@@ -69,5 +74,25 @@ describe("marcadorDesdeBlancas", () => {
   it("las tablas son tablas lleve las piezas que lleve", () => {
     expect(marcadorDesdeBlancas("0.5", "blancas")).toBe("½-½");
     expect(marcadorDesdeBlancas("0.5", "negras")).toBe("½-½");
+  });
+});
+
+describe("filtroSocioPorNombreOMote", () => {
+  it("busca por el nombre oficial y por el mote a la vez", () => {
+    // El fallo que arregla: la lista pinta el mote, así que buscar lo que se ve en
+    // pantalla no encontraba ninguna partida.
+    expect(filtroSocioPorNombreOMote("Juanvi")).toBe(
+      "nombre.ilike.*Juanvi*,apodo.ilike.*Juanvi*"
+    );
+  });
+
+  it("escapa igual que el otro filtro: una coma no parte la condición", () => {
+    expect(filtroSocioPorNombreOMote("Pérez, Juan")).toBe(
+      'nombre.ilike."*Pérez, Juan*",apodo.ilike."*Pérez, Juan*"'
+    );
+  });
+
+  it("no mira `alias`, que no se enseña en ninguna pantalla", () => {
+    expect(filtroSocioPorNombreOMote("Ximo")).not.toContain("alias");
   });
 });

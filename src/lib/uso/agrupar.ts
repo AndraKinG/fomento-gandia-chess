@@ -28,6 +28,9 @@ export type UsoDia = {
   mensajesChat: number;
   avisos: number;
   pushEntregados: number;
+  /** Preguntas al asistente (migración 0044). Del asistente no se guarda nada más:
+   *  cuántas, nunca cuáles. */
+  mensajesIa: number;
 };
 
 export type UsoAgrupado = Omit<UsoDia, "dia"> & {
@@ -35,6 +38,22 @@ export type UsoAgrupado = Omit<UsoDia, "dia"> & {
   clave: string;
   /** Cuentas distintas vistas en el periodo (no la suma de los días). */
   activos: number;
+  /**
+   * Cuentas distintas que han preguntado al asistente en el periodo.
+   *
+   * Va aparte de `mensajesIa` porque son dos preguntas distintas y la segunda es la
+   * que importa: 40 mensajes pueden ser el club entero probándolo o una sola persona
+   * enganchada, y eso cambia por completo si la IA merece la pena.
+   */
+  sociosIa: number;
+  /**
+   * Días que tiene el periodo REALMENTE, contando solo los ya transcurridos.
+   *
+   * Hace falta para las medias: la semana en curso puede llevar dos días, y dividir
+   * entre siete fijos hunde el número de hoy contra el de las semanas cerradas — la
+   * comparación que es justo la gracia de la tabla.
+   */
+  dias: number;
   /**
    * Media de socios distintos que entran POR DÍA dentro del periodo.
    *
@@ -84,7 +103,7 @@ export function clavePeriodo(dia: string, periodo: Periodo): string {
  */
 export function agruparUso(
   dias: UsoDia[],
-  actividad: { dia: string; profileId: string }[],
+  actividad: { dia: string; profileId: string; mensajesIa?: number }[],
   periodo: Periodo
 ): UsoAgrupado[] {
   const grupos = new Map<string, UsoAgrupado>();
@@ -94,6 +113,8 @@ export function agruparUso(
     const g = grupos.get(clave) ?? {
       clave,
       activos: 0,
+      sociosIa: 0,
+      dias: 0,
       activosPorDia: 0,
       visitas: 0,
       latidos: 0,
@@ -104,6 +125,7 @@ export function agruparUso(
       mensajesChat: 0,
       avisos: 0,
       pushEntregados: 0,
+      mensajesIa: 0,
     };
     g.visitas += d.visitas;
     g.latidos += d.latidos;
@@ -114,6 +136,8 @@ export function agruparUso(
     g.mensajesChat += d.mensajesChat;
     g.avisos += d.avisos;
     g.pushEntregados += d.pushEntregados;
+    g.mensajesIa += d.mensajesIa;
+    g.dias += 1;
     grupos.set(clave, g);
   }
 
@@ -122,6 +146,8 @@ export function agruparUso(
   const vistos = new Map<string, Set<string>>();
   // Y por DÍA, que es lo que da la media diaria.
   const porDia = new Map<string, Set<string>>();
+  // Los que ADEMÁS han preguntado al asistente, con el mismo criterio de no duplicar.
+  const conIa = new Map<string, Set<string>>();
   for (const a of actividad) {
     const clave = clavePeriodo(a.dia, periodo);
     if (!grupos.has(clave)) continue; // actividad de un día sin fila no inventa periodos
@@ -131,24 +157,30 @@ export function agruparUso(
     const d = porDia.get(a.dia) ?? new Set<string>();
     d.add(a.profileId);
     porDia.set(a.dia, d);
+    if ((a.mensajesIa ?? 0) > 0) {
+      const i = conIa.get(clave) ?? new Set<string>();
+      i.add(a.profileId);
+      conIa.set(clave, i);
+    }
   }
   for (const [clave, s] of vistos) {
     const g = grupos.get(clave);
     if (g) g.activos = s.size;
   }
+  for (const [clave, s] of conIa) {
+    const g = grupos.get(clave);
+    if (g) g.sociosIa = s.size;
+  }
 
   // La media diaria: se suman los distintos DE CADA DÍA y se divide entre los días
   // que tiene el periodo — contando los días sin nadie, que también son días.
-  const cuantosDias = new Map<string, number>();
   const sumaDiaria = new Map<string, number>();
   for (const d of dias) {
     const clave = clavePeriodo(d.dia, periodo);
-    cuantosDias.set(clave, (cuantosDias.get(clave) ?? 0) + 1);
     sumaDiaria.set(clave, (sumaDiaria.get(clave) ?? 0) + (porDia.get(d.dia)?.size ?? 0));
   }
   for (const [clave, g] of grupos) {
-    const n = cuantosDias.get(clave) ?? 0;
-    g.activosPorDia = n > 0 ? (sumaDiaria.get(clave) ?? 0) / n : 0;
+    g.activosPorDia = g.dias > 0 ? (sumaDiaria.get(clave) ?? 0) / g.dias : 0;
   }
 
   return [...grupos.values()].sort((a, b) => b.clave.localeCompare(a.clave));

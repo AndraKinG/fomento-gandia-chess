@@ -20,6 +20,8 @@ import { FotoPerfil } from "./FotoPerfil";
 import { Aperturas } from "./Aperturas";
 import { EligeTablero } from "./EligeTablero";
 import { EligePiezas } from "./EligePiezas";
+import { EligeAsistente } from "./EligeAsistente";
+import { sitioBoton } from "@/lib/asistente/boton";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { GrupoAviso } from "@/lib/avisos/politica";
 
@@ -30,7 +32,7 @@ export default async function PerfilPage() {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "email, player_id, avisos_silenciados, tema_tablero, juego_piezas, players(nombre, apodo, apodo_solicitado, elo_fide, elo_feda, elo_otro, fide_id, feda_id, foto_url, aperturas)"
+      "email, player_id, avisos_silenciados, tema_tablero, juego_piezas, asistente_boton, players(nombre, apodo, apodo_solicitado, elo_fide, elo_feda, elo_otro, fide_id, feda_id, foto_url, aperturas)"
     )
     .eq("id", user!.id)
     .single();
@@ -197,6 +199,11 @@ export default async function PerfilPage() {
             </div>
             <div className="border-t border-borde pt-4">
               <EligePiezas actual={(profile?.juego_piezas as string) ?? "celtic"} />
+            </div>
+            {/* El botón del asistente va en esta tarjeta y no en la de avisos: es dónde
+                se ve una cosa, no si te avisa de algo. */}
+            <div className="border-t border-borde pt-4">
+              <EligeAsistente actual={sitioBoton(profile?.asistente_boton as string | null)} />
             </div>
           </Tarjeta>
         )}

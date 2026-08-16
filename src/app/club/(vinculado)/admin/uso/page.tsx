@@ -39,19 +39,25 @@ import {
  * CUÁNTO SE MIRA HACIA ATRÁS según el periodo: 14 días, 12 semanas o 12 meses.
  */
 
-const VENTANAS: Record<Periodo, { dias: number; titulo: string }> = {
-  dia: { dias: 14, titulo: "Últimos 14 días" },
-  semana: { dias: 7 * 12, titulo: "Últimas 12 semanas" },
-  mes: { dias: 366, titulo: "Últimos 12 meses" },
+/**
+ * Cuánto se mira hacia atrás y cuántas filas se enseñan.
+ *
+ * SON DOS NÚMEROS Y NO UNO, y esa es la corrección: se pedían 84 días para enseñar 12
+ * semanas, pero 84 días caen sobre TRECE semanas del calendario —la primera, cortada
+ * por la mitad—. La tabla decía "Últimas 12 semanas" y traía 13 filas, y la de arriba
+ * del todo era media semana enseñada como si fuera entera, o sea el peor dato de la
+ * tabla siendo mentira. Igual en meses (366 días tocan 13 meses) y en días (la ventana
+ * incluye hoy, así que eran 15). Ahora se pide de más a propósito y se corta a lo que
+ * dice el título.
+ */
+const VENTANAS: Record<Periodo, { dias: number; filas: number; titulo: string }> = {
+  dia: { dias: 14, filas: 14, titulo: "Últimos 14 días" },
+  semana: { dias: 7 * 13, filas: 12, titulo: "Últimas 12 semanas" },
+  mes: { dias: 400, filas: 12, titulo: "Últimos 12 meses" },
 };
 
 function esPeriodo(v: string | undefined): v is Periodo {
   return v === "dia" || v === "semana" || v === "mes";
-}
-
-/** Días que cubre un grupo, para la media de conectados. */
-function diasDelGrupo(periodo: Periodo): number {
-  return periodo === "dia" ? 1 : periodo === "semana" ? 7 : 30;
 }
 
 function etiqueta(clave: string, periodo: Periodo): string {
@@ -94,8 +100,8 @@ export default async function UsoPage({
     { data: deHoy },
   ] = await Promise.all([
     admin.rpc("recuento_uso", { desde: desdeIso }),
-    admin.from("uso_diario").select("dia, visitas, latidos").gte("dia", desdeIso),
-    admin.from("uso_socios_dia").select("dia, profile_id").gte("dia", desdeIso),
+    admin.from("uso_diario").select("dia, visitas, latidos, mensajes_ia").gte("dia", desdeIso),
+    admin.from("uso_socios_dia").select("dia, profile_id, mensajes_ia").gte("dia", desdeIso),
     supabase.from("profiles").select("id", { count: "exact", head: true }),
     // LAS CUENTAS DE PRUEBA NO SON EL CLUB (migración 0040): su latido ya no se
     // apunta, pero los denominadores de aquí se cuentan en esta pantalla, así que
@@ -144,7 +150,10 @@ export default async function UsoPage({
   // ventana (generate_series), así que es la espina; el diario del latido puede
   // tener huecos (días sin nadie) y se rellena con ceros.
   const latidosPorDia = new Map(
-    (diario ?? []).map((f) => [f.dia as string, { visitas: f.visitas, latidos: f.latidos }])
+    (diario ?? []).map((f) => [
+      f.dia as string,
+      { visitas: f.visitas, latidos: f.latidos, mensajesIa: f.mensajes_ia ?? 0 },
+    ])
   );
   const dias: UsoDia[] = ((recuento ?? []) as Record<string, unknown>[]).map((f) => ({
     dia: String(f.dia),
@@ -157,14 +166,17 @@ export default async function UsoPage({
     mensajesChat: Number(f.mensajes_chat),
     avisos: Number(f.avisos),
     pushEntregados: Number(f.push_entregados),
+    mensajesIa: latidosPorDia.get(String(f.dia))?.mensajesIa ?? 0,
   }));
 
   const pares = (actividad ?? []).map((a) => ({
     dia: a.dia as string,
     profileId: a.profile_id as string,
+    mensajesIa: Number(a.mensajes_ia ?? 0),
   }));
 
-  const grupos = agruparUso(dias, pares, periodo);
+  const todos = agruparUso(dias, pares, periodo);
+  const grupos = todos.slice(0, ventana.filas);
   const actual = grupos[0];
   const hanEntradoAlguna = new Set((todosLosDias ?? []).map((f) => f.profile_id as string)).size;
 
@@ -302,10 +314,24 @@ export default async function UsoPage({
                 valor={tiempoPorSocio(actual.latidos, actual.activos)}
                 nota={`${tiempoDeUso(actual.latidos)} en total`}
               />
+              {/* Se divide entre los días QUE LLEVA el periodo, no entre 7 o 30 fijos:
+                  la semana en curso puede llevar dos días, y con el divisor fijo la
+                  media salía hasta tres veces más baja de lo que era — justo en la
+                  columna con la que se compara contra las semanas ya cerradas. */}
               <Dato
                 titulo="Conectados a la vez"
-                valor={mediaConectados(actual.latidos, diasDelGrupo(periodo))}
+                valor={mediaConectados(actual.latidos, actual.dias)}
                 nota="de media"
+              />
+              {/* EL ASISTENTE (migración 0044). Los mensajes solos engañan —cuarenta
+                  pueden ser el club entero o una persona—, así que el dato que decide
+                  va debajo: cuántos socios distintos lo han usado. */}
+              <Dato
+                titulo="Preguntas a la IA"
+                valor={String(actual.mensajesIa)}
+                nota={
+                  actual.sociosIa === 1 ? "1 socio" : `${actual.sociosIa} socios`
+                }
               />
             </div>
           )}
@@ -338,7 +364,7 @@ export default async function UsoPage({
                       </th>
                       <th
                         className="border-l border-borde px-3 pt-2 text-center font-semibold"
-                        colSpan={5}
+                        colSpan={6}
                       >
                         Actividad
                       </th>
@@ -357,6 +383,9 @@ export default async function UsoPage({
                         Subidas
                       </th>
                       <th className="px-3 pb-2 text-right font-medium">Chat</th>
+                      <th className="px-3 pb-2 text-right font-medium" title="Preguntas al asistente de IA">
+                        IA
+                      </th>
                       <th className="px-3 pb-2 text-right font-medium" title="Avisos generados / push entregados">
                         Avisos
                       </th>
@@ -388,6 +417,7 @@ export default async function UsoPage({
                         <Num v={g.retos} />
                         <Num v={g.partidasSubidas} />
                         <Num v={g.mensajesChat} />
+                        <Num v={g.mensajesIa} />
                         <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums">
                           {g.avisos === 0 ? (
                             <span className="text-tinta-suave">—</span>

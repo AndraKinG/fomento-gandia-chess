@@ -33,6 +33,24 @@ export function valorSeguro(texto: string): string {
 }
 
 /**
+ * Condición `or` para buscar una ficha por su nombre oficial O por su mote.
+ *
+ * POR QUÉ LAS DOS COLUMNAS (lo cazó el propietario: "el filtro de partidas del club no
+ * filtra por mote"): la lista PINTA el mote (`nombreDeFila`, migración 0041), así que
+ * buscar por lo que se ve en pantalla no encontraba nada — el buscador miraba solo
+ * `players.nombre`. Y el oficial se queda porque es el que sale en las actas de la FACV:
+ * quien busca "Sanfélix" tiene que encontrarlo igual aunque en el club sea "Juanvi".
+ *
+ * NO se busca por `alias` (migración 0035): esas son palabras extra para cruzar actas,
+ * no se enseñan en ningún sitio, y buscar por algo invisible da resultados que no se
+ * explican.
+ */
+export function filtroSocioPorNombreOMote(texto: string): string {
+  const valor = valorSeguro(texto.trim());
+  return `nombre.ilike.${valor},apodo.ilike.${valor}`;
+}
+
+/**
  * Condición `or` para buscar por nombre del rival o del socio dueño de la partida.
  *
  * `idsJugadores` son las fichas cuyo nombre ya ha cuadrado con el texto. Si no hay

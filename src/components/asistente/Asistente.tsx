@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Banner } from "@/components/ui/Banner";
+import { clasesBoton, clasesPanel, type SitioBoton } from "@/lib/asistente/boton";
 
 /**
  * El asistente del club: botón flotante que abre un chat encima de la pantalla.
@@ -14,6 +15,13 @@ import { Banner } from "@/components/ui/Banner";
  * NO GUARDA NADA. La conversación vive en memoria y se va al recargar. Para lo que
  * es —resolver una duda— guardarla obligaría a una tabla, sus políticas y una
  * pantalla para borrarla, y nadie ha pedido volver a leer lo que preguntó ayer.
+ * Lo único que queda de una pregunta es UN CONTADOR para el panel de admin
+ * (migración 0044): cuántas, nunca cuáles.
+ *
+ * DE QUÉ ESQUINA CUELGA LO DECIDE EL SOCIO (`sitio`, migración 0044). Flotar sobre
+ * todas las pantallas significa tapar una esquina de todas las pantallas, y cuál
+ * estorba depende de con qué mano se sujeta el móvil. Si eligió esconderlo, este
+ * componente ni se monta: eso lo decide el layout.
  */
 
 type Turno = { papel: "usuario" | "asistente"; texto: string };
@@ -29,7 +37,7 @@ const ATAJOS = [
   "¿Qué torneos hay pronto?",
 ];
 
-export function Asistente() {
+export function Asistente({ sitio }: { sitio: SitioBoton }) {
   const [abierto, setAbierto] = useState(false);
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [texto, setTexto] = useState("");
@@ -92,9 +100,7 @@ export function Asistente() {
         onClick={() => setAbierto((v) => !v)}
         aria-expanded={abierto}
         aria-label={abierto ? "Cerrar el asistente" : "Abrir el asistente"}
-        // Por encima de la barra inferior del móvil (`bottom-24`), que si no lo
-        // tapa; en escritorio no hay barra abajo y baja a su sitio.
-        className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-degradado-club text-2xl text-sobre-acento shadow-lg transition duration-100 active:scale-95 lg:bottom-6 lg:right-6"
+        className={`fixed z-30 flex h-14 w-14 items-center justify-center rounded-full bg-degradado-club text-2xl text-sobre-acento shadow-lg transition duration-100 active:scale-95 ${clasesBoton(sitio)}`}
       >
         <span aria-hidden>{abierto ? "✕" : "♞"}</span>
       </button>
@@ -103,7 +109,7 @@ export function Asistente() {
         <div
           role="dialog"
           aria-label="Asistente del club"
-          className="fixed inset-x-2 bottom-40 z-30 flex max-h-[70dvh] flex-col overflow-hidden rounded-2xl border border-borde bg-tarjeta shadow-2xl sm:inset-x-auto sm:right-4 sm:w-96 lg:bottom-24 lg:right-6"
+          className={`fixed inset-x-2 z-30 flex max-h-[70dvh] flex-col overflow-hidden rounded-2xl border border-borde bg-tarjeta shadow-2xl sm:inset-x-auto sm:w-96 ${clasesPanel(sitio)}`}
         >
           <div className="border-b border-borde px-4 py-3">
             <p className="text-sm font-semibold text-tinta">Asistente del club</p>

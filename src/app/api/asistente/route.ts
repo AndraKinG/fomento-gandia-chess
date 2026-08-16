@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sesionActual } from "@/lib/auth/sesion";
 import { nombreDePila } from "@/lib/auth/nombre";
 import { instrucciones } from "@/lib/asistente/instrucciones";
@@ -109,6 +110,23 @@ export async function POST(request: Request) {
         { status: 502 }
       );
     }
+
+    // EL ÚNICO RASTRO QUE DEJA UNA CONVERSACIÓN: un contador para el panel de admin
+    // (migración 0044, lo pidió el propietario). Ni la pregunta ni la respuesta se
+    // guardan en ningún sitio — se cuenta que hubo una, y nada más.
+    //
+    // VA AQUÍ Y NO ANTES a propósito: cuenta el intercambio que de verdad ha ocurrido,
+    // no el que se quedó en un error de la IA o en una clave sin configurar, que no
+    // dicen nada de si el club usa esto.
+    //
+    // Y NO PUEDE TUMBAR LA RESPUESTA: si el contador falla, el socio tiene que recibir
+    // igual lo que preguntó. Un panel de uso no vale una conversación rota.
+    try {
+      await createAdminClient().rpc("registrar_asistente", { p_profile: sesion.userId });
+    } catch (e) {
+      console.error("[asistente] no se pudo contar la pregunta", e);
+    }
+
     return NextResponse.json({ texto });
   } catch (e) {
     if (e instanceof SinClave) {

@@ -23,6 +23,7 @@ function dia(fecha: string, extra: Partial<UsoDia> = {}): UsoDia {
     mensajesChat: 0,
     avisos: 0,
     pushEntregados: 0,
+    mensajesIa: 0,
     ...extra,
   };
 }
@@ -189,5 +190,64 @@ describe("conUnDecimal", () => {
   it("una décima y coma, como se escribe en español", () => {
     expect(conUnDecimal(1.5)).toBe("1,5");
     expect(conUnDecimal(2)).toBe("2,0");
+  });
+});
+
+describe("el asistente en el panel (migración 0044)", () => {
+  it("suma los mensajes del periodo", () => {
+    const g = agruparUso(
+      [
+        dia("2026-08-10", { mensajesIa: 3 }),
+        dia("2026-08-11", { mensajesIa: 2 }),
+      ],
+      [],
+      "semana"
+    );
+    expect(g[0].mensajesIa).toBe(5);
+  });
+
+  it("los socios que preguntan NO se suman: son personas, no mensajes", () => {
+    // El mismo error clásico que con los activos: quien pregunta el lunes y el
+    // martes es UNA persona usando el asistente, no dos.
+    const g = agruparUso(
+      [dia("2026-08-10", { mensajesIa: 4 }), dia("2026-08-11", { mensajesIa: 6 })],
+      [
+        { dia: "2026-08-10", profileId: "ana", mensajesIa: 4 },
+        { dia: "2026-08-11", profileId: "ana", mensajesIa: 6 },
+      ],
+      "semana"
+    );
+    expect(g[0].mensajesIa).toBe(10);
+    expect(g[0].sociosIa).toBe(1);
+  });
+
+  it("quien entró pero no preguntó no cuenta como usuario de la IA", () => {
+    const g = agruparUso(
+      [dia("2026-08-10", { mensajesIa: 2 })],
+      [
+        { dia: "2026-08-10", profileId: "ana", mensajesIa: 2 },
+        { dia: "2026-08-10", profileId: "luis", mensajesIa: 0 },
+        { dia: "2026-08-10", profileId: "pep" },
+      ],
+      "dia"
+    );
+    expect(g[0].activos).toBe(3);
+    expect(g[0].sociosIa).toBe(1);
+  });
+});
+
+describe("los días que lleva un periodo", () => {
+  it("cuenta los días transcurridos, no los del calendario", () => {
+    // De aquí sale la media de conectados: la semana en curso puede llevar dos días,
+    // y dividir entre siete fijos hundía la cifra contra las semanas ya cerradas.
+    const g = agruparUso([dia("2026-08-10"), dia("2026-08-11")], [], "semana");
+    expect(g[0].dias).toBe(2);
+  });
+
+  it("una semana entera son siete", () => {
+    const dias = ["10", "11", "12", "13", "14", "15", "16"].map((d) =>
+      dia(`2026-08-${d}`)
+    );
+    expect(agruparUso(dias, [], "semana")[0].dias).toBe(7);
   });
 });

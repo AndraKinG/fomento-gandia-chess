@@ -12,7 +12,7 @@ import { Exportar } from "./Exportar";
 import { Estrella } from "./Estrella";
 import { Contenedor, REJILLA } from "@/components/ui/Contenedor";
 import { Pestana, Pestanas } from "@/components/ui/Pestanas";
-import { filtroBusqueda } from "@/lib/partidas/buscar";
+import { filtroBusqueda, filtroSocioPorNombreOMote } from "@/lib/partidas/buscar";
 import { nombreDeFila } from "@/lib/club/nombre-socio";
 
 // "½" y no "=": es como se escriben las tablas en el resto de la app (el acta, el
@@ -75,11 +75,13 @@ export default async function PartidasPage({
   // `player_id`. Filtrar por `players.nombre` dentro del `or` hacía fallar la consulta
   // entera —PostgREST no admite columnas de una tabla incrustada en el árbol lógico— y
   // el resultado era que buscar un nombre dejaba el repositorio EN BLANCO.
+  //
+  // Y se busca por el nombre oficial Y POR EL MOTE, que es lo que la lista pinta.
   if (busqueda) {
     const { data: socios } = await supabase
       .from("players")
       .select("id")
-      .ilike("nombre", `%${busqueda}%`);
+      .or(filtroSocioPorNombreOMote(busqueda));
     consulta = consulta.or(
       filtroBusqueda(busqueda, (socios ?? []).map((s) => s.id as string))
     );

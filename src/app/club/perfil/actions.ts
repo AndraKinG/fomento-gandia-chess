@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sesionActual } from "@/lib/auth/sesion";
 import { esTemaValido } from "@/lib/ajedrez/temas";
 import { esJuegoValido } from "@/lib/ajedrez/piezas";
+import { SITIOS } from "@/lib/asistente/boton";
 import type { GrupoAviso } from "@/lib/avisos/politica";
 import { moteOcupado, textoOcupado, validarMote } from "@/lib/club/mote";
 import { avisar } from "@/lib/avisos/enviar";
@@ -211,6 +212,31 @@ export async function elegirPiezas(clave: string): Promise<{ error?: string }> {
     .eq("id", user.id);
   if (error) return { error: "No se pudo guardar el juego" };
 
+  revalidatePath("/club", "layout");
+  return {};
+}
+
+/**
+ * Guarda dónde quiere el socio el botón del asistente, o que no lo quiere ver.
+ *
+ * MISMA FORMA QUE `elegirPiezas`, y la validación no es un adorno: la columna tiene un
+ * `check` en la base (migración 0044), así que un valor raro daría un error de Postgres
+ * en vez de un mensaje entendible.
+ */
+export async function elegirAsistente(clave: string): Promise<{ error?: string }> {
+  const sesion = await sesionActual();
+  if (!sesion) return { error: "No autenticado" };
+  if (!SITIOS.some((s) => s.clave === clave)) return { error: "Esa opción no existe." };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("profiles")
+    .update({ asistente_boton: clave })
+    .eq("id", sesion.userId);
+  if (error) return { error: "No se pudo guardar" };
+
+  // El botón lo monta el layout del club, así que se revalida el layout entero: sin
+  // esto el ajuste no se nota hasta la siguiente recarga completa.
   revalidatePath("/club", "layout");
   return {};
 }

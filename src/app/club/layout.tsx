@@ -14,6 +14,7 @@ import { ProximaRonda } from "@/components/torneos/ProximaRonda";
 import { leerProximaRonda, type ProximaRondaVista } from "@/lib/torneos/proxima-ronda";
 import { temaTablero } from "@/lib/ajedrez/temas";
 import { juegoPiezas } from "@/lib/ajedrez/piezas";
+import { seVeElBoton, sitioBoton } from "@/lib/asistente/boton";
 
 /**
  * Zona de socios. Exige sesión y pone el cromo común (navegación y suscripción a
@@ -57,6 +58,8 @@ export default async function ClubLayout({
   // pinten sin ir cada uno a la base. Una clave desconocida cae al del club.
   let claveTema: string | null = null;
   let clavePiezas: string | null = null;
+  // Dónde quiere el socio el botón del asistente, o si no lo quiere ver.
+  let claveAsistente: string | null = null;
   // La ronda de torneo que le toca al socio dentro de poco, para la tarjeta de
   // "empieza en 43 min". Va en el layout y no en una pantalla porque la hora te
   // pilla donde te pille; la decisión de cuándo se ve es del navegador, no de aquí
@@ -80,13 +83,18 @@ export default async function ClubLayout({
         .select("id", { count: "exact", head: true })
         .eq("profile_id", sesion.userId)
         .is("leido_en", null),
-      supabase.from("profiles").select("tema_tablero, juego_piezas").eq("id", sesion.userId).maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("tema_tablero, juego_piezas, asistente_boton")
+        .eq("id", sesion.userId)
+        .maybeSingle(),
       leerProximaRonda(supabase, sesion.playerId),
     ]);
     retosPendientes = retos ?? 0;
     avisosSinLeer = sinLeer ?? 0;
     claveTema = (preferencias?.tema_tablero as string | null) ?? null;
     clavePiezas = (preferencias?.juego_piezas as string | null) ?? null;
+    claveAsistente = (preferencias?.asistente_boton as string | null) ?? null;
     proximaRonda = ronda;
   }
 
@@ -127,8 +135,12 @@ export default async function ClubLayout({
       {/* El asistente va en el layout y no en cada pantalla: la gracia es poder
           preguntar sin salir de donde estás. Solo para quien ya tiene ficha: sin
           ella no hay nada del club que consultar y la pantalla de vincular tiene
-          que quedarse sin distracciones. */}
-      {sesion.playerId != null && <Asistente />}
+          que quedarse sin distracciones. Y si el socio lo ha escondido desde su perfil
+          (migración 0044), no se monta: un botón flotante tapa una esquina de todas las
+          pantallas, y hay quien prefiere esa esquina libre. */}
+      {sesion.playerId != null && seVeElBoton(claveAsistente) && (
+        <Asistente sitio={sitioBoton(claveAsistente)} />
+      )}
     </div>
     </ProveedorEnPartida>
     </ProveedorPendientes>
