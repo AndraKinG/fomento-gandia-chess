@@ -14,7 +14,7 @@ import { ProximaRonda } from "@/components/torneos/ProximaRonda";
 import { leerProximaRonda, type ProximaRondaVista } from "@/lib/torneos/proxima-ronda";
 import { temaTablero } from "@/lib/ajedrez/temas";
 import { juegoPiezas } from "@/lib/ajedrez/piezas";
-import { seVeElBoton, sitioBoton } from "@/lib/asistente/boton";
+import { posicionGuardada, seVeElBoton, sitioBoton } from "@/lib/asistente/boton";
 
 /**
  * Zona de socios. Exige sesión y pone el cromo común (navegación y suscripción a
@@ -60,6 +60,8 @@ export default async function ClubLayout({
   let clavePiezas: string | null = null;
   // Dónde quiere el socio el botón del asistente, o si no lo quiere ver.
   let claveAsistente: string | null = null;
+  // Y dónde lo dejó si lo arrastró (migración 0045). Null = en su esquina.
+  let posicionAsistente: { x: number; y: number } | null = null;
   // La ronda de torneo que le toca al socio dentro de poco, para la tarjeta de
   // "empieza en 43 min". Va en el layout y no en una pantalla porque la hora te
   // pilla donde te pille; la decisión de cuándo se ve es del navegador, no de aquí
@@ -85,7 +87,7 @@ export default async function ClubLayout({
         .is("leido_en", null),
       supabase
         .from("profiles")
-        .select("tema_tablero, juego_piezas, asistente_boton")
+        .select("tema_tablero, juego_piezas, asistente_boton, asistente_x, asistente_y")
         .eq("id", sesion.userId)
         .maybeSingle(),
       leerProximaRonda(supabase, sesion.playerId),
@@ -95,6 +97,10 @@ export default async function ClubLayout({
     claveTema = (preferencias?.tema_tablero as string | null) ?? null;
     clavePiezas = (preferencias?.juego_piezas as string | null) ?? null;
     claveAsistente = (preferencias?.asistente_boton as string | null) ?? null;
+    posicionAsistente = posicionGuardada(
+      preferencias?.asistente_x as number | null,
+      preferencias?.asistente_y as number | null
+    );
     proximaRonda = ronda;
   }
 
@@ -139,7 +145,7 @@ export default async function ClubLayout({
           (migración 0044), no se monta: un botón flotante tapa una esquina de todas las
           pantallas, y hay quien prefiere esa esquina libre. */}
       {sesion.playerId != null && seVeElBoton(claveAsistente) && (
-        <Asistente sitio={sitioBoton(claveAsistente)} />
+        <Asistente sitio={sitioBoton(claveAsistente)} posicion={posicionAsistente} />
       )}
     </div>
     </ProveedorEnPartida>

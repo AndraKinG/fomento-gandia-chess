@@ -1,8 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Banner } from "@/components/ui/Banner";
-import { clasesBoton, clasesPanel, type SitioBoton } from "@/lib/asistente/boton";
+import {
+  aPixeles,
+  clasesBoton,
+  clasesPanel,
+  esArrastre,
+  ladoDelPanel,
+  panelHaciaAbajo,
+  sujetar,
+  type Punto,
+  type SitioBoton,
+} from "@/lib/asistente/boton";
+import { moverAsistente } from "@/app/club/perfil/actions";
 
 /**
  * El asistente del club: botón flotante que abre un chat encima de la pantalla.
@@ -18,13 +29,45 @@ import { clasesBoton, clasesPanel, type SitioBoton } from "@/lib/asistente/boton
  * Lo único que queda de una pregunta es UN CONTADOR para el panel de admin
  * (migración 0044): cuántas, nunca cuáles.
  *
- * DE QUÉ ESQUINA CUELGA LO DECIDE EL SOCIO (`sitio`, migración 0044). Flotar sobre
- * todas las pantallas significa tapar una esquina de todas las pantallas, y cuál
- * estorba depende de con qué mano se sujeta el móvil. Si eligió esconderlo, este
+ * DÓNDE SE PONE LO DECIDE EL SOCIO. Flotar sobre todas las pantallas significa tapar
+ * una esquina de todas las pantallas, y cuál estorba depende de con qué mano se sujeta
+ * el móvil. Dos formas: la esquina elegida en el perfil (`sitio`, migración 0044) o
+ * ARRASTRARLO a donde sea (`posicion`, migración 0045). Si eligió esconderlo, este
  * componente ni se monta: eso lo decide el layout.
+ *
+ * EL ARRASTRE Y EL TOQUE COMPARTEN BOTÓN, y por eso hay un umbral: nadie toca del todo
+ * quieto, así que sin él cualquier temblor del dedo se leería como "lo has movido" y el
+ * chat no se abriría nunca. Va con eventos de PUNTERO y `setPointerCapture`, igual que
+ * arrastrar una pieza en el tablero y por el mismo motivo: la API de arrastrar de HTML
+ * no dispara nada con el dedo.
  */
 
 type Turno = { papel: "usuario" | "asistente"; texto: string };
+
+/**
+ * El tamaño de la ventana, y null mientras se pinta en el servidor.
+ *
+ * SE DEVUELVE UNA CADENA Y SE PARTE DESPUÉS a propósito: `useSyncExternalStore` compara
+ * la instantánea con `===`, así que devolver un objeto nuevo en cada llamada sería un
+ * bucle infinito de renderizados.
+ */
+function suscribir(avisar: () => void) {
+  window.addEventListener("resize", avisar);
+  window.addEventListener("orientationchange", avisar);
+  return () => {
+    window.removeEventListener("resize", avisar);
+    window.removeEventListener("orientationchange", avisar);
+  };
+}
+const medir = () => `${window.innerWidth}x${window.innerHeight}`;
+const enElServidor = () => "";
+
+function usePantalla(): { ancho: number; alto: number } | null {
+  const medida = useSyncExternalStore(suscribir, medir, enElServidor);
+  if (!medida) return null;
+  const [ancho, alto] = medida.split("x").map(Number);
+  return { ancho, alto };
+}
 
 const BIENVENIDA =
   "Pregúntame lo que quieras de ajedrez o del club.";
@@ -37,8 +80,20 @@ const ATAJOS = [
   "¿Qué torneos hay pronto?",
 ];
 
-export function Asistente({ sitio }: { sitio: SitioBoton }) {
+export function Asistente({
+  sitio,
+  posicion: guardada,
+}: {
+  sitio: SitioBoton;
+  posicion: Punto | null;
+}) {
   const [abierto, setAbierto] = useState(false);
+  // Dónde está el botón ahora mismo. Null = en su esquina, que es el caso de quien
+  // nunca lo ha arrastrado.
+  const [posicion, setPosicion] = useState<Punto | null>(guardada);
+  // El arrastre en curso. En una ref y no en estado: cambia en cada `pointermove` y
+  // nada de lo que hay dentro se pinta.
+  const arrastre = useRef<{ id: number; x0: number; y0: number; movido: boolean } | null>(null);
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [texto, setTexto] = useState("");
   const [pensando, setPensando] = useState(false);
@@ -65,6 +120,34 @@ export function Asistente({ sitio }: { sitio: SitioBoton }) {
     window.addEventListener("keydown", alPulsar);
     return () => window.removeEventListener("keydown", alPulsar);
   }, [abierto]);
+
+  // DÓNDE SE PINTAN LAS DOS COSAS cuando el botón se ha arrastrado. Se calcula en el
+  // renderizado y no en un efecto: un efecto pintaría primero en la esquina y luego
+  // saltaría al sitio bueno, y ese salto se ve.
+  //
+  // EL TAMAÑO DE PANTALLA SALE DE `useSyncExternalStore` y no de leer `window` al
+  // pintar: leerlo al pintar es impuro (lo prohíbe el linter del compilador de React) y
+  // además el servidor no tiene `window`, así que la primera pasada discreparía de la
+  // del navegador. Con esto, el servidor devuelve "" y las dos coinciden. De propina,
+  // girar el móvil recoloca el botón solo, que con una lectura suelta no pasaría.
+  const pantalla = usePantalla();
+  const centro = posicion && pantalla ? aPixeles(posicion, pantalla.ancho, pantalla.alto) : null;
+  const estiloBoton = centro
+    ? { left: centro.x, top: centro.y, transform: "translate(-50%, -50%)" }
+    : undefined;
+  // La ventana se abre HACIA DENTRO de la pantalla y pegada a su botón: hacia el otro
+  // lado se saldría por el borde y quedaría medio chat fuera.
+  const estiloPanel =
+    posicion && centro
+      ? {
+          ...(ladoDelPanel(posicion) === "derecha"
+            ? { right: (pantalla?.ancho ?? 0) - centro.x - 28 }
+            : { left: centro.x - 28 }),
+          ...(panelHaciaAbajo(posicion)
+            ? { top: centro.y + 40 }
+            : { bottom: (pantalla?.alto ?? 0) - centro.y + 40 }),
+        }
+      : undefined;
 
   async function enviar(desdeAtajo?: string) {
     const pregunta = (desdeAtajo ?? texto).trim();
@@ -97,10 +180,55 @@ export function Asistente({ sitio }: { sitio: SitioBoton }) {
     <>
       <button
         type="button"
-        onClick={() => setAbierto((v) => !v)}
+        onClick={() => {
+          // Un arrastre acaba en `pointerup`, y el navegador manda el clic después:
+          // sin esto, soltar el botón en su nuevo sitio abriría el chat de propina.
+          if (arrastre.current?.movido) return;
+          setAbierto((v) => !v);
+        }}
+        onPointerDown={(e) => {
+          if (e.pointerType === "mouse" && e.button !== 0) return;
+          // La captura manda los `pointermove` y el `pointerup` a este botón aunque el
+          // dedo ya esté lejos: sin ella, el arrastre se corta al salir de él.
+          e.currentTarget.setPointerCapture(e.pointerId);
+          arrastre.current = { id: e.pointerId, x0: e.clientX, y0: e.clientY, movido: false };
+        }}
+        onPointerMove={(e) => {
+          const a = arrastre.current;
+          if (!a || a.id !== e.pointerId) return;
+          if (!a.movido && !esArrastre(e.clientX - a.x0, e.clientY - a.y0)) return;
+          a.movido = true;
+          // Mientras se arrastra, el chat abierto estorba: se cierra al empezar a mover.
+          setAbierto(false);
+          setPosicion(sujetar(e.clientX, e.clientY, window.innerWidth, window.innerHeight));
+        }}
+        onPointerUp={(e) => {
+          const a = arrastre.current;
+          if (!a || a.id !== e.pointerId) return;
+          if (a.movido) {
+            const p = sujetar(e.clientX, e.clientY, window.innerWidth, window.innerHeight);
+            setPosicion(p);
+            // Se guarda AL SOLTAR y no mientras se mueve: guardar en cada píxel serían
+            // cientos de escrituras por arrastre. Si falla, el botón se queda donde lo
+            // has dejado hasta la siguiente recarga; no vale la pena molestar por esto.
+            void moverAsistente(p.x, p.y);
+          }
+          // El `onClick` llega DESPUÉS de esto, así que la marca se limpia más tarde.
+          setTimeout(() => {
+            arrastre.current = null;
+          }, 0);
+        }}
+        onPointerCancel={() => {
+          arrastre.current = null;
+        }}
         aria-expanded={abierto}
         aria-label={abierto ? "Cerrar el asistente" : "Abrir el asistente"}
-        className={`fixed z-30 flex h-14 w-14 items-center justify-center rounded-full bg-degradado-club text-2xl text-sobre-acento shadow-lg transition duration-100 active:scale-95 ${clasesBoton(sitio)}`}
+        // `touch-none` para que arrastrarlo con el dedo no desplace la página.
+        // Sin posición propia manda la esquina del perfil; con ella, el estilo.
+        className={`fixed z-30 flex h-14 w-14 touch-none items-center justify-center rounded-full bg-degradado-club text-2xl text-sobre-acento shadow-lg active:scale-95 ${
+          posicion ? "" : `transition duration-100 ${clasesBoton(sitio)}`
+        }`}
+        style={estiloBoton}
       >
         <span aria-hidden>{abierto ? "✕" : "♞"}</span>
       </button>
@@ -109,7 +237,10 @@ export function Asistente({ sitio }: { sitio: SitioBoton }) {
         <div
           role="dialog"
           aria-label="Asistente del club"
-          className={`fixed inset-x-2 z-30 flex max-h-[70dvh] flex-col overflow-hidden rounded-2xl border border-borde bg-tarjeta shadow-2xl sm:inset-x-auto sm:w-96 ${clasesPanel(sitio)}`}
+          className={`fixed inset-x-2 z-30 flex max-h-[70dvh] flex-col overflow-hidden rounded-2xl border border-borde bg-tarjeta shadow-2xl sm:inset-x-auto sm:w-96 ${
+            posicion ? "" : clasesPanel(sitio)
+          }`}
+          style={estiloPanel}
         >
           <div className="border-b border-borde px-4 py-3">
             <p className="text-sm font-semibold text-tinta">Asistente del club</p>

@@ -49,8 +49,11 @@ export function EligeAsistente({ actual }: { actual: string }) {
           </button>
         ))}
       </div>
+      {/* El arrastre no se ve venir: un botón redondo no anuncia que se puede mover, y
+          sin decirlo aquí no lo descubriría nadie. */}
       <p className="text-xs text-tinta-suave">
-        {SITIOS.find((s) => s.clave === elegido)?.detalle}.
+        {SITIOS.find((s) => s.clave === elegido)?.detalle}. También puedes arrastrarlo
+        por la pantalla y se queda donde lo sueltes.
       </p>
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>

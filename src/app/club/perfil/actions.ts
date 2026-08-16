@@ -229,9 +229,12 @@ export async function elegirAsistente(clave: string): Promise<{ error?: string }
   if (!SITIOS.some((s) => s.clave === clave)) return { error: "Esa opción no existe." };
 
   const admin = createAdminClient();
+  // Elegir esquina BORRA el arrastre (migración 0045): es la forma de deshacer un
+  // botón dejado en un sitio raro, y sin esto el ajuste del perfil no haría nada
+  // visible para quien ya lo había movido.
   const { error } = await admin
     .from("profiles")
-    .update({ asistente_boton: clave })
+    .update({ asistente_boton: clave, asistente_x: null, asistente_y: null })
     .eq("id", sesion.userId);
   if (error) return { error: "No se pudo guardar" };
 
@@ -239,6 +242,31 @@ export async function elegirAsistente(clave: string): Promise<{ error?: string }
   // esto el ajuste no se nota hasta la siguiente recarga completa.
   revalidatePath("/club", "layout");
   return {};
+}
+
+/**
+ * Guarda dónde ha soltado el socio el botón del asistente (migración 0045).
+ *
+ * EN FRACCIONES DE PANTALLA, ya sujetadas por el navegador, y aquí se vuelven a
+ * comprobar: la columna tiene un `check` de 0 a 1 en la base, así que un valor fuera de
+ * rango daría un error de Postgres en mitad de un arrastre.
+ *
+ * NO REVALIDA NADA a propósito, y es la diferencia con `elegirAsistente`: el botón ya
+ * está donde lo has soltado —lo pintó el navegador— así que rehacer el layout entero
+ * solo serviría para que parpadeara la pantalla al soltar.
+ */
+export async function moverAsistente(x: number, y: number): Promise<{ error?: string }> {
+  const sesion = await sesionActual();
+  if (!sesion) return { error: "No autenticado" };
+  const valido = (v: number) => Number.isFinite(v) && v >= 0 && v <= 1;
+  if (!valido(x) || !valido(y)) return { error: "Posición fuera de la pantalla." };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("profiles")
+    .update({ asistente_x: x, asistente_y: y })
+    .eq("id", sesion.userId);
+  return error ? { error: "No se pudo guardar" } : {};
 }
 
 /**

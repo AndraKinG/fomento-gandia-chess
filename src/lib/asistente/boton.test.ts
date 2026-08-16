@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  aPixeles,
   clasesBoton,
   clasesPanel,
+  esArrastre,
+  LADO_BOTON,
+  ladoDelPanel,
+  panelHaciaAbajo,
+  posicionGuardada,
+  sujetar,
   seVeElBoton,
   SITIOS,
   sitioBoton,
@@ -70,5 +77,59 @@ describe("el catálogo de opciones", () => {
 
   it("todas se pueden elegir de verdad", () => {
     for (const s of SITIOS) expect(sitioBoton(s.clave)).toBe(s.clave);
+  });
+});
+
+describe("arrastrar el botón (migración 0045)", () => {
+  it("un dedo que tiembla sigue siendo un toque", () => {
+    // Sin umbral el chat no se abriría NUNCA: nadie toca del todo quieto.
+    expect(esArrastre(0, 0)).toBe(false);
+    expect(esArrastre(3, 2)).toBe(false);
+  });
+
+  it("mover el dedo de verdad es un arrastre", () => {
+    expect(esArrastre(0, 12)).toBe(true);
+    expect(esArrastre(-20, 5)).toBe(true);
+  });
+
+  it("hacen falta las dos coordenadas: media posición no es una posición", () => {
+    expect(posicionGuardada(0.3, null)).toBeNull();
+    expect(posicionGuardada(null, null)).toBeNull();
+    expect(posicionGuardada(0.3, 0.8)).toEqual({ x: 0.3, y: 0.8 });
+  });
+
+  it("una posición fuera de la pantalla se descarta", () => {
+    // Un botón fuera de cuadro no se puede volver a coger para traerlo.
+    expect(posicionGuardada(1.4, 0.5)).toBeNull();
+    expect(posicionGuardada(0.5, -0.2)).toBeNull();
+  });
+
+  it("al soltar, el botón se queda ENTERO dentro de la pantalla", () => {
+    const p = sujetar(-500, 5000, 400, 800);
+    const { x, y } = aPixeles(p, 400, 800);
+    const mitad = LADO_BOTON / 2;
+    expect(x - mitad).toBeGreaterThanOrEqual(0);
+    expect(x + mitad).toBeLessThanOrEqual(400);
+    expect(y - mitad).toBeGreaterThanOrEqual(0);
+    expect(y + mitad).toBeLessThanOrEqual(800);
+  });
+
+  it("soltarlo en medio lo deja donde se soltó", () => {
+    expect(sujetar(200, 400, 400, 800)).toEqual({ x: 0.5, y: 0.5 });
+  });
+
+  it("guardado en fracciones, el sitio se conserva al cambiar de pantalla", () => {
+    // Es el motivo de no guardar píxeles: lo elegido en el monitor tiene que seguir
+    // teniendo sentido en el móvil.
+    const p = sujetar(960, 400, 1920, 800);
+    expect(p.x).toBeCloseTo(0.5, 5);
+    expect(aPixeles(p, 390, 780).x).toBeCloseTo(195, 5);
+  });
+
+  it("la ventana del chat se abre hacia dentro, nunca hacia el borde", () => {
+    expect(ladoDelPanel({ x: 0.9, y: 0.5 })).toBe("derecha");
+    expect(ladoDelPanel({ x: 0.1, y: 0.5 })).toBe("izquierda");
+    expect(panelHaciaAbajo({ x: 0.5, y: 0.1 })).toBe(true);
+    expect(panelHaciaAbajo({ x: 0.5, y: 0.9 })).toBe(false);
   });
 });

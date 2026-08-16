@@ -64,3 +64,95 @@ export function clasesPanel(sitio: SitioBoton): string {
     ? "bottom-40 lg:bottom-24 sm:left-4 lg:left-6"
     : "bottom-40 lg:bottom-24 sm:right-4 lg:right-6";
 }
+
+/* ---------------------------------------------------------------------------
+ * ARRASTRARLO A DONDE SEA (migración 0045)
+ *
+ * Dos esquinas son dos sitios, y el botón flota sobre TODAS las pantallas de la zona de
+ * socios: lo que estorba cambia según la pantalla. Así que además de las esquinas se
+ * puede coger y soltar donde uno quiera.
+ *
+ * SE GUARDA EN FRACCIONES DE PANTALLA Y NO EN PÍXELES: en píxeles, el sitio elegido en
+ * el monitor cae fuera de cuadro en el móvil, y girar el teléfono manda el botón al
+ * limbo. Y NULL SIGUE SIENDO LA ESQUINA de la 0044, así que quien no arrastre nada no
+ * nota ningún cambio.
+ * ------------------------------------------------------------------------ */
+
+/** Dónde está el botón, en fracciones de pantalla (0 a 1), medido en su centro. */
+export type Punto = { x: number; y: number };
+
+/** Lo que mide el botón, en píxeles (`h-14 w-14`). */
+export const LADO_BOTON = 56;
+
+/** Aire que se le deja al borde de la pantalla. */
+export const MARGEN_BORDE = 8;
+
+/**
+ * Cuánto hay que mover el dedo para que cuente como arrastre y no como toque.
+ *
+ * SIN ESTO EL BOTÓN NO SE PODRÍA ABRIR: un dedo nunca toca del todo quieto, así que
+ * cualquier píxel de temblor se leería como "lo has movido" y el chat no se abriría
+ * nunca. Ocho píxeles es lo que separa un toque de un arrastre con el dedo.
+ */
+export const UMBRAL_ARRASTRE = 8;
+
+/** ¿Ha sido un arrastre, o un toque con pulso? */
+export function esArrastre(dx: number, dy: number): boolean {
+  return Math.hypot(dx, dy) >= UMBRAL_ARRASTRE;
+}
+
+/**
+ * Lo guardado en la base, con red: hacen falta LAS DOS coordenadas y las dos dentro de
+ * la pantalla. Media posición no es una posición.
+ */
+export function posicionGuardada(
+  x: number | null | undefined,
+  y: number | null | undefined
+): Punto | null {
+  if (typeof x !== "number" || typeof y !== "number") return null;
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  if (x < 0 || x > 1 || y < 0 || y > 1) return null;
+  return { x, y };
+}
+
+/**
+ * Un punto en píxeles llevado a fracciones, SIN QUE EL BOTÓN SE SALGA.
+ *
+ * Se sujeta al soltar y no al pintar porque lo que se guarda tiene que ser ya válido:
+ * un botón medio fuera de cuadro no se puede volver a coger para traerlo.
+ */
+export function sujetar(
+  px: number,
+  py: number,
+  ancho: number,
+  alto: number,
+  lado = LADO_BOTON
+): Punto {
+  const mitad = lado / 2 + MARGEN_BORDE;
+  const entre = (v: number, min: number, max: number) =>
+    max <= min ? (min + max) / 2 : Math.min(Math.max(v, min), max);
+  return {
+    x: entre(px, mitad, ancho - mitad) / (ancho || 1),
+    y: entre(py, mitad, alto - mitad) / (alto || 1),
+  };
+}
+
+/** De fracciones a píxeles del centro, para pintar. */
+export function aPixeles(p: Punto, ancho: number, alto: number): Punto {
+  return { x: p.x * ancho, y: p.y * alto };
+}
+
+/**
+ * Por qué lado se abre la ventana del chat.
+ *
+ * Se abre HACIA DENTRO de la pantalla: con el botón a la derecha, la ventana crece
+ * hacia la izquierda. Al revés se saldría por el borde y quedaría medio chat fuera.
+ */
+export function ladoDelPanel(p: Punto): "izquierda" | "derecha" {
+  return p.x > 0.5 ? "derecha" : "izquierda";
+}
+
+/** Igual con la altura: con el botón arriba, la ventana baja; abajo, sube. */
+export function panelHaciaAbajo(p: Punto): boolean {
+  return p.y < 0.5;
+}
