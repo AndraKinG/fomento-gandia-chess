@@ -219,14 +219,10 @@ export default async function UsoPage({
           <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
             El club en la app
           </h2>
-          {/* LAS COLUMNAS LAS DECIDE LA REJILLA, NO UNOS CORTES A MANO. Antes eran
-              `grid-cols-2 sm:grid-cols-3 lg:grid-cols-5`, y ese "2" fijo es el que
-              rompía el móvil: en un teléfono de 360 px, dos columnas dejan cada tarjeta
-              en unos 150 px, y ahí "5 h 35 min en total" llegaba pegado al borde (lo
-              trajo el propietario con una captura). Con `auto-fit` y un mínimo de 11rem,
-              una tarjeta NUNCA baja de 176 px: en un móvil estrecho salen a una columna
-              y a lo ancho, en cuanto hay sitio pasan a dos, y en un monitor caben cinco
-              o seis sin escribir un solo breakpoint. */}
+          {/* LAS COLUMNAS LAS DECIDE LA REJILLA, con un mínimo de 11rem por tarjeta:
+              en un móvil estrecho salen a una columna y a todo lo ancho, y en un monitor
+              caben cinco o seis, sin escribir un solo breakpoint ni tener que volver a
+              acertar el número cada vez que se añade una tarjeta. */}
           <div className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-3">
             {/* EL ÚNICO DATO EN VIVO del panel, y va primero: es lo que se mira al
                 entrar. Sale de la presencia que ya alimenta el círculo verde. */}
@@ -278,7 +274,15 @@ export default async function UsoPage({
 
         {/* ---- 2. EL PERIODO EN CURSO, en grande ---- */}
         <section className="space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* EN MÓVIL, EL TÍTULO ARRIBA Y LAS PESTAÑAS EN SU PROPIA FILA, mismo patrón
+              que la cabecera de /club/partidas. Con `justify-between` en una sola fila,
+              los tres botones se repartían los 196 px que sobraban al lado del título:
+              59 px cada uno, de los que 24 se los come el relleno, así que "Semana"
+              pedía 66 y solo tenía 59 — y como las pastillas llevan `whitespace-nowrap`
+              a propósito (para no partir el texto en dos líneas), lo que sobraba se
+              pintaba FUERA de la pastilla. Medido en un Redmi 9 Pro: 393 px de ancho.
+              Con la fila entera para ellas, cada pastilla pasa de 59 a ~120 px. */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
               {periodo === "dia" ? "Hoy" : periodo === "semana" ? "Esta semana" : "Este mes"}
             </h2>
