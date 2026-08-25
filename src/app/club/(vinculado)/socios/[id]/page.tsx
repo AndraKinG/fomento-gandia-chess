@@ -11,6 +11,7 @@ import { textoResultado, type Resultado } from "@/lib/partidas/validar";
 import { nombreVisible } from "@/lib/club/nombre-socio";
 import { EditorMote } from "@/components/club/EditorMote";
 import { EditorEloEstimado } from "@/components/club/EditorEloEstimado";
+import { ElosFide, elosDeFila } from "@/components/club/ElosFide";
 
 /**
  * La ficha pública de un socio: lo que los demás ven de él.
@@ -42,7 +43,9 @@ export default async function SocioPage({
 
   const { data: socio } = await supabase
     .from("players")
-    .select("id, nombre, apodo, apodo_solicitado, foto_url, aperturas, elo_fide, elo_feda, elo_otro, fide_id")
+    .select(
+      "id, nombre, apodo, apodo_solicitado, foto_url, aperturas, elo_fide, elo_feda, elo_otro, fide_id, elo_fide_rapidas, elo_fide_blitz, variacion_fide, variacion_fide_rapidas, variacion_fide_blitz, elo_fide_leido_en"
+    )
     .eq("id", id)
     .maybeSingle();
   if (!socio) redirect("/club");
@@ -178,6 +181,12 @@ export default async function SocioPage({
             )}
           </div>
         </Tarjeta>
+
+        {/* LOS TRES ELOS DE LA FIDE con su variación pendiente. Va aquí, justo debajo
+            de quién es: es la pregunta por la que se entra en una ficha. El chip de
+            arriba sigue diciendo el ELO que MANDA (clásicas, o el del orden de fuerza
+            si no tiene); esto lo desglosa. */}
+        <ElosFide elos={elosDeFila(socio)} />
 
         {esMiFicha && (
           <p className="px-1 text-xs text-tinta-suave">

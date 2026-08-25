@@ -7,6 +7,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { ChipElo } from "@/components/ui/ChipElo";
+import { ElosFide, elosDeFila } from "@/components/club/ElosFide";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 // Con alias y no relativo: este import cruza de la zona de socios a la de
 // autenticación, y un "../" de más se rompe en cuanto se mueve una carpeta —
@@ -32,7 +33,7 @@ export default async function PerfilPage() {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "email, player_id, avisos_silenciados, tema_tablero, juego_piezas, asistente_boton, players(nombre, apodo, apodo_solicitado, elo_fide, elo_feda, elo_otro, fide_id, feda_id, foto_url, aperturas)"
+      "email, player_id, avisos_silenciados, tema_tablero, juego_piezas, asistente_boton, players(nombre, apodo, apodo_solicitado, elo_fide, elo_feda, elo_otro, fide_id, feda_id, foto_url, aperturas, elo_fide_rapidas, elo_fide_blitz, variacion_fide, variacion_fide_rapidas, variacion_fide_blitz, elo_fide_leido_en)"
     )
     .eq("id", user!.id)
     .single();
@@ -69,6 +70,9 @@ export default async function PerfilPage() {
     elo_fide: number | null; elo_feda: number | null;
     elo_otro: number | null; fide_id: string | null; feda_id: string | null;
     foto_url: string | null; aperturas: string | null;
+    elo_fide_rapidas: number | null; elo_fide_blitz: number | null;
+    variacion_fide: number | null; variacion_fide_rapidas: number | null;
+    variacion_fide_blitz: number | null; elo_fide_leido_en: string | null;
   } | null;
 
   // La URL firmada de la foto, si hay: el bucket es privado (migración 0030) y
@@ -146,6 +150,12 @@ export default async function PerfilPage() {
             detalle="Vincúlate a tu ficha del club para ver tu progreso"
           />
         )}
+        {/* EL DESGLOSE DE LA FIDE: las tres modalidades y lo que llevas ganado o
+            perdido desde la última lista. La cifra grande de arriba se queda como está
+            —clásicas es la modalidad que manda— y esto contesta lo que antes había que
+            ir a buscar al perfil de la FIDE. */}
+        {p && <ElosFide elos={elosDeFila(p)} />}
+
         {!p && (
           <p className="text-center text-sm">
             <Link href="/club/vincular" className="font-semibold text-acento-texto underline">
