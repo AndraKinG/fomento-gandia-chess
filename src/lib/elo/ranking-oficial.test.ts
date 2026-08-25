@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  eloParaOrdenar,
   estadisticasClub,
   etiquetaNumero,
   ordenarPorElo,
@@ -121,5 +122,42 @@ describe("etiquetaNumero", () => {
 
   it("con bis lo añade", () => {
     expect(etiquetaNumero(12, 1)).toBe("12bis");
+  });
+});
+
+describe("el estimado en la ordenación (2026-08-25)", () => {
+  // Lo pidió un socio de la junta: "que refleje el ELO que pongo yo a mano para los
+  // socios que no tienen FIDE".
+  const base = { numero: 1, bisIndex: 0, nombre: "Quien sea" };
+
+  it("el FIDE manda sobre todo lo demás", () => {
+    expect(eloParaOrdenar({ ...base, eloFide: 1900, eloOtro: 1500, eloOficial: 1700 })).toBe(1900);
+  });
+
+  it("sin FIDE, el estimado gana al del orden de fuerza", () => {
+    // El estimado lo pone hoy quien conoce al socio; el del orden de fuerza es el del
+    // documento de septiembre.
+    expect(eloParaOrdenar({ ...base, eloFide: null, eloOtro: 1650, eloOficial: 1400 })).toBe(1650);
+  });
+
+  it("sin FIDE ni estimado, queda el del orden de fuerza", () => {
+    expect(eloParaOrdenar({ ...base, eloFide: null, eloOtro: null, eloOficial: 1400 })).toBe(1400);
+  });
+
+  it("sin nada, null: al final de la lista y no un cero que parece dato", () => {
+    expect(eloParaOrdenar({ ...base, eloFide: null, eloOtro: null, eloOficial: null })).toBeNull();
+  });
+
+  it("ordena usando el estimado de quien no tiene FIDE", () => {
+    const lista = [
+      { ...base, nombre: "Sin nada", eloFide: null, eloOtro: null, eloOficial: null },
+      { ...base, nombre: "Estimado alto", eloFide: null, eloOtro: 2000, eloOficial: 1200 },
+      { ...base, nombre: "Con FIDE", eloFide: 1850, eloOtro: null, eloOficial: null },
+    ];
+    expect(ordenarPorElo(lista).map((j) => j.nombre)).toEqual([
+      "Estimado alto",
+      "Con FIDE",
+      "Sin nada",
+    ]);
   });
 });

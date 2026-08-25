@@ -30,6 +30,8 @@ type Fila = {
   eloOficial: number | null;
   eloFide: number | null;
   eloFeda: number | null;
+  /** El estimado que pone la junta a mano, para quien no tiene FIDE (`players.elo_otro`). */
+  eloOtro: number | null;
 };
 
 /** Cómo se ordena la lista. Son los dos criterios que pidió el propietario. */
@@ -52,6 +54,7 @@ function TablaRanking({
   miFicha,
   conFide,
   conFeda,
+  conEstimado,
 }: {
   filas: Fila[];
   desde: number;
@@ -59,6 +62,7 @@ function TablaRanking({
   miFicha: string | null;
   conFide: boolean;
   conFeda: boolean;
+  conEstimado: boolean;
 }) {
   return (
     <Tarjeta compacta>
@@ -76,18 +80,36 @@ function TablaRanking({
                   2026-08-13: en "Por ELO" la única cifra que se veía en un móvil era la
                   del orden de fuerza —estática todo el año, y solo para Interclubs—
                   porque la de FIDE estaba escondida hasta los 640 px. Ahora en esa
-                  pestaña la primera columna es el ELO REAL (FIDE de clásicas, con el
-                  oficial de respaldo para los 11 que no lo tienen) y la del orden de
-                  fuerza pasa a ser la secundaria. En la otra pestaña, al revés: ahí el
-                  documento es el orden de fuerza. */}
+                  pestaña la primera columna es el ELO REAL (FIDE de clásicas).
+
+                  Y NINGUNA COLUMNA SE LLAMA YA "OFICIAL", que era la queja de un socio
+                  de la junta el 2026-08-25: "ELO = FIDE, Oficial = orden de fuerza —
+                  siendo el FIDE el oficial, ese campo o se quita o refleja el ELO que
+                  pongo yo a mano". Tenía razón en las dos cosas: el rating oficial de
+                  un jugador ES el de la FIDE, así que llamar "Oficial" al número de un
+                  documento interno invitaba a leerlo al revés. Ahora cada columna dice
+                  lo que es —"O. fuerza"— y en la pestaña de ELO su sitio lo ocupa el
+                  ESTIMADO, que es el dato que allí falta: el de los socios que aún no
+                  tienen FIDE. El orden de fuerza sigue entero en su propia pestaña, que
+                  es de donde no se debe mover. */}
               <th scope="col" className="pb-1 pr-2 text-right font-medium">
-                {criterio === "elo" ? "ELO" : "Oficial"}
+                {criterio === "elo" ? "ELO" : "O. fuerza"}
               </th>
-              {conFide && (
-                <th scope="col" className="hidden pb-1 pr-2 text-right font-medium sm:table-cell">
-                  {criterio === "elo" ? "Oficial" : "FIDE"}
-                </th>
-              )}
+              {criterio === "elo"
+                ? conEstimado && (
+                    <th
+                      scope="col"
+                      className="hidden pb-1 pr-2 text-right font-medium sm:table-cell"
+                      title="Lo pone la junta a mano para quien no tiene ELO FIDE"
+                    >
+                      Estimado
+                    </th>
+                  )
+                : conFide && (
+                    <th scope="col" className="hidden pb-1 pr-2 text-right font-medium sm:table-cell">
+                      FIDE
+                    </th>
+                  )}
               {conFeda && (
                 <th scope="col" className="hidden pb-1 text-right font-medium sm:table-cell">
                   FEDA
@@ -143,11 +165,20 @@ function TablaRanking({
                   <td className="py-1.5 pr-2 text-right font-semibold tabular-nums text-tinta">
                     {(criterio === "elo" ? eloParaOrdenar(f) : f.eloOficial) || "—"}
                   </td>
-                  {conFide && (
-                    <td className="hidden py-1.5 pr-2 text-right tabular-nums text-tinta-suave sm:table-cell">
-                      {(criterio === "elo" ? f.eloOficial : f.eloFide) ?? "—"}
-                    </td>
-                  )}
+                  {criterio === "elo"
+                    ? conEstimado && (
+                        <td className="hidden py-1.5 pr-2 text-right tabular-nums text-tinta-suave sm:table-cell">
+                          {/* Solo se enseña si NO tiene FIDE: con FIDE, el estimado ya
+                              no se usa para nada y ponerlo al lado invita a compararlos
+                              como si fueran dos opiniones sobre lo mismo. */}
+                          {f.eloFide === null ? (f.eloOtro ?? "—") : "—"}
+                        </td>
+                      )
+                    : conFide && (
+                        <td className="hidden py-1.5 pr-2 text-right tabular-nums text-tinta-suave sm:table-cell">
+                          {f.eloFide ?? "—"}
+                        </td>
+                      )}
                   {conFeda && (
                     <td className="hidden py-1.5 text-right tabular-nums text-tinta-suave sm:table-cell">
                       {f.eloFeda ?? "—"}
@@ -210,7 +241,7 @@ export default async function OrdenFuerzaPage({
   const { data: orden } = season
     ? await supabase
         .from("force_order")
-        .select("numero, bis_index, elo_oficial, player_id, players(nombre, apodo, elo_fide, elo_feda)")
+        .select("numero, bis_index, elo_oficial, player_id, players(nombre, apodo, elo_fide, elo_feda, elo_otro)")
         .eq("season_id", season.id)
         .order("numero")
         .order("bis_index")
@@ -222,6 +253,7 @@ export default async function OrdenFuerzaPage({
       apodo: string | null;
       elo_fide: number | null;
       elo_feda: number | null;
+      elo_otro: number | null;
     } | null;
     return {
       numero: f.numero,
@@ -234,6 +266,7 @@ export default async function OrdenFuerzaPage({
       eloOficial: f.elo_oficial ?? null,
       eloFide: p?.elo_fide ?? null,
       eloFeda: p?.elo_feda ?? null,
+      eloOtro: p?.elo_otro ?? null,
     };
   });
 
@@ -242,6 +275,9 @@ export default async function OrdenFuerzaPage({
   // FIDE, no el número), así que eran dos columnas de guiones ocupando ancho.
   const conFide = filas.some((f) => f.eloFide !== null);
   const conFeda = filas.some((f) => f.eloFeda !== null);
+  // La columna del estimado solo aparece si le sirve a alguien: un socio SIN FIDE que
+  // lo tenga puesto. Con todo el club federado sería una columna de guiones.
+  const conEstimado = filas.some((f) => f.eloFide === null && f.eloOtro !== null);
   const trozos = partirEnDos(visibles);
 
   // Estadísticas del club: salen de la misma consulta, así que no cuestan nada, y
@@ -341,14 +377,20 @@ export default async function OrdenFuerzaPage({
                   miFicha={sesion?.playerId ?? null}
                   conFide={conFide}
                   conFeda={conFeda}
+                  conEstimado={conEstimado}
                 />
               ))}
             </div>
 
             <Tarjeta compacta>
+              {/* LA LEYENDA SIGUE A LAS COLUMNAS: decía "Oficial" cuando ya no hay
+                  ninguna columna con ese nombre. */}
               <p className="text-xs text-tinta-suave">
-                <b className="font-semibold">Oficial</b>: el ELO con el que la FACV hace
-                el orden. Si falta, el mayor entre FEDA y FIDE (RGC 52.1).{" "}
+                <b className="font-semibold">ELO</b>: el FIDE de clásicas, al día.{" "}
+                <b className="font-semibold">O. fuerza</b>: el del documento que la FACV
+                publica para el Interclubs, del día que se hizo.{" "}
+                <b className="font-semibold">Estimado</b>: lo pone la junta a mano para
+                quien todavía no tiene FIDE.{" "}
                 <b className="font-semibold">bis</b>: entró después de publicarse la
                 lista.
               </p>

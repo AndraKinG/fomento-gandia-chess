@@ -81,6 +81,10 @@ function comoTexto(r) {
 
 let actualizados = 0;
 let errores = 0;
+// SIN ELO NO ES UN ERROR, y contarlo como tal era enganoso: hay 10 socios con ficha
+// FIDE y ningun rating todavia -- estan federados pero no han jugado nada valido. Son
+// justo los que necesitan el ELO estimado que pone la junta a mano.
+let sinElo = 0;
 for (const p of players) {
   try {
     const perfil = await fetch(`https://ratings.fide.com/profile/${p.fide_id}`, {
@@ -92,11 +96,11 @@ for (const p of players) {
     } else {
       const r = parsearPerfilFide(await perfil.text());
       if (r.clasicas.elo === null && r.rapidas.elo === null && r.blitz.elo === null) {
-        // NO SE ESCRIBE NADA en este caso, a propósito: si la FIDE rediseña la página o
-        // devuelve un error con HTTP 200, machacar los ELOs con null borraría datos
+        // NO SE ESCRIBE NADA en este caso, a propósito: si la FIDE rediseñara la página
+        // o devolviera un error con HTTP 200, machacar los ELOs con null borraría datos
         // buenos de los 46 socios de una pasada.
-        errores++;
-        console.error(`  ${p.nombre}: ningún rating en el perfil (¿ha cambiado la página?)`);
+        sinElo++;
+        console.log(`  ${p.nombre}: sin ELO FIDE todavía`);
       } else {
         const upd = await fetch(`${SUPABASE_URL}/rest/v1/players?id=eq.${p.id}`, {
           method: "PATCH",
@@ -131,5 +135,9 @@ for (const p of players) {
   await new Promise((r) => setTimeout(r, 500)); // cortesía con el servidor FIDE
 }
 
-console.log(`Hecho: ${actualizados} actualizados, ${errores} errores`);
+console.log(`Hecho: ${actualizados} actualizados, ${sinElo} sin ELO todavía, ${errores} errores`);
+
+// SOLO ES FALLO SI NO SE ACTUALIZÓ NADIE. Con cero actualizados y 46 fichas, o la FIDE
+// ha cambiado la página o no hay red: eso sí hay que verlo en el registro de la tarea
+// programada. Que diez socios no tengan ELO es normal y no debe pintar la tarea en rojo.
 if (actualizados === 0 && players.length > 0) process.exit(1);

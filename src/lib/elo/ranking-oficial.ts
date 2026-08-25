@@ -15,6 +15,9 @@ export type JugadorRanking = {
   eloOficial: number | null;
   /** FIDE de clásicas al día, que lo trae la sync del ranking de la FACV. */
   eloFide?: number | null;
+  /** El estimado que pone la junta a mano (`players.elo_otro`), para quien no tiene
+   *  FIDE todavía. */
+  eloOtro?: number | null;
 };
 
 /**
@@ -27,11 +30,15 @@ export type JugadorRanking = {
  * de septiembre en marzo. Cuando se escribió esto ninguna ficha tenía ELO FIDE, así
  * que era el único que había — dejó de ser verdad al montar la sync del ranking FACV.
  *
- * El del orden de fuerza queda de respaldo para quien no tiene FIDE (11 de 46): mejor
- * un número viejo que mandarlo al final de la lista como si no jugara.
+ * PARA QUIEN NO TIENE FIDE, EL ESTIMADO ANTES QUE EL DEL ORDEN DE FUERZA (2026-08-25,
+ * pedido por un socio de la junta): el estimado lo pone a mano quien conoce al socio y
+ * es de HOY; el del orden de fuerza es el del documento de septiembre y para un recién
+ * llegado no existe siquiera. Si alguien se ha tomado la molestia de estimarlo, ese
+ * manda. Y el del orden de fuerza sigue de último respaldo: mejor un número viejo que
+ * mandar a alguien al final de la lista como si no jugara.
  */
 export function eloParaOrdenar(j: JugadorRanking): number | null {
-  return j.eloFide ?? j.eloOficial ?? null;
+  return j.eloFide ?? j.eloOtro ?? j.eloOficial ?? null;
 }
 
 /**
