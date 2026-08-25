@@ -186,60 +186,78 @@ export default async function PartidasPage({
                 <Link href={`/club/partidas/${p.id}`} className="block h-full">
                   <Tarjeta
                     compacta
-                    className="h-full transition hover:border-borde-acento"
+                    className="flex h-full flex-col gap-1 transition hover:border-borde-acento"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        {/* El ELO del rival FUERA del texto que se recorta: metido
-                            dentro, en un móvil se cortaba a mitad —"Sanz Wawer, Daniel
-                            (208…"— y un ELO a medias es peor que ninguno. Ahora se
-                            recortan los nombres y la cifra se ve siempre. */}
-                        <p className="flex items-baseline gap-1 text-sm text-tinta">
-                          <span className="min-w-0 truncate">
-                            <span className="font-semibold">{duenio}</span>
-                            <span className="text-tinta-suave"> vs </span>
-                            <span className="font-semibold">{p.rival_nombre}</span>
+                    {/* TRES FILAS SIEMPRE, Y ESO ES LO QUE IGUALA LAS ALTURAS. Antes la
+                        derecha era una columna de hasta cuatro iconos apilados
+                        (estrella, resultado, color, PGN) y la izquierda de dos a cuatro
+                        líneas, así que cada tarjeta medía lo que le tocaba: la que tenía
+                        PGN salía más alta que la de al lado, y la que no tenía apertura
+                        más baja que todas. `h-full` solo arreglaba las de una MISMA fila.
+
+                        Ahora el pie existe siempre —color, resultado, apertura, candado
+                        y PGN en una línea— así que todas las tarjetas tienen el mismo
+                        número de líneas, y con `mt-auto` el pie queda pegado abajo
+                        aunque el nombre ocupe dos líneas. */}
+                    <div className="flex items-start justify-between gap-2">
+                      {/* El ELO del rival FUERA del texto que se recorta: metido
+                          dentro, en un móvil se cortaba a mitad —"Sanz Wawer, Daniel
+                          (208…"— y un ELO a medias es peor que ninguno. Ahora se
+                          recortan los nombres y la cifra se ve siempre. */}
+                      <p className="flex min-w-0 items-baseline gap-1 text-sm text-tinta">
+                        <span className="min-w-0 truncate">
+                          <span className="font-semibold">{duenio}</span>
+                          <span className="text-tinta-suave"> vs </span>
+                          <span className="font-semibold">{p.rival_nombre}</span>
+                        </span>
+                        {p.rival_elo ? (
+                          <span className="shrink-0 tabular-nums text-tinta-suave">
+                            ({p.rival_elo})
                           </span>
-                          {p.rival_elo ? (
-                            <span className="shrink-0 tabular-nums text-tinta-suave">
-                              ({p.rival_elo})
-                            </span>
-                          ) : null}
-                        </p>
-                        <p className="mt-0.5 text-xs text-tinta-suave">
-                          {formatearRangoFechas(p.fecha, p.fecha)}
-                          {p.ronda ? ` · Ronda ${p.ronda}` : ""}
-                          {torneo ? ` · ${torneo}` : ""}
-                        </p>
-                        {/* Solo aparece en las tuyas: si la ves y es privada, es que
-                            es tuya (lo garantiza la RLS de la 0039). Sin este aviso no
-                            habría forma de saber cuáles has escondido. */}
-                        {p.privada && (
-                          <p className="mt-0.5 text-xs font-medium text-tinta-suave">
-                            🔒 Solo para ti
-                          </p>
-                        )}
-                        {p.apertura && (
-                          <p className="truncate text-xs text-tinta-suave">{p.apertura}</p>
-                        )}
-                      </div>
-                      <div className="flex shrink-0 flex-col items-end gap-0.5">
+                        ) : null}
+                      </p>
+                      <span className="shrink-0">
                         <Estrella gameId={p.id} favorita={esFavorita.has(p.id)} />
-                        <span
-                          className={`text-lg font-bold ${COLOR_MARCA[resultado]}`}
-                          title={textoResultado(resultado)}
-                        >
-                          {MARCA[resultado]}
+                      </span>
+                    </div>
+
+                    {/* `truncate`: un torneo de nombre largo partía la línea en dos y
+                        volvía a descuadrar la tarjeta. */}
+                    <p className="truncate text-xs text-tinta-suave">
+                      {formatearRangoFechas(p.fecha, p.fecha)}
+                      {p.ronda ? ` · Ronda ${p.ronda}` : ""}
+                      {torneo ? ` · ${torneo}` : ""}
+                    </p>
+
+                    <div className="mt-auto flex items-center gap-2 text-xs">
+                      <span aria-hidden className="shrink-0 text-tinta-suave">
+                        {p.color === "blancas" ? "♙" : "♟"}
+                      </span>
+                      <span
+                        className={`shrink-0 text-base font-bold leading-none ${COLOR_MARCA[resultado]}`}
+                        title={textoResultado(resultado)}
+                      >
+                        {MARCA[resultado]}
+                      </span>
+                      {/* La apertura se lleva el hueco que sobra y se recorta: es el
+                          dato menos importante de la tarjeta y el que más varía de
+                          largo. */}
+                      <span className="min-w-0 flex-1 truncate text-tinta-suave">
+                        {p.apertura ?? ""}
+                      </span>
+                      {/* Solo aparece en las tuyas: si la ves y es privada, es que es
+                          tuya (lo garantiza la RLS de la 0039). Sin esta marca no
+                          habría forma de saber cuáles has escondido. */}
+                      {p.privada && (
+                        <span className="shrink-0 text-tinta-suave" title="Solo para ti">
+                          🔒
                         </span>
-                        <span aria-hidden className="text-xs text-tinta-suave">
-                          {p.color === "blancas" ? "♙" : "♟"}
+                      )}
+                      {p.pgn && (
+                        <span className="shrink-0 text-acento-texto" title="Tiene PGN">
+                          PGN
                         </span>
-                        {p.pgn && (
-                          <span className="text-xs text-acento-texto" title="Tiene PGN">
-                            PGN
-                          </span>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </Tarjeta>
                 </Link>
