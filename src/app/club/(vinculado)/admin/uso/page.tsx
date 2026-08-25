@@ -219,7 +219,15 @@ export default async function UsoPage({
           <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
             El club en la app
           </h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {/* LAS COLUMNAS LAS DECIDE LA REJILLA, NO UNOS CORTES A MANO. Antes eran
+              `grid-cols-2 sm:grid-cols-3 lg:grid-cols-5`, y ese "2" fijo es el que
+              rompía el móvil: en un teléfono de 360 px, dos columnas dejan cada tarjeta
+              en unos 150 px, y ahí "5 h 35 min en total" llegaba pegado al borde (lo
+              trajo el propietario con una captura). Con `auto-fit` y un mínimo de 11rem,
+              una tarjeta NUNCA baja de 176 px: en un móvil estrecho salen a una columna
+              y a lo ancho, en cuanto hay sitio pasan a dos, y en un monitor caben cinco
+              o seis sin escribir un solo breakpoint. */}
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-3">
             {/* EL ÚNICO DATO EN VIVO del panel, y va primero: es lo que se mira al
                 entrar. Sale de la presencia que ya alimenta el círculo verde. */}
             <EnLineaAhora />
@@ -290,7 +298,7 @@ export default async function UsoPage({
           </div>
 
           {actual && (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-3">
               <Dato
                 titulo="Socios activos"
                 valor={String(actual.activos)}
