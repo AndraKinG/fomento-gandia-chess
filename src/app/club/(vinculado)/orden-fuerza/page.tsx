@@ -120,10 +120,17 @@ function TablaRanking({
           <tbody>
             {filas.map((f, i) => {
               const soyYo = f.ficha === miFicha;
+              // SIN NINGÚN ELO la fila se apaga entera, y es lo que pidió el
+              // propietario: son los últimos ocho de la lista, todos con un guion, y
+              // en negro sobre blanco pesaban más que los que sí tienen número. Un
+              // socio recién federado sin partidas valoradas no es una fila importante.
+              const sinElo = criterio === "elo" && eloParaOrdenar(f) === null;
               return (
                 <tr
                   key={`${f.numero}-${f.bisIndex}`}
-                  className={`border-t border-borde ${soyYo ? "bg-tarjeta-suave" : ""}`}
+                  className={`border-t border-borde ${soyYo ? "bg-tarjeta-suave" : ""} ${
+                    sinElo ? "opacity-60" : ""
+                  }`}
                 >
                   <td className="py-1.5 pr-2 tabular-nums text-tinta-suave">
                     {criterio === "elo"
@@ -139,30 +146,46 @@ function TablaRanking({
                         podía tocar. Un socio de la junta lo pidió como "un enlace en el
                         nombre que me lleve a la ficha" — el enlace ya estaba, lo que
                         faltaba era que se viera. */}
-                    <Link
-                      href={`/club/socios/${f.ficha}`}
-                      className={`text-acento-texto hover:underline ${soyYo ? "font-semibold" : ""}`}
-                    >
-                      {f.nombre}
-                    </Link>
+                    {/* EL NÚMERO DE ORDEN VA EN LA MISMA LÍNEA QUE EL NOMBRE, y esto
+                        era el problema visual que trajo el propietario: el nombre
+                        oficial se pintaba en bloque ANTES del número, así que quien
+                        tiene mote ocupaba TRES líneas (mote / nombre oficial / nº) y
+                        quien no tiene, una. El resultado era una columna que se estiraba
+                        el doble que la de al lado. Ahora son dos líneas como mucho:
+                        nombre y número arriba, el oficial debajo. */}
+                    <span className="flex flex-wrap items-baseline gap-x-2">
+                      <Link
+                        href={`/club/socios/${f.ficha}`}
+                        className={`text-acento-texto hover:underline ${soyYo ? "font-semibold" : ""}`}
+                      >
+                        {f.nombre}
+                      </Link>
+                      {/* En el orden por ELO se enseña al lado el número de orden: es lo
+                          que deja ver de un vistazo dónde los dos criterios no
+                          coinciden. */}
+                      {criterio === "elo" && (
+                        <span className="text-xs text-tinta-suave">
+                          nº {etiquetaNumero(f.numero, f.bisIndex)}
+                        </span>
+                      )}
+                    </span>
                     {/* EL OFICIAL DEBAJO, y solo si el mote no es él: esta lista es el
                         orden de fuerza que publica la FACV, así que el nombre de la
                         federación tiene que poder leerse — si no, un capitán no sabría
                         con qué nombre buscar a alguien en un acta. */}
                     {f.nombreOficial !== f.nombre && (
-                      <span className="block truncate text-xs text-tinta-suave">
+                      <span className="block truncate text-xs leading-tight text-tinta-suave">
                         {f.nombreOficial}
                       </span>
                     )}
-                    {/* En el orden por ELO se enseña al lado el número de orden: es lo
-                        que deja ver de un vistazo dónde los dos criterios no coinciden. */}
-                    {criterio === "elo" && (
-                      <span className="ml-2 text-xs text-tinta-suave">
-                        nº {etiquetaNumero(f.numero, f.bisIndex)}
-                      </span>
-                    )}
                   </td>
-                  <td className="py-1.5 pr-2 text-right font-semibold tabular-nums text-tinta">
+                  {/* El guion, en gris y sin negrita: es la ausencia de un dato, no un
+                      dato. En negrita competía con los ELOs de verdad. */}
+                  <td
+                    className={`py-1.5 pr-2 text-right tabular-nums ${
+                      sinElo ? "text-tinta-suave" : "font-semibold text-tinta"
+                    }`}
+                  >
                     {(criterio === "elo" ? eloParaOrdenar(f) : f.eloOficial) || "—"}
                   </td>
                   {criterio === "elo"
