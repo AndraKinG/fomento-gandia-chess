@@ -82,6 +82,8 @@ export function GestionTorneo({
   const [abriendoInscritos, setAbriendoInscritos] = useState(false);
   /** Borrar pide una segunda pulsación: se lleva el torneo entero. */
   const [confirmandoBorrar, setConfirmandoBorrar] = useState(false);
+  // Borrar la ultima ronda tambien pide confirmacion: se puede llevar resultados.
+  const [confirmandoRonda, setConfirmandoRonda] = useState(false);
   // Guarda el NÚMERO de ronda, no la posición, y null significa "la última". Así
   // generar una ronda nueva la enseña sola, y borrar la última no deja el selector
   // apuntando a una ronda que ya no existe.
@@ -89,15 +91,28 @@ export function GestionTorneo({
   const [pendiente, startTransition] = useTransition();
   const router = useRouter();
 
+  /**
+   * Lanza una accion del organizador y SIEMPRE dice algo si sale mal.
+   *
+   * EL `try` NO ES DECORATIVO: sin el, una accion que LANZA en vez de devolver
+   * `{error}` —un corte de red, un fallo de la propia llamada— dejaba el boton sin
+   * hacer nada y sin ningun mensaje. Desde fuera eso es "no me deja borrar la ronda y
+   * no se por que", que es exactamente la queja que trajo a revisar esto: un boton que
+   * no responde no se puede distinguir de un permiso denegado.
+   */
   function ejecutar(accion: () => Promise<{ error?: string }>) {
     setError(null);
     startTransition(async () => {
-      const r = await accion();
-      if (r.error) {
-        setError(r.error);
-        return;
+      try {
+        const r = await accion();
+        if (r.error) {
+          setError(r.error);
+          return;
+        }
+        router.refresh();
+      } catch {
+        setError("No se ha podido hacer. Prueba otra vez o recarga la pantalla.");
       }
-      router.refresh();
     });
   }
 
@@ -128,6 +143,13 @@ export function GestionTorneo({
   const inscritos = socios.filter((s) => s.inscrito);
   const faltanResultados = rondas.some((r) => r.pares.some((p) => p.resultado === null));
   const rondasHechas = rondas.length;
+  // El numero de la ULTIMA ronda, que es la que borra el boton. No es lo mismo que
+  // cuantas hay: el boton dice de que ronda habla, asi que tiene que decir la verdad.
+  const numeroUltima = rondas[rondas.length - 1]?.numero ?? 0;
+  // Lo que se lleva por delante borrarla, para poder avisarlo ANTES de borrar.
+  const ultima = rondas[rondas.length - 1] ?? null;
+  const resultadosQueSePierden = ultima?.pares.filter((p) => p.resultado !== null).length ?? 0;
+  const partidasEnlazadas = ultima?.pares.filter((p) => p.gameId !== null).length ?? 0;
   const quedanRondas = rondasTotales === null || rondasHechas < rondasTotales;
   const rondaActual =
     rondas.find((r) => r.numero === rondaPinchada) ?? rondas[rondas.length - 1] ?? null;
@@ -485,16 +507,59 @@ export function GestionTorneo({
           )}
 
           <div className="flex flex-wrap gap-2">
-            {rondasHechas > 0 && (
-              <Boton
-                variante="secundario"
-                className="text-sm"
-                disabled={pendiente}
-                onClick={() => ejecutar(() => borrarUltimaRonda(tournamentId))}
-              >
-                Borrar ronda {rondasHechas}
-              </Boton>
-            )}
+            {/* BORRAR LA ULTIMA RONDA, EN DOS PASOS Y DICIENDO QUE SE LLEVA.
+                Antes era un solo clic, y ademas justo al lado de "Cerrar el torneo":
+                dos botones grises pegados, uno deshace y el otro cierra. Y si la ronda
+                tenia resultados anotados, se iban con ella SIN AVISAR — que no es un
+                detalle, porque el ELO del club no se guarda, se recalcula de los
+                emparejamientos (ver `leerRanking`), asi que borrar resultados reescribe
+                el ranking. Es la misma razon por la que un torneo jugado no se puede
+                borrar; aqui no se prohibe —a veces hay que deshacer una ronda mal
+                emparejada— pero se dice antes. */}
+            {rondasHechas > 0 &&
+              (confirmandoRonda ? (
+                <div className="flex w-full flex-wrap items-center gap-2">
+                  <p className="min-w-0 flex-1 text-sm text-tinta">
+                    ¿Borrar la ronda {numeroUltima}?
+                    {resultadosQueSePierden > 0 &&
+                      ` Se pierden ${resultadosQueSePierden} resultado${
+                        resultadosQueSePierden === 1 ? "" : "s"
+                      } y el ranking del club cambia.`}
+                    {partidasEnlazadas > 0 &&
+                      ` ${partidasEnlazadas} partida${
+                        partidasEnlazadas === 1 ? "" : "s"
+                      } del repositorio se quedan sin torneo (no se borran).`}
+                  </p>
+                  <Boton
+                    variante="secundario"
+                    className="text-sm"
+                    disabled={pendiente}
+                    onClick={() => {
+                      setConfirmandoRonda(false);
+                      ejecutar(() => borrarUltimaRonda(tournamentId));
+                    }}
+                  >
+                    {pendiente ? "Borrando…" : "Sí, borrarla"}
+                  </Boton>
+                  <Boton
+                    variante="secundario"
+                    className="text-sm"
+                    disabled={pendiente}
+                    onClick={() => setConfirmandoRonda(false)}
+                  >
+                    No
+                  </Boton>
+                </div>
+              ) : (
+                <Boton
+                  variante="secundario"
+                  className="text-sm"
+                  disabled={pendiente}
+                  onClick={() => setConfirmandoRonda(true)}
+                >
+                  Borrar ronda {numeroUltima}
+                </Boton>
+              ))}
             {rondasHechas > 0 && !faltanResultados && (
               <Boton
                 variante="secundario"
@@ -514,15 +579,27 @@ export function GestionTorneo({
         </div>
       )}
 
+      {/* CERRADO: DECIR QUE POR ESO NO HAY BOTONES.
+          Al cerrar el torneo desaparece el bloque entero de arriba —generar ronda,
+          borrar ronda, poner hora— y no quedaba ni una palabra explicandolo. Con
+          "Cerrar el torneo" pegado a "Borrar ronda", cerrar sin querer y quedarse sin
+          poder borrar la ronda es un camino de un solo clic, y desde dentro parece que
+          la app no te deja. */}
       {esJunta && estado === "terminado" && (
-        <Boton
-          variante="secundario"
-          className="w-full text-sm"
-          disabled={pendiente}
-          onClick={() => ejecutar(() => cambiarEstadoTorneo(tournamentId, "en_curso"))}
-        >
-          Reabrir el torneo
-        </Boton>
+        <div className="space-y-2 pt-2">
+          <p className="px-1 text-sm text-tinta-suave">
+            El torneo está cerrado: por eso no se pueden generar ni borrar rondas.
+            Reábrelo para volver a tocarlas.
+          </p>
+          <Boton
+            variante="secundario"
+            className="w-full text-sm"
+            disabled={pendiente}
+            onClick={() => ejecutar(() => cambiarEstadoTorneo(tournamentId, "en_curso"))}
+          >
+            Reabrir el torneo
+          </Boton>
+        </div>
       )}
 
       {/* BORRAR EL TORNEO: solo quien lo creó (o un admin), y solo si no se ha jugado
