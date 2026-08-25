@@ -109,11 +109,17 @@ function TablaRanking({
                       : etiquetaNumero(f.numero, f.bisIndex)}
                   </td>
                   <td className="py-1.5 pr-2 text-tinta">
-                    {/* El nombre lleva a la ficha del socio: es donde están su foto,
-                        sus aperturas y sus partidas. */}
+                    {/* El nombre lleva a la ficha del socio: su foto, sus aperturas,
+                        sus partidas y —para junta y admin— su mote y su ELO estimado.
+
+                        VA PINTADO COMO ENLACE SIEMPRE, no solo al pasar el ratón: en un
+                        móvil no hay ratón, así que era texto plano y nadie sabía que se
+                        podía tocar. Un socio de la junta lo pidió como "un enlace en el
+                        nombre que me lleve a la ficha" — el enlace ya estaba, lo que
+                        faltaba era que se viera. */}
                     <Link
                       href={`/club/socios/${f.ficha}`}
-                      className={`hover:text-acento-texto hover:underline ${soyYo ? "font-semibold" : ""}`}
+                      className={`text-acento-texto hover:underline ${soyYo ? "font-semibold" : ""}`}
                     >
                       {f.nombre}
                     </Link>

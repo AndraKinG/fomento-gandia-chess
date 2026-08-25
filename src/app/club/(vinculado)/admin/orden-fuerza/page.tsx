@@ -5,7 +5,7 @@ import { Cabecera } from "@/components/ui/Cabecera";
 import { Banner } from "@/components/ui/Banner";
 import { ChipElo } from "@/components/ui/ChipElo";
 import { FilaJugadorOF } from "@/components/ui/FilaJugadorOF";
-import { EditorMote } from "./EditorMote";
+import { EditorMote } from "@/components/club/EditorMote";
 import { Contenedor } from "@/components/ui/Contenedor";
 import { BotonAccion } from "@/components/ui/BotonAccion";
 import { partirEnDos } from "@/lib/ui/columnas";

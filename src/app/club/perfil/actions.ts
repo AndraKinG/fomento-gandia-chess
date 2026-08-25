@@ -337,11 +337,15 @@ export async function solicitarMote(mote: string): Promise<{ error?: string; ok?
       tipo: "mote_pedido",
       titulo: "Un socio pide su mote",
       cuerpo: `${sesion.nombre ?? "Un socio"} quiere llamarse "${valor}".`,
-      url: "/club/admin/orden-fuerza",
+      // A LA FICHA DEL SOCIO Y NO AL PANEL DE ADMIN: `/club/admin/*` es solo del
+      // admin, así que este aviso —que va a la junta— aterrizaba en un redirect a
+      // /club. El aviso de "resuélvelo tú" llevaba justo donde no se puede resolver.
+      url: `/club/socios/${sesion.playerId}`,
     });
   }
 
   revalidatePath("/club/perfil");
   revalidatePath("/club/admin/orden-fuerza");
+  revalidatePath(`/club/socios/${sesion.playerId}`);
   return { ok: valor ? "Pedido. La junta lo tiene que aprobar." : "Solicitud retirada." };
 }

@@ -272,6 +272,50 @@ export async function actualizarEloActual(): Promise<{
  * 43 socios sin cuenta todavía, dejarlo en manos de cada uno significaría no verlos
  * durante meses.
  */
+/**
+ * El ELO ESTIMADO de un socio (`players.elo_otro`), a mano.
+ *
+ * DE LOS TRES ELOS ES EL ÚNICO QUE SE PUEDE TOCAR A MANO, y conviene tener claro por
+ * qué (regla de los tres ELOs en CLAUDE.md):
+ *
+ * - `elo_fide` lo trae la sincronización del viernes desde el ranking de la FACV, así
+ *   que escribirlo aquí duraría hasta el viernes y se perdería SIN AVISAR. Si está mal,
+ *   está mal en la FACV.
+ * - `force_order.elo_oficial` es el documento estático del orden de fuerza, que también
+ *   se sincroniza, y encima solo vale para el Interclubs.
+ * - `elo_otro` no lo escribe nadie más, y es el respaldo del artículo 52.1 del RGC: lo
+ *   usa `fuerza()` cuando un socio no tiene FIDE ni FEDA, que es justo el caso del que
+ *   acaba de entrar al club y todavía no sale federado.
+ *
+ * O SEA QUE ESTO ES PARA QUIEN NO TIENE ELO OFICIAL. Con ELO de la FACV, el número que
+ * manda sigue siendo aquel, y este se guarda pero no se enseña.
+ *
+ * Junta y admin, como el mote: es la gente que conoce a los 46.
+ */
+export async function ponerEloEstimado(
+  playerId: string,
+  valor: string
+): Promise<{ error?: string }> {
+  if (!(await esJunta())) return { error: "No autorizado" };
+
+  // Vacío = quitarlo. Mismo criterio y mismos topes que al crear una ficha a mano
+  // (`enteroOpcional`), para que el número válido sea el mismo por las dos puertas.
+  const elo = enteroOpcional(valor);
+  if (elo === undefined) return { error: "Un ELO entre 0 y 3500." };
+
+  const { error } = await createAdminClient()
+    .from("players")
+    .update({ elo_otro: elo })
+    .eq("id", playerId);
+  if (error) return { error: "No se pudo guardar el ELO." };
+
+  // Las dos pantallas donde se ve, y las convocatorias, que lo usan para la fuerza.
+  revalidatePath("/club/admin/orden-fuerza");
+  revalidatePath(`/club/socios/${playerId}`);
+  revalidatePath("/club/orden-fuerza");
+  return {};
+}
+
 export async function ponerApodo(
   playerId: string,
   apodo: string
@@ -313,6 +357,7 @@ export async function ponerApodo(
   // listas enteras. Las demás lo cogerán en su siguiente pintado.
   revalidatePath("/club/admin/orden-fuerza");
   revalidatePath("/club/orden-fuerza");
+  revalidatePath(`/club/socios/${playerId}`);
   revalidatePath("/club/jugar");
   revalidatePath("/club/partidas");
   revalidatePath("/club");
@@ -418,6 +463,7 @@ export async function resolverMote(
 
   revalidatePath("/club/admin/orden-fuerza");
   revalidatePath("/club/orden-fuerza");
+  revalidatePath(`/club/socios/${playerId}`);
   revalidatePath("/club/perfil");
   revalidatePath("/club/jugar");
   revalidatePath("/club");

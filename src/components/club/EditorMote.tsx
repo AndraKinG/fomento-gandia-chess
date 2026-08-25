@@ -2,14 +2,21 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ponerApodo, resolverMote } from "./actions";
+import { ponerApodo, resolverMote } from "@/app/club/(vinculado)/admin/orden-fuerza/actions";
 
 /**
- * El mote del club de un socio, editable en la misma fila.
+ * El mote del club de un socio, editable donde se le vea.
  *
- * AQUÍ Y NO EN UNA PANTALLA APARTE porque son 46 y se rellenan de una sentada: quien
- * los conoce va bajando la lista y escribiendo. Un formulario por socio, con su
- * navegación de ida y vuelta, garantizaría que se quedaran a medias.
+ * VIVE EN `components` Y NO EN LA PANTALLA DE ADMIN porque se usa en DOS SITIOS: la
+ * lista de ELO del admin (46 de una sentada) y la ficha de cada socio, que es por donde
+ * llega la junta (`/club/admin/*` es solo del admin, así que un miembro de la junta
+ * nunca podía tocar un mote — lo cazó un socio de la junta: "el apodo no el puc posar a
+ * ningú, soles tinc accés a la meua fitxa"). Dos copias del campo acabarían validando
+ * distinto en cada sitio.
+ *
+ * EN LA LISTA VA EN LA FILA porque son 46 y se rellenan de una sentada: quien los conoce
+ * va bajando y escribiendo. Un formulario por socio, con su navegación de ida y vuelta,
+ * garantizaría que se quedaran a medias.
  *
  * SE GUARDA AL SALIR DEL CAMPO, no con un botón: un botón por fila serían 46 botones
  * que hay que acertar en un móvil. Y solo si el valor ha cambiado, para no escribir 46
@@ -20,6 +27,7 @@ export function EditorMote({
   apodo,
   apodoSolicitado,
   nombreOficial,
+  ancho = "fila",
 }: {
   playerId: string;
   apodo: string | null;
@@ -27,6 +35,8 @@ export function EditorMote({
   apodoSolicitado: string | null;
   /** Para el `aria-label`: con 46 campos iguales, "Mote" a secas no dice de quién. */
   nombreOficial: string;
+  /** En una ficha hay sitio; en una fila de 46, no. */
+  ancho?: "fila" | "ficha";
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pendiente, startTransition] = useTransition();
@@ -49,7 +59,7 @@ export function EditorMote({
   // colgada, y el socio seguiría viendo "la junta lo tiene que aprobar" para siempre.
   if (apodoSolicitado) {
     return (
-      <span className="flex flex-col items-end gap-1">
+      <span className={`flex flex-col gap-1 ${ancho === "ficha" ? "items-start" : "items-end"}`}>
         <span className="text-xs text-tinta-suave">
           pide <b className="font-semibold text-tinta">{apodoSolicitado}</b>
         </span>
@@ -83,7 +93,7 @@ export function EditorMote({
   }
 
   return (
-    <span className="flex flex-col items-end gap-0.5">
+    <span className={`flex flex-col gap-0.5 ${ancho === "ficha" ? "" : "items-end"}`}>
       <input
         // La `key` con el valor rehace el campo cuando el servidor manda otro mote.
         key={`${playerId}-${apodo ?? ""}`}
@@ -106,7 +116,9 @@ export function EditorMote({
             router.refresh();
           });
         }}
-        className="w-24 rounded-lg border border-borde bg-tarjeta px-2 py-1 text-xs text-tinta placeholder:text-tinta-suave disabled:opacity-50"
+        className={`rounded-lg border border-borde bg-tarjeta px-2 py-1 text-tinta placeholder:text-tinta-suave disabled:opacity-50 ${
+          ancho === "ficha" ? "w-full text-sm" : "w-24 text-xs"
+        }`}
       />
       {error && <span className="text-[0.65rem] text-red-600 dark:text-red-400">{error}</span>}
     </span>

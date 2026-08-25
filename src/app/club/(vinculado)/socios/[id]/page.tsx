@@ -9,6 +9,8 @@ import { Contenedor } from "@/components/ui/Contenedor";
 import { PuntoConectado } from "@/components/presencia/Presencia";
 import { textoResultado, type Resultado } from "@/lib/partidas/validar";
 import { nombreVisible } from "@/lib/club/nombre-socio";
+import { EditorMote } from "@/components/club/EditorMote";
+import { EditorEloEstimado } from "@/components/club/EditorEloEstimado";
 
 /**
  * La ficha pública de un socio: lo que los demás ven de él.
@@ -16,6 +18,13 @@ import { nombreVisible } from "@/lib/club/nombre-socio";
  * EXISTE PARA TODAS LAS FICHAS, tenga cuenta o no: el ELO, el número de orden y
  * las partidas subidas son del SOCIO, no de su cuenta. La foto y las aperturas
  * solo aparecen si él las ha puesto desde su perfil.
+ *
+ * Y ES LA PANTALLA DONDE LA JUNTA GESTIONA A UN SOCIO (2026-08-16, pedido por un socio
+ * de la junta: "el apodo no el puc posar a ningú, soles tinc accés a la meua fitxa").
+ * El mote y el ELO estimado se ponían solo en `/club/admin/orden-fuerza`, y esa puerta
+ * es SOLO DEL ADMIN: las acciones aceptaban a la junta desde el primer día, pero la
+ * junta no podía llegar a la pantalla que las llama. Aquí sí, porque esta ficha ya la
+ * ve todo el club — y es además donde uno mira cuando quiere saber de alguien.
  *
  * LA FOTO VA CON URL FIRMADA de una hora, generada aquí con la clave de
  * servicio: el bucket es privado (migración 0030) y así la cara de un socio no
@@ -33,7 +42,7 @@ export default async function SocioPage({
 
   const { data: socio } = await supabase
     .from("players")
-    .select("id, nombre, apodo, foto_url, aperturas, elo_fide, fide_id")
+    .select("id, nombre, apodo, apodo_solicitado, foto_url, aperturas, elo_fide, elo_feda, elo_otro, fide_id")
     .eq("id", id)
     .maybeSingle();
   if (!socio) redirect("/club");
@@ -73,6 +82,8 @@ export default async function SocioPage({
   }
 
   const esMiFicha = sesion?.playerId === socio.id;
+  // Quien puede gestionar a un socio: junta y admin, los mismos que las acciones.
+  const puedeGestionar = Boolean(sesion?.esJunta || sesion?.esAdmin);
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
@@ -113,16 +124,25 @@ export default async function SocioPage({
               {/* El ELO REAL: `elo_fide` (clásicas al día, lo trae la sync del
                   ranking FACV). Si no tiene, el del orden de fuerza, diciéndolo.
                   Regla de los tres ELOs en CLAUDE.md. */}
-              {(socio.elo_fide || orden?.elo_oficial) && (
+              {/* Y de último recurso el ESTIMADO (`elo_otro`), que antes no se
+                  enseñaba en ninguna parte: es el del socio que acaba de entrar y
+                  todavía no sale federado, o sea justo el que nadie sabe. Sin
+                  enseñarlo, ponerlo no servía para nada. */}
+              {(socio.elo_fide || orden?.elo_oficial || socio.elo_otro) && (
                 <span
                   title={
                     socio.elo_fide
                       ? "FIDE de clásicas, al día (se actualiza cada semana)"
-                      : "Del orden de fuerza: aún no tiene ELO de clásicas"
+                      : orden?.elo_oficial
+                        ? "Del orden de fuerza: aún no tiene ELO de clásicas"
+                        : "Estimado por el club: todavía no tiene ELO oficial"
                   }
                   className="rounded-full bg-tarjeta-suave px-2.5 py-0.5 text-xs font-semibold text-tinta ring-1 ring-borde"
                 >
-                  ELO {socio.elo_fide ?? orden?.elo_oficial}
+                  ELO {socio.elo_fide ?? orden?.elo_oficial ?? socio.elo_otro}
+                  {!socio.elo_fide && !orden?.elo_oficial && (
+                    <span className="font-normal text-tinta-suave"> estimado</span>
+                  )}
                 </span>
               )}
               {orden && (
@@ -166,6 +186,53 @@ export default async function SocioPage({
               Cambiar foto o aperturas
             </Link>
           </p>
+        )}
+
+        {/* GESTIÓN, SOLO JUNTA Y ADMIN. Va aquí y no en una pantalla aparte porque es
+            donde la junta llega de verdad: desde la lista de ELO, tocando un nombre. Y
+            el aviso de "un socio pide su mote" también trae aquí. */}
+        {puedeGestionar && (
+          <Tarjeta className="space-y-4">
+            <div>
+              <p className="text-sm font-semibold text-tinta">Gestión del socio</p>
+              <p className="text-xs text-tinta-suave">Solo lo ve la junta y el admin.</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-tinta-suave">
+                  Mote del club
+                </p>
+                <EditorMote
+                  playerId={socio.id}
+                  apodo={socio.apodo}
+                  apodoSolicitado={socio.apodo_solicitado}
+                  nombreOficial={socio.nombre}
+                  ancho="ficha"
+                />
+                <p className="text-xs text-tinta-suave">
+                  Se ve en todo el club. El nombre oficial de la FACV no cambia.
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-tinta-suave">
+                  ELO estimado
+                </p>
+                <EditorEloEstimado
+                  playerId={socio.id}
+                  eloOtro={socio.elo_otro}
+                  nombreOficial={socio.nombre}
+                />
+                {/* DECIR LO QUE ESTE CAMPO NO HACE, porque es la trampa evidente: quien
+                    ve "ELO" aquí espera corregir el número grande de arriba, y ese lo
+                    reescribe la sincronización del viernes desde la FACV. */}
+                <p className="text-xs text-tinta-suave">
+                  {socio.elo_fide
+                    ? "Tiene ELO de la FACV, así que manda aquel. Este no se usa."
+                    : "Para quien aún no tiene ELO oficial. Se usa en las convocatorias."}
+                </p>
+              </div>
+            </div>
+          </Tarjeta>
         )}
 
         <section className="space-y-2">
