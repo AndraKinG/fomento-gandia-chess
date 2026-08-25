@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { esAdmin } from "@/lib/auth/es-admin";
+import { esAdmin, esJunta } from "@/lib/auth/es-admin";
 import { avisar } from "@/lib/avisos/enviar";
 import { sincronizarTorneosFACVCore } from "@/lib/import/facv-torneos-apply";
 import { formatearRangoFechas } from "@/lib/torneos/fechas";
@@ -83,12 +83,23 @@ export async function cambiarDeInteres(
 /**
  * Rellena a mano lo que la FACV no publica: hora, ritmo, información extra y
  * enlace a las bases. Son justo los campos que el re-sync nunca pisa.
+ *
+ * JUNTA Y ADMIN desde el 2026-08-16, y no solo admin. El motivo es que la FACV **no
+ * tiene página por torneo** —su calendario publica siete columnas y ningún enlace,
+ * comprobado en vivo—, así que esta ficha es el único sitio donde puede estar la
+ * información de un torneo. Dejando la llave en un solo par de manos, los 147 torneos
+ * importados se quedan vacíos para siempre; y quien se entera de la hora y las bases es
+ * quien va a los torneos, no necesariamente el que administra la app.
+ *
+ * SE LLAMA DESDE DOS SITIOS: el panel de admin (la tabla, para varios de una vez) y la
+ * propia pantalla del torneo (`EditorFichaTorneo`), que es donde estás cuando te das
+ * cuenta de que falta la hora.
  */
 export async function editarFichaTorneo(
   tournamentId: string,
   datos: { hora?: string; ritmo?: string; infoExtra?: string; urlBases?: string }
 ): Promise<Resultado> {
-  if (!(await esAdmin())) return { error: "No autorizado" };
+  if (!(await esJunta())) return { error: "No autorizado" };
 
   const url = datos.urlBases?.trim();
   if (url && !/^https?:\/\//i.test(url)) {

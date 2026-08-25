@@ -11,6 +11,8 @@ import { BloqueCoches, type CocheVista } from "../BloqueCoches";
 import { BorrarTorneo } from "../BorrarTorneo";
 import { Contenedor } from "@/components/ui/Contenedor";
 import { nombreVisible } from "@/lib/club/nombre-socio";
+import { enlaceInfo64, URL_CALENDARIO_FACV } from "@/lib/torneos/enlaces-torneo";
+import { EditorFichaTorneo } from "@/components/club/EditorFichaTorneo";
 
 type Asistencia = "voy" | "no_voy" | "duda";
 
@@ -110,6 +112,12 @@ export default async function TorneoPage({
     torneo.origen === "manual" &&
     (Boolean(sesion?.esAdmin) || torneo.creado_por === sesion?.userId);
 
+  // Rellenar la hora, el ritmo, las bases y la información extra: junta y admin, los
+  // mismos que la acción. NO se limita a los creados a mano, al contrario que borrar:
+  // los importados de la FACV son justo los que llegan vacíos, porque su calendario no
+  // publica nada de eso.
+  const puedeEditar = Boolean(sesion?.esJunta);
+
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera
@@ -169,6 +177,48 @@ export default async function TorneoPage({
                 Ver las bases del torneo
               </a>
             </p>
+          )}
+
+          {/* DÓNDE MIRAR SI AQUÍ NO ESTÁ.
+              LA FACV NO TIENE PÁGINA POR TORNEO: su calendario oficial publica siete
+              columnas —nombre, fechas, lugar, organizador— y NI UN ENLACE en las 171
+              filas (comprobado contra la página en vivo el 2026-08-16). Así que no hay
+              ninguna URL suya con la información de este torneo que poder poner aquí, y
+              lo único suyo enlazable es el calendario entero, que es de donde salió.
+              La información de verdad está en info64, donde los organizadores de aquí
+              publican bases, inscritos y resultados. */}
+          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-borde pt-3 text-sm">
+            <a
+              href={enlaceInfo64(torneo.nombre)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-acento-texto hover:underline"
+            >
+              Buscarlo en info64 ↗
+            </a>
+            {torneo.origen === "facv" && (
+              <a
+                href={URL_CALENDARIO_FACV}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-tinta-suave hover:underline"
+              >
+                Calendario de la FACV ↗
+              </a>
+            )}
+          </div>
+          {/* Y si no está en ningún sitio, se escribe aquí: esta ficha es el único
+              lugar donde esa información puede vivir. */}
+          {puedeEditar && (
+            <div className="mt-3 border-t border-borde pt-3">
+              <EditorFichaTorneo
+                tournamentId={torneo.id}
+                hora={torneo.hora}
+                ritmo={torneo.ritmo}
+                infoExtra={torneo.info_extra}
+                urlBases={torneo.url_bases}
+              />
+            </div>
           )}
         </Tarjeta>
 
