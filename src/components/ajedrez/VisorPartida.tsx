@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Chess } from "chess.js";
+import { paraReproducir } from "@/lib/partidas/pgn-legible";
 import { Tablero } from "./Tablero";
 import { BotonCopiar } from "@/components/ui/BotonCopiar";
 import { Mirando } from "@/components/presencia/Mirando";
@@ -34,8 +35,20 @@ export function VisorPartida({
 }) {
   const analisis = useMemo(() => {
     try {
+      // SE INTENTA EL PGN TAL CUAL Y, SI NO, EL LIMPIADO. `chess.js` 1.4.0 solo acepta
+      // UN comentario por jugada y ninguno después de una variante, y Lichess exporta
+      // justo eso: la evaluación y el texto del análisis en dos comentarios seguidos.
+      // Con un PGN así, `loadPgn` lanza y la partida se quedaba sin poder reproducir
+      // (pasó con un capítulo de estudio del propietario). Ver `pgn-legible.ts`.
+      //
+      // El original primero y el limpiado de respaldo, y no al revés, para no tocar
+      // nada de lo que ya funcionaba: si el lector se lo traga, se usa su lectura.
       const c = new Chess();
-      c.loadPgn(pgn);
+      try {
+        c.loadPgn(pgn);
+      } catch {
+        c.loadPgn(paraReproducir(pgn));
+      }
       const historial = c.history({ verbose: true });
       if (historial.length === 0) return { error: "sin-jugadas" as const };
 
