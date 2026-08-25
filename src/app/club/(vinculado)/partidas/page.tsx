@@ -176,11 +176,17 @@ export default async function PartidasPage({
               (p.tournaments as unknown as { nombre: string } | null)?.nombre ??
               p.torneo_texto;
             return (
-              <li key={p.id}>
-                <Link href={`/club/partidas/${p.id}`} className="block">
+              // TODAS LAS TARJETAS DE UNA FILA, IGUAL DE ALTAS. La rejilla ya estira
+              // el `li` hasta la altura de la fila, pero el `Link` y la tarjeta de
+              // dentro se quedaban con la altura de SU contenido, así que una partida
+              // con enlace al PGN salía más alta que la de al lado y las dos columnas
+              // no cuadraban. `h-full` en los tres eslabones es lo que hace que la
+              // altura del `li` llegue hasta el borde de la tarjeta.
+              <li key={p.id} className="h-full">
+                <Link href={`/club/partidas/${p.id}`} className="block h-full">
                   <Tarjeta
                     compacta
-                    className="transition hover:border-borde-acento"
+                    className="h-full transition hover:border-borde-acento"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
