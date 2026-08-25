@@ -24,6 +24,20 @@ export type PartidaImportada = {
   torneoTexto: string | null;
   /** false si no se ha podido saber cuál de los dos bandos es el usuario. */
   reconocida: boolean;
+  /**
+   * POR QUÉ no se ha reconocido, que no es un detalle: cambia lo que hay que hacer.
+   *
+   * - `sin-jugadores`: el PGN NO TRAE `[White]`/`[Black]`. Pasa con los capítulos de
+   *   estudio de Lichess y con cualquier PGN escrito a mano. Aquí no hay usuario que
+   *   añadir: esa partida no dice quién jugaba, y ningún nombre lo va a arreglar.
+   * - `sin-coincidencia`: sí hay nombres, pero ninguno es el tuyo (o los dos lo son).
+   *   Esto SÍ se arregla añadiendo tu usuario de la plataforma.
+   *
+   * La distinción existe porque el importador mandaba a todo el mundo a "añade tu
+   * usuario y vuelve a analizar", y con un PGN de estudio eso es un callejón sin
+   * salida: se puede intentar toda la tarde y no va a funcionar nunca.
+   */
+  motivo: "ok" | "sin-jugadores" | "sin-coincidencia";
 };
 
 /**
@@ -126,6 +140,13 @@ export function aPartidaImportada(pgn: string, misNombres: string[]): PartidaImp
   // Si coincide con los dos (nombres muy cortos, un "a" suelto) no se sabe.
   const reconocida = soyBlanco !== soyNegro;
   const color = !reconocida ? null : soyBlanco ? "blancas" : "negras";
+  // SIN NINGÚN JUGADOR EN LAS CABECERAS no es que no te haya encontrado: es que ahí no
+  // hay a quién encontrar. Es el caso de los capítulos de estudio de Lichess.
+  const motivo: PartidaImportada["motivo"] = reconocida
+    ? "ok"
+    : !blanco && !negro
+      ? "sin-jugadores"
+      : "sin-coincidencia";
 
   const bruto = (c.Result ?? "").trim();
   let resultado: PartidaImportada["resultado"] = null;
@@ -154,6 +175,7 @@ export function aPartidaImportada(pgn: string, misNombres: string[]): PartidaImp
     ronda: ronda && ronda > 0 ? ronda : null,
     torneoTexto,
     reconocida,
+    motivo,
   };
 }
 

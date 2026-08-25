@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Boton } from "@/components/ui/Boton";
 import { Banner } from "@/components/ui/Banner";
@@ -50,11 +51,32 @@ export function Importador({ miNombre }: { miNombre: string }) {
     const reconocidas = lista.map((c) => ({ ...c, elegida: c.reconocida }));
 
     setCandidatas(reconocidas);
-    const sinReconocer = lista.filter((c) => !c.reconocida).length;
-    if (sinReconocer > 0) {
+    // EL AVISO SE PARTE EN DOS SEGÚN EL MOTIVO, y es lo que faltaba: decir "añade tu
+    // usuario y vuelve a analizar" a quien ha pegado un capítulo de estudio de Lichess
+    // es mandarlo a un callejón sin salida — ese PGN no trae jugadores, así que ningún
+    // usuario lo va a arreglar nunca.
+    const sinJugadores = lista.filter((c) => c.motivo === "sin-jugadores").length;
+    const sinCoincidencia = lista.filter((c) => c.motivo === "sin-coincidencia").length;
+    if (sinJugadores > 0 && sinCoincidencia === 0) {
       setAviso({
         tipo: "aviso",
-        texto: `${sinReconocer} de ${lista.length} no se han podido asignar: no aparece tu nombre en ellas. Añade tu usuario de la plataforma arriba y vuelve a analizar.`,
+        texto:
+          sinJugadores === 1
+            ? "Ese PGN no dice quién jugaba: no trae los campos White y Black. Pasa con los capítulos de estudio de Lichess. Súbela desde \"Subir una partida\" pegando el PGN, que ahí eliges color, rival y resultado."
+            : `${sinJugadores} de ${lista.length} no dicen quién jugaba: no traen los campos White y Black (los capítulos de estudio de Lichess son así). Para esas, usa \"Subir una partida\" pegando el PGN.`,
+      });
+    } else if (sinJugadores + sinCoincidencia > 0) {
+      const total = sinJugadores + sinCoincidencia;
+      setAviso({
+        tipo: "aviso",
+        texto:
+          `${total} de ${lista.length} no se han podido asignar. ` +
+          (sinCoincidencia > 0
+            ? `En ${sinCoincidencia} no aparece tu nombre: añade tu usuario de la plataforma arriba y vuelve a analizar. `
+            : "") +
+          (sinJugadores > 0
+            ? `${sinJugadores} no dicen quién jugaba (sin campos White y Black): esas van por "Subir una partida".`
+            : ""),
       });
     }
   }
@@ -217,8 +239,22 @@ export function Importador({ miNombre }: { miNombre: string }) {
                         </>
                       ) : (
                         <p className="text-sm text-tinta-suave">
-                          No se sabe qué color llevabas: tu nombre no aparece en esta
-                          partida.
+                          {c.motivo === "sin-jugadores" ? (
+                            <>
+                              Esta partida no dice quién jugaba (sin campos{" "}
+                              <span className="font-mono text-xs">White</span> y{" "}
+                              <span className="font-mono text-xs">Black</span>).{" "}
+                              <Link
+                                href="/club/partidas/nueva"
+                                className="text-acento-texto underline"
+                              >
+                                Súbela pegando el PGN
+                              </Link>
+                              , que ahí eliges color, rival y resultado.
+                            </>
+                          ) : (
+                            "No se sabe qué color llevabas: tu nombre no aparece en esta partida."
+                          )}
                         </p>
                       )}
                       {c.reconocida && !c.fecha && (

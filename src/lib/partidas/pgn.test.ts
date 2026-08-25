@@ -236,3 +236,59 @@ describe("aPgnExportable", () => {
     expect(pgn).toContain('[Black "El \\"Mago\\""]');
   });
 });
+
+describe("por qué NO se ha reconocido una partida", () => {
+  // La distinción importa porque cambia lo que hay que hacer, y el importador
+  // mandaba a todo el mundo a "añade tu usuario", que con un PGN de estudio es un
+  // callejón sin salida.
+
+  const ESTUDIO_LICHESS = `[Event "AndraKinG's Study: Partida 2 Interclubs 2026 (Ronda 5) Joan"]
+[Date "2026.02.07"]
+[Result "*"]
+[Variant "Standard"]
+[ECO "D02"]
+[Opening "Queen's Pawn Game: London System, with e6"]
+[StudyName "AndraKinG's Study"]
+[ChapterURL "https://lichess.org/study/bFrF9beY/GUL0iMQy"]
+[UTCDate "2026.02.07"]
+
+1. d4 d5 2. Bf4 e6 3. Nf3 Nf6 *`;
+
+  const CON_OTROS = `[Event "Torneo"]
+[Date "2026.02.07"]
+[White "Pepe Pérez"]
+[Black "Ana López"]
+[Result "1-0"]
+
+1. e4 e5 1-0`;
+
+  it("un capítulo de estudio de Lichess: no trae jugadores", () => {
+    // No hay `White` ni `Black`, así que no hay a quién encontrar. Fue el caso real
+    // que trajo el propietario.
+    const p = aPartidaImportada(ESTUDIO_LICHESS, ["Joan Martínez Ribes", "AndraKinG"]);
+    expect(p.reconocida).toBe(false);
+    expect(p.motivo).toBe("sin-jugadores");
+  });
+
+  it("una partida de otros dos: sí trae jugadores, pero no eres tú", () => {
+    // Este caso SÍ se arregla añadiendo tu usuario, y es la diferencia.
+    const p = aPartidaImportada(CON_OTROS, ["Joan Martínez Ribes"]);
+    expect(p.reconocida).toBe(false);
+    expect(p.motivo).toBe("sin-coincidencia");
+  });
+
+  it("cuando se reconoce, el motivo es `ok`", () => {
+    const p = aPartidaImportada(CON_OTROS, ["Pepe Pérez"]);
+    expect(p.reconocida).toBe(true);
+    expect(p.motivo).toBe("ok");
+    expect(p.color).toBe("blancas");
+    expect(p.resultado).toBe("1");
+  });
+
+  it("del estudio se rescata lo que sí trae: la fecha y el evento", () => {
+    // Aunque no se pueda importar por aquí, no es un PGN roto.
+    const p = aPartidaImportada(ESTUDIO_LICHESS, ["Joan"]);
+    expect(p.fecha).toBe("2026-02-07");
+    expect(p.torneoTexto).toContain("Interclubs 2026");
+  });
+});
