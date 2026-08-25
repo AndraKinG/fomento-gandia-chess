@@ -28,7 +28,7 @@ export default async function TorneoPage({
   const { data: torneo } = await supabase
     .from("tournaments")
     .select(
-      "id, nombre, fecha_inicio, fecha_fin, lugar, organizador, hora, ritmo, info_extra, url_bases, origen, creado_por"
+      "id, nombre, fecha_inicio, fecha_fin, lugar, organizador, hora, ritmo, info_extra, url_bases, url_facv, url_resultados, origen, creado_por"
     )
     .eq("id", id)
     .maybeSingle();
@@ -179,23 +179,49 @@ export default async function TorneoPage({
             </p>
           )}
 
-          {/* DÓNDE MIRAR SI AQUÍ NO ESTÁ.
-              LA FACV NO TIENE PÁGINA POR TORNEO: su calendario oficial publica siete
-              columnas —nombre, fechas, lugar, organizador— y NI UN ENLACE en las 171
-              filas (comprobado contra la página en vivo el 2026-08-16). Así que no hay
-              ninguna URL suya con la información de este torneo que poder poner aquí, y
-              lo único suyo enlazable es el calendario entero, que es de donde salió.
-              La información de verdad está en info64, donde los organizadores de aquí
-              publican bases, inscritos y resultados. */}
+          {/* DÓNDE ESTÁ LA INFORMACIÓN DE ESTE TORNEO.
+              LA FACV SÍ TIENE PÁGINA POR TORNEO, y aquí hubo una conclusión equivocada
+              que conviene no repetir: se comprobó `calendario_oficial.php` —siete
+              columnas, cero enlaces— y se dio el sitio entero por perdido. Pero la
+              portada de facv.org embute otro widget cuyas tarjetas enlazan la entrada
+              con las bases. Lo encontró el propietario. Ahora esos enlaces los trae la
+              sincronización del viernes (`url_facv`, `url_resultados`).
+
+              EL ORDEN ES EL DE LO QUE MÁS SIRVE: la página de la FACV con las bases, los
+              resultados si el torneo está en marcha, y solo si no hay ninguna de las dos,
+              la búsqueda en info64 — que acierta a menudo pero no siempre, porque los
+              nombres de las dos fuentes no coinciden. */}
           <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-borde pt-3 text-sm">
-            <a
-              href={enlaceInfo64(torneo.nombre)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-acento-texto hover:underline"
-            >
-              Buscarlo en info64 ↗
-            </a>
+            {torneo.url_facv && (
+              <a
+                href={torneo.url_facv}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-acento-texto hover:underline"
+              >
+                Bases e información en la FACV ↗
+              </a>
+            )}
+            {torneo.url_resultados && (
+              <a
+                href={torneo.url_resultados}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-acento-texto hover:underline"
+              >
+                Emparejamientos y resultados ↗
+              </a>
+            )}
+            {!torneo.url_facv && !torneo.url_resultados && (
+              <a
+                href={enlaceInfo64(torneo.nombre)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-acento-texto hover:underline"
+              >
+                Buscarlo en info64 ↗
+              </a>
+            )}
             {torneo.origen === "facv" && (
               <a
                 href={URL_CALENDARIO_FACV}

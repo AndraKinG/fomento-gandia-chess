@@ -4,12 +4,15 @@ import { sincronizarOrdenFuerzaFACVCore } from "@/lib/import/facv-of-apply";
 import { sincronizarResultadosFACVCore } from "@/lib/import/facv-resultados-apply";
 import { sincronizarActasCore } from "@/lib/import/chessresults-apply";
 import { actualizarEloActualCore } from "@/lib/import/facv-elo-actual-apply";
+import { sincronizarFichasTorneoFACV } from "@/lib/import/facv-fichas-apply";
 
 export type ResumenSyncSemanal = {
   ordenFuerza: Awaited<ReturnType<typeof sincronizarOrdenFuerzaFACVCore>>;
   resultados: Awaited<ReturnType<typeof sincronizarResultadosFACVCore>>;
   actas: Awaited<ReturnType<typeof sincronizarActasCore>>;
   eloActual: Awaited<ReturnType<typeof actualizarEloActualCore>>;
+  /** Los enlaces de cada torneo a su página de la FACV y a sus resultados. */
+  fichasTorneo: Awaited<ReturnType<typeof sincronizarFichasTorneoFACV>>;
   /** Cuántos admins y miembros de junta se han avisado de que hay fichas nuevas. */
   avisadosFichasNuevas: number;
 };
@@ -45,13 +48,19 @@ export async function sincronizarSemanalCore(): Promise<ResumenSyncSemanal> {
   //    que Vercel sí puede descargar). Después del orden de fuerza por lo mismo
   //    que los demás: cruza nombres contra las fichas.
   const eloActual = await actualizarEloActualCore();
+  // 5. Los ENLACES de cada torneo: su página en la FACV con las bases y la de
+  //    resultados. Va al final porque no depende de nada de lo anterior, y va AQUÍ
+  //    —y no en un script a mano como los ELOs de la FIDE— porque facv.org sí se
+  //    puede descargar desde Vercel. Si falla, no estropea el resto: los enlaces se
+  //    quedan como estaban hasta el viernes siguiente.
+  const fichasTorneo = await sincronizarFichasTorneoFACV();
 
   let avisadosFichasNuevas = 0;
   if (ordenFuerza.creados > 0) {
     avisadosFichasNuevas = await avisarFichasNuevas(ordenFuerza.creados);
   }
 
-  return { ordenFuerza, resultados, actas, eloActual, avisadosFichasNuevas };
+  return { ordenFuerza, resultados, actas, eloActual, fichasTorneo, avisadosFichasNuevas };
 }
 
 /**
