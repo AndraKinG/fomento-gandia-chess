@@ -255,7 +255,7 @@ export default async function UsoPage({
             {hoyHanEntrado.length === 0 ? (
               <p className="mt-1 text-sm text-tinta-suave">Todavía nadie.</p>
             ) : (
-              <p className="mt-1 text-sm text-tinta">
+              <p className="mt-1 break-words text-sm text-tinta">
                 {hoyHanEntrado
                   .map((p) => (p.visitas > 1 ? `${p.nombre} (${p.visitas})` : p.nombre))
                   .join(" · ")}
