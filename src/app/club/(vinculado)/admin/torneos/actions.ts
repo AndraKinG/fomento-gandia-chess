@@ -130,7 +130,7 @@ export async function editarFichaTorneo(
  *
  * SOLO LOS CREADOS A MANO, y ahora se comprueba en el servidor: el botón ya se
  * pintaba solo para esos (`t.esManual`), pero la acción se lo creía. Borrar uno del
- * calendario de la FACV no arregla nada porque la sincronización del viernes lo
+ * calendario de la FACV no arregla nada porque la sincronización del fin de semana lo
  * vuelve a traer — para quitarlo de la lista está el interruptor "de interés".
  */
 export async function borrarTorneo(tournamentId: string): Promise<Resultado> {

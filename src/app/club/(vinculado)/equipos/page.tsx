@@ -157,8 +157,8 @@ export default async function EquiposPage({
           )}
           <Acceso
             href={conTemporada("/club/orden-fuerza", season)}
-            titulo="Ranking oficial"
-            detalle="ELO de la FACV y orden de fuerza"
+            titulo="Orden de fuerza"
+            detalle="El orden que manda en las convocatorias"
           />
         </Rejilla>
 

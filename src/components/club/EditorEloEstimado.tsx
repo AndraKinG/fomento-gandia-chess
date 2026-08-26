@@ -8,8 +8,8 @@ import { ponerEloEstimado } from "@/app/club/(vinculado)/admin/orden-fuerza/acti
  * El ELO estimado de un socio, editable por junta y admin.
  *
  * ES EL ÚNICO DE LOS TRES ELOS QUE SE PUEDE ESCRIBIR A MANO (el por qué, en la acción
- * `ponerEloEstimado`): el de la FACV lo reescribe la sincronización del viernes, así que
- * un campo para tocarlo sería un campo que se borra solo cada semana sin decir nada.
+ * `ponerEloEstimado`): el de la FACV lo reescribe la sincronización del fin de semana,
+ * así que un campo para tocarlo sería un campo que se borra solo cada semana sin avisar.
  *
  * SE GUARDA AL SALIR DEL CAMPO y solo si ha cambiado, igual que el mote: es el mismo
  * gesto y no tiene sentido que uno pida botón y el otro no.

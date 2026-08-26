@@ -154,12 +154,12 @@ export default async function RankingPage() {
               {/* Los dos rankings se confunden con facilidad, así que cada uno dice
                   dónde está el otro. */}
               <p className="mt-2 text-xs text-tinta-suave">
-                El ranking oficial de la FACV está en{" "}
+                El ELO real de cada uno está en{" "}
                 <Link
-                  href="/club/orden-fuerza"
+                  href="/club/socios"
                   className="font-semibold text-acento-texto underline"
                 >
-                  Interclubs → Ranking oficial
+                  Socios del club
                 </Link>
                 .
               </p>

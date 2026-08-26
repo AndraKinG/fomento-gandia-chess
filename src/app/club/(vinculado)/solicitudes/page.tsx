@@ -67,8 +67,8 @@ export default async function SolicitudesPage() {
             la ficha del socio nuevo son el mismo trabajo seguido, y esta es la pantalla
             de la junta —que no entra en `/club/admin`—, así que tenerlo solo allí hacía
             que dar de alta a alguien dependiera del propietario. Va en un `details`
-            cerrado porque casi siempre no hace falta: la sincronización del viernes trae
-            solas las fichas en cuanto la FACV publica al socio. */}
+            cerrado porque casi siempre no hace falta: la sincronización del fin de
+            semana trae solas las fichas en cuanto la FACV publica al socio. */}
         <Tarjeta>
           <details className="group">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-medium text-tinta">
@@ -81,10 +81,10 @@ export default async function SolicitudesPage() {
               </span>
             </summary>
             <p className="mt-2 text-sm text-tinta-suave">
-              Normalmente no hace falta: cada viernes se sincroniza el orden de fuerza de
-              la FACV y las fichas nuevas entran solas, con aviso a la junta. Esto es para
-              el hueco de semanas entre que alguien entra al club y la FACV lo publica —
-              sin ficha no puede vincular su cuenta.
+              Normalmente no hace falta: cada domingo y lunes se sincroniza el orden de
+              fuerza de la FACV y las fichas nuevas entran solas, con aviso a la junta.
+              Esto es para el hueco de semanas entre que alguien entra al club y la FACV
+              lo publica — sin ficha no puede vincular su cuenta.
             </p>
             <p className="mt-2 text-sm text-tinta-suave">
               Cuando la FACV lo publique, la sincronización{" "}
@@ -92,7 +92,7 @@ export default async function SolicitudesPage() {
               ID FIDE, ponlo.
             </p>
             <div className="mt-3">
-              <FormularioFichaManual volverA="/club/orden-fuerza" />
+              <FormularioFichaManual volverA="/club/socios" />
             </div>
           </details>
         </Tarjeta>

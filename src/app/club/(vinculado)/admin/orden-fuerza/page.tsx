@@ -101,7 +101,7 @@ export default async function OrdenFuerzaPage({
           romper enlaces. */}
       <Cabecera
         titulo="ELO de los socios"
-        subtitulo="El ELO actual de la FACV y las posiciones del orden de fuerza"
+        subtitulo="El ELO FIDE al día y las posiciones del orden de fuerza"
         volverA="/club/admin"
         medida="panel"
       />
@@ -138,7 +138,7 @@ export default async function OrdenFuerzaPage({
         {/* Las DOS fuentes, lado a lado: el orden de fuerza (posiciones y fichas
             nuevas) y el ELO REAL actual (FIDE de clásicas, vía el ranking FACV, que
             a diferencia de fide.com sí se puede descargar desde Vercel). El cron del
-            viernes hace las dos; los botones son para no esperar. */}
+            domingo y el del lunes hacen las dos; los botones son para no esperar. */}
         <div className="grid gap-2 sm:grid-cols-2">
           <form action={accionSincronizar}>
             {/* Esto descarga y parsea una página de la FACV: los segundos que tarda

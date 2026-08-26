@@ -106,7 +106,7 @@ export default async function TorneoPage({
 
   // Borrar es para deshacer una equivocación, así que solo lo ve quien lo creó (o un
   // admin) y solo en los creados a mano: los del calendario de la FACV los trae la
-  // sincronización y volverían el viernes. El servidor lo comprueba igual.
+  // sincronización y volverían con la del fin de semana. El servidor lo comprueba igual.
   const puedeBorrar =
     Boolean(sesion?.esJunta) &&
     torneo.origen === "manual" &&
@@ -185,7 +185,7 @@ export default async function TorneoPage({
               columnas, cero enlaces— y se dio el sitio entero por perdido. Pero la
               portada de facv.org embute otro widget cuyas tarjetas enlazan la entrada
               con las bases. Lo encontró el propietario. Ahora esos enlaces los trae la
-              sincronización del viernes (`url_facv`, `url_resultados`).
+              sincronización del fin de semana (`url_facv`, `url_resultados`).
 
               EL ORDEN ES EL DE LO QUE MÁS SIRVE: la página de la FACV con las bases, los
               resultados si el torneo está en marcha, y solo si no hay ninguna de las dos,

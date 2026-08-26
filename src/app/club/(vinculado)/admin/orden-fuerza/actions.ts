@@ -298,7 +298,7 @@ export async function crearFichaManual(formData: FormData): Promise<{
  *
  * SUSTITUYE al antiguo "Actualizar FIDE" que rascaba ratings.fide.com perfil a
  * perfil y solo funcionaba en local: esta fuente es facv.org y funciona también
- * en Vercel — la sync del viernes lo hace sola, este botón es para no esperar.
+ * en Vercel — la sync del fin de semana lo hace sola, este botón es para no esperar.
  */
 export async function actualizarEloActual(): Promise<{
   actualizados: number;
@@ -330,7 +330,7 @@ export async function actualizarEloActual(): Promise<{
  * DE LOS TRES ELOS ES EL ÚNICO QUE SE PUEDE TOCAR A MANO, y conviene tener claro por
  * qué (regla de los tres ELOs en CLAUDE.md):
  *
- * - `elo_fide` lo trae la sincronización del viernes desde el ranking de la FACV, así
+ * - `elo_fide` lo trae la sync del fin de semana desde el ranking de la FACV, así
  *   que escribirlo aquí duraría hasta el viernes y se perdería SIN AVISAR. Si está mal,
  *   está mal en la FACV.
  * - `force_order.elo_oficial` es el documento estático del orden de fuerza, que también

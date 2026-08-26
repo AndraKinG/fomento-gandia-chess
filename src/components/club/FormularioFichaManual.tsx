@@ -9,7 +9,7 @@ import { crearFichaManual } from "@/app/club/(vinculado)/admin/orden-fuerza/acti
  *
  * PARA QUÉ, y por qué es un respaldo y no el camino normal: quien entra se autofedera y
  * en unas semanas la FACV lo publica en su orden de fuerza, y la sincronización del
- * viernes lo trae solo. Esto es para ese hueco de semanas — **sin ficha no puede vincular
+ * fin de semana lo trae solo. Esto es para ese hueco de semanas — **sin ficha no puede vincular
  * su cuenta**, porque la lista de `/club/vincular` sale del orden de fuerza, así que
  * hasta entonces no tendría acceso a la app.
  *

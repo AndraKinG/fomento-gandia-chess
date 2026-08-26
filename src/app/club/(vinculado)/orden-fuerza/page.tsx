@@ -22,7 +22,7 @@ function Estadistica({ valor, etiqueta }: { valor: string; etiqueta: string }) {
 }
 
 /**
- * Ranking de ELO oficial y orden de fuerza del club, abierto a todos los socios.
+ * El orden de fuerza de la temporada: el documento de la FACV, abierto a los socios.
  *
  * POR QUÉ ESTÁ EN INTERCLUBS y no en su propia sección: el orden de fuerza es una
  * pieza del Interclubs, no un dato suelto. Es lo que decide en qué tablero juega
@@ -33,14 +33,15 @@ function Estadistica({ valor, etiqueta }: { valor: string; etiqueta: string }) {
  * los botones de importar y sincronizar. Esta es la versión de lectura: el dato
  * interesa a los 46 socios, no solo a quien lo actualiza.
  *
- * DOS ORDENACIONES, que es lo que pidió el propietario:
+ * UNA SOLA ORDENACIÓN, la del documento. Antes había también un "por ELO" aquí, y se
+ * fue con la lista de socios (2026-08-26): ordenar por ELO es mirar quién es más fuerte
+ * HOY, y eso es `/club/socios`, que además los tiene a todos. Este papel solo sabe
+ * ordenar por su propio número, que es lo único que vale en una convocatoria.
  *
- * - **Orden de fuerza**: el número oficial de la FACV. Es el que manda en las
- *   convocatorias, y NO siempre coincide con ordenar por ELO — un jugador que entra
- *   a mitad de temporada recibe un número "bis" junto a otro de fuerza parecida en
- *   vez de recolocar la lista entera.
- * - **Por ELO**: de mayor a menor ELO oficial. Al lado de cada uno se deja su
- *   número de orden, que es justo lo que hace ver dónde los dos criterios difieren.
+ * SE LLAMABA "RANKING OFICIAL" Y ERA UN NOMBRE ENGAÑOSO (queja de un socio de la junta,
+ * 2026-08-26: "Elo = Fide, Oficial = Ordre de força"). El rating oficial de un jugador
+ * ES el de la FIDE; llamar "oficial" al número de un documento interno invitaba a leerlo
+ * del revés. Ahora la pantalla se llama por lo que es.
  */
 export default async function OrdenFuerzaPage({
   searchParams,
@@ -117,11 +118,10 @@ export default async function OrdenFuerzaPage({
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera
-        // "Ranking OFICIAL" y no "del club": ese nombre ya lo lleva el ranking de
-        // ELO interno de Torneos → Del club, y dos pantallas con el mismo título
-        // es la forma más rápida de que nadie sepa cuál está mirando.
-        titulo="Ranking oficial"
-        subtitulo="ELO de la FACV y orden de fuerza"
+        // El nombre del documento, tal cual: es como lo llaman el capitán y la FACV,
+        // y no se puede confundir con ninguna otra lista de la app.
+        titulo="Orden de fuerza"
+        subtitulo="El documento de la FACV que manda en las convocatorias"
         volverA={conTemporada("/club/equipos", season)}
         medida="panel"
       />

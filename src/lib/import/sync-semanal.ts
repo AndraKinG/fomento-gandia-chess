@@ -142,7 +142,10 @@ async function avisarFichasNuevas(cuantas: number): Promise<number> {
       cuantas === 1
         ? "El orden de fuerza de la FACV trae una ficha que no teníamos."
         : `El orden de fuerza de la FACV trae ${cuantas} fichas que no teníamos.`,
-    url: "/club/orden-fuerza",
+    // A LA LISTA DE SOCIOS, no al orden de fuerza: el aviso es de FICHAS, y desde el
+    // 2026-08-26 las fichas viven en `/club/socios`. Además ahí están todas, también
+    // las de quien entró después de publicarse el documento.
+    url: "/club/socios",
   });
   return guardados;
 }

@@ -25,7 +25,7 @@ const MAX_PAGINAS = 12;
  * tarjetas del widget de la portada de la FACV.
  *
  * POR QUÉ SE PUEDE AUTOMATIZAR ESTO Y NO LOS ELOs DE LA FIDE: facv.org se descarga sin
- * problema desde Vercel —es lo que ya hace la sync del viernes con el orden de fuerza y
+ * problema desde Vercel —es lo que ya hace la sync del fin de semana con el orden de fuerza y
  * el ranking—, mientras que fide.com bloquea las IPs de centro de datos. La diferencia
  * no es de código, es de quién te deja entrar.
  *

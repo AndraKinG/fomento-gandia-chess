@@ -139,7 +139,7 @@ export default async function SocioPage({
                       ? "FIDE de clásicas, al día (se actualiza cada semana)"
                       : orden?.elo_oficial
                         ? "Del orden de fuerza: aún no tiene ELO de clásicas"
-                        : "Estimado por el club: todavía no tiene ELO oficial"
+                        : "Estimado por el club: todavía no tiene ELO FIDE"
                   }
                   className="rounded-full bg-tarjeta-suave px-2.5 py-0.5 text-xs font-semibold text-tinta ring-1 ring-borde"
                 >
@@ -242,11 +242,11 @@ export default async function SocioPage({
                 />
                 {/* DECIR LO QUE ESTE CAMPO NO HACE, porque es la trampa evidente: quien
                     ve "ELO" aquí espera corregir el número grande de arriba, y ese lo
-                    reescribe la sincronización del viernes desde la FACV. */}
+                    reescribe la sincronización del fin de semana desde la FACV. */}
                 <p className="text-xs text-tinta-suave">
                   {socio.elo_fide
-                    ? "Tiene ELO de la FACV, así que manda aquel. Este no se usa."
-                    : "Para quien aún no tiene ELO oficial. Se usa en las convocatorias."}
+                    ? "Tiene ELO FIDE, así que manda aquel. Este no se usa."
+                    : "Para quien aún no tiene ELO FIDE. Se usa en las convocatorias."}
                 </p>
               </div>
             </div>
