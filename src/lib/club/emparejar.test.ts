@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  avisoDeSuizo,
   balanceColor,
   calendarioLiguilla,
   colorearEnfrentamiento,
   emparejarSuizo,
   rondasRecomendadas,
+  rondasSinRepetir,
   type EstadoJugador,
 } from "./emparejar";
 
@@ -275,5 +277,44 @@ describe("rondasRecomendadas", () => {
     [40, 6],
   ])("con %i jugadores, %i rondas", (jugadores, esperado) => {
     expect(rondasRecomendadas(jugadores)).toBe(esperado);
+  });
+});
+
+describe("rondasSinRepetir y el aviso del suizo", () => {
+  // Salen de un caso real: un suizo de 5 jugadores a 4 rondas dejó al motor de
+  // ChessPairings sin emparejamiento legal en la ronda 4 (2026-08-26).
+
+  it("con jugadores pares, el techo es N−1", () => {
+    // Es el largo de un todos contra todos: cada uno tiene N−1 rivales y no hay más.
+    expect(rondasSinRepetir(8)).toBe(7);
+    expect(rondasSinRepetir(4)).toBe(3);
+  });
+
+  it("con impares es N, porque cada ronda descansa uno", () => {
+    expect(rondasSinRepetir(5)).toBe(5);
+    expect(rondasSinRepetir(7)).toBe(7);
+  });
+
+  it("menos de dos jugadores no son un torneo", () => {
+    expect(rondasSinRepetir(1)).toBe(0);
+    expect(rondasSinRepetir(0)).toBe(0);
+  });
+
+  it("no avisa cuando las rondas caben", () => {
+    // 5 jugadores aguantan 5 rondas sin repetir: el caso de ChessPairings falló por su
+    // criterio de un solo bye, que el nuestro no aplica.
+    expect(avisoDeSuizo(5, 4)).toBeNull();
+    expect(avisoDeSuizo(12, 4)).toBeNull();
+  });
+
+  it("avisa cuando las rondas se pasan del techo", () => {
+    const aviso = avisoDeSuizo(4, 5);
+    expect(aviso).toContain("4 jugadores");
+    expect(aviso).toContain("3 rondas");
+    expect(aviso).toContain("liguilla");
+  });
+
+  it("dice desde qué ronda habrá revanchas", () => {
+    expect(avisoDeSuizo(4, 6)).toContain("a partir de la 4".replace("a", "A"));
   });
 });

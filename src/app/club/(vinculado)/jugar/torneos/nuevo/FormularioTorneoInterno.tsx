@@ -123,8 +123,8 @@ export function FormularioTorneoInterno() {
           <input type="hidden" name="sistema" value={sistema} />
           <p className="text-xs text-tinta-suave">
             {sistema === "suizo"
-              ? "Las rondas se calculan según los inscritos, y se puede parar cuando quieras."
-              : "El calendario sale entero al generar la primera ronda: N−1 rondas con N jugadores."}
+              ? "Las rondas se calculan según los inscritos, y se puede parar cuando quieras. Con pocos jugadores acaba repitiendo enfrentamientos: por debajo de 8, mejor liguilla."
+              : "El calendario sale entero al generar la primera ronda: N−1 rondas con N jugadores, y nadie repite rival."}
           </p>
         </div>
         )}

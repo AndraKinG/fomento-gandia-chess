@@ -4,6 +4,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { nombreDeFila } from "@/lib/club/nombre-socio";
 import { leerTorneoChessPairings } from "@/lib/import/chesspairings-leer";
 import { idDesdeEnlace } from "@/lib/import/chesspairings";
+import { RefrescarCada } from "@/components/club/RefrescarCada";
 
 /**
  * La clasificación y los emparejamientos de un torneo presencial, traídos de
@@ -89,6 +90,12 @@ export async function TorneoChessPairings({ urlPublica }: { urlPublica: string |
 
   return (
     <div className="space-y-4">
+      {/* SE ACTUALIZA SOLO mientras la pestaña esté delante. El servidor recachea su
+          respuesta cada 60 s, pero eso no repinta una pantalla ya abierta: sin esto,
+          quien deja el torneo puesto en el móvil durante una ronda se queda con la foto
+          de cuando entró. */}
+      <RefrescarCada segundos={60} />
+
       <section className="space-y-2">
         <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-tinta-suave">
@@ -234,7 +241,7 @@ export async function TorneoChessPairings({ urlPublica }: { urlPublica: string |
 
       <p className="px-1 text-xs text-tinta-suave">
         Datos de ChessPairings, que es donde se lleva el torneo. Se actualizan solos cada
-        minuto.{" "}
+        minuto mientras tengas esta pantalla delante.{" "}
         {t.enlacePublico && (
           <a
             href={t.enlacePublico}

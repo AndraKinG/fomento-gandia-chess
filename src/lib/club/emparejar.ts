@@ -321,6 +321,49 @@ export function emparejarSuizo(
 }
 
 /**
+ * Cuántas rondas caben en un suizo SIN que nadie repita rival.
+ *
+ * ES EL LARGO DE UN TODOS CONTRA TODOS, porque eso es exactamente el techo: cada jugador
+ * tiene N−1 rivales posibles y no hay más. Con jugadores PARES son N−1 rondas; con
+ * IMPARES son N, porque cada ronda descansa uno y hace falta una vuelta más para que
+ * todos se hayan cruzado.
+ *
+ * POR QUÉ HACE FALTA SABERLO (2026-08-26): el propietario montó un suizo de 5 jugadores a
+ * 4 rondas en ChessPairings y su motor se plantó en la ronda 4 con "no valid pairing
+ * exists". Comprobado con sus datos: era imposible de verdad, no un fallo suyo — solo dos
+ * jugadores no habían descansado, y cada uno ya había jugado contra los tres que
+ * quedaban.
+ *
+ * NUESTRO SUIZO NO SE PLANTA, y ahí está el peligro: cuando alguien ya ha jugado contra
+ * todos los que quedan, `emparejarSuizo` REPITE el enfrentamiento más cercano en puntos y
+ * lo apunta en `repeticiones`. Es la decisión correcta para un torneo de club —mejor una
+ * revancha que una ronda que no se puede jugar— pero durante meses esa lista no la miraba
+ * nadie, así que la repetición pasaba en silencio. Con esto se puede avisar antes.
+ */
+export function rondasSinRepetir(jugadores: number): number {
+  if (jugadores < 2) return 0;
+  return jugadores % 2 === 0 ? jugadores - 1 : jugadores;
+}
+
+/**
+ * El aviso que hay que dar antes de emparejar un suizo, o null si no hay nada que decir.
+ *
+ * SE DICE ANTES Y NO DESPUÉS: enterarse de que la ronda 4 repite dos partidas cuando ya
+ * está generada obliga a borrarla, y borrar una ronda con resultados reescribe la
+ * clasificación.
+ */
+export function avisoDeSuizo(jugadores: number, rondas: number): string | null {
+  if (jugadores < 2 || rondas < 1) return null;
+  const tope = rondasSinRepetir(jugadores);
+  if (rondas <= tope) return null;
+  return (
+    `Con ${jugadores} jugadores solo caben ${tope} rondas sin repetir rival, y este torneo ` +
+    `tiene ${rondas}. A partir de la ${tope + 1} habrá revanchas. ` +
+    `Con tan pocos jugadores, una liguilla son ${tope} rondas y no repite ninguna.`
+  );
+}
+
+/**
  * Rondas recomendadas para un suizo según el número de jugadores: las justas para
  * que salga un ganador claro, que es aproximadamente log2(N) redondeado arriba,
  * con un mínimo de 3.

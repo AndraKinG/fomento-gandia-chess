@@ -13,7 +13,15 @@ import { estadoParaEmparejar, rondaCompleta } from "@/lib/club/clasificacion";
 import { difundirTorneo } from "@/lib/vivo/difundir";
 import { leerTorneo } from "./datos";
 
-type Resultado = { error?: string; id?: string };
+type Resultado = {
+  error?: string;
+  id?: string;
+  /**
+   * Un aviso que NO es un error: la cosa se ha hecho, pero hay algo que decir. Nació
+   * para las revanchas del suizo, que hasta el 2026-08-26 pasaban en silencio.
+   */
+  aviso?: string;
+};
 
 function refrescar(id?: string): void {
   revalidatePath("/club/jugar/torneos");
@@ -168,6 +176,7 @@ export async function generarRonda(tournamentId: string): Promise<Resultado> {
   const numero = torneo.rondas.length + 1;
   const fichas = torneo.inscritos.map((i) => i.ficha);
 
+  let repetidas = 0;
   let emparejamientos: { blancas: string; negras: string }[];
   let descansa: string | null;
 
@@ -186,6 +195,14 @@ export async function generarRonda(tournamentId: string): Promise<Resultado> {
     const ronda = emparejarSuizo(estado, numero);
     emparejamientos = ronda.emparejamientos;
     descansa = ronda.descansa;
+    // LAS REVANCHAS SE DICEN. `emparejarSuizo` repite el enfrentamiento más cercano en
+    // puntos cuando alguien ya ha jugado contra todos los que quedan —es lo correcto en
+    // un torneo de club, mejor una revancha que una ronda imposible— pero esa lista
+    // llevaba meses calculándose sin que nadie la mirara. Un emparejamiento repetido en
+    // silencio es de las cosas que descubre el jugador, no el organizador.
+    if (ronda.repeticiones.length > 0) {
+      repetidas = ronda.repeticiones.length;
+    }
   }
 
   const { data: rondaCreada, error: errorRonda } = await supabase
@@ -221,6 +238,14 @@ export async function generarRonda(tournamentId: string): Promise<Resultado> {
   }
 
   refrescar(tournamentId);
+  if (repetidas > 0) {
+    return {
+      aviso:
+        repetidas === 1
+          ? `Ronda ${numero} generada, pero una partida es una revancha: ya no quedaban rivales nuevos para todos.`
+          : `Ronda ${numero} generada, pero ${repetidas} partidas son revanchas: ya no quedaban rivales nuevos para todos.`,
+    };
+  }
   return {};
 }
 

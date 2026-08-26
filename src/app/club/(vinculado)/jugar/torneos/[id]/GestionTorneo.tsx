@@ -11,6 +11,7 @@ import { jugarEmparejamiento } from "@/app/club/(vinculado)/jugar/actions";
 import { Mirando } from "@/components/presencia/Mirando";
 import { EditorUrlPublica } from "@/components/club/EditorUrlPublica";
 import { diaYHora } from "@/lib/torneos/hora-de-ronda";
+import { avisoDeSuizo, rondasRecomendadas } from "@/lib/club/emparejar";
 import {
   anotarResultado,
   borrarTorneoInterno,
@@ -86,6 +87,7 @@ export function GestionTorneo({
   puedeBorrar: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
   const [abriendoInscritos, setAbriendoInscritos] = useState(false);
   /** Borrar pide una segunda pulsación: se lleva el torneo entero. */
   const [confirmandoBorrar, setConfirmandoBorrar] = useState(false);
@@ -107,8 +109,9 @@ export function GestionTorneo({
    * no se por que", que es exactamente la queja que trajo a revisar esto: un boton que
    * no responde no se puede distinguir de un permiso denegado.
    */
-  function ejecutar(accion: () => Promise<{ error?: string }>) {
+  function ejecutar(accion: () => Promise<{ error?: string; aviso?: string }>) {
     setError(null);
+    setAviso(null);
     startTransition(async () => {
       try {
         const r = await accion();
@@ -116,6 +119,9 @@ export function GestionTorneo({
           setError(r.error);
           return;
         }
+        // UN AVISO NO ES UN ERROR: la cosa se ha hecho, pero hay algo que contar — que
+        // la ronda lleva revanchas, por ejemplo. Se pinta distinto y no bloquea.
+        if (r.aviso) setAviso(r.aviso);
         router.refresh();
       } catch {
         setError("No se ha podido hacer. Prueba otra vez o recarga la pantalla.");
@@ -177,6 +183,12 @@ export function GestionTorneo({
    * en la condición, generar la ronda lo cierra por sí mismo.
    */
   const puedeCambiarInscritos = esJunta && estado === "inscripcion";
+  // Con pocos jugadores, un suizo largo acaba repitiendo enfrentamientos. Se avisa con
+  // los inscritos que hay y las rondas que tendrá el torneo.
+  const avisoSuizo =
+    sistema === "suizo" && quedanRondas
+      ? avisoDeSuizo(inscritos.length, rondasTotales ?? rondasRecomendadas(inscritos.length))
+      : null;
   const editandoInscritos = abriendoInscritos && puedeCambiarInscritos;
 
   return (
@@ -221,6 +233,7 @@ export function GestionTorneo({
         </Tarjeta>
       )}
       {error && <Banner tipo="error">{error}</Banner>}
+      {aviso && <Banner tipo="aviso">{aviso}</Banner>}
 
       {/* ---- Inscritos ---- */}
       <section className="space-y-2">
@@ -548,6 +561,12 @@ export function GestionTorneo({
               Falta anotar resultados: no se puede emparejar la ronda siguiente con
               datos a medias.
             </p>
+          )}
+          {/* EL AVISO ANTES DE GENERAR, que es cuando sirve: enterarse de que la ronda
+              repite partidas cuando ya está generada obliga a borrarla, y borrar una
+              ronda con resultados reescribe la clasificación. */}
+          {avisoSuizo && (
+            <p className="px-1 text-xs text-tinta-suave">{avisoSuizo}</p>
           )}
           {inscritos.length < 2 && (
             <p className="px-1 text-xs text-tinta-suave">
