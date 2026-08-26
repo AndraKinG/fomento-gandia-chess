@@ -7,6 +7,7 @@ import { Banner } from "@/components/ui/Banner";
 import { clasificar } from "@/lib/club/clasificacion";
 import { leerTorneo } from "../datos";
 import { GestionTorneo, type RondaVista, type SocioVista } from "./GestionTorneo";
+import { TorneoChessPairings } from "@/components/club/TorneoChessPairings";
 import { Contenedor } from "@/components/ui/Contenedor";
 import { nombreVisible } from "@/lib/club/nombre-socio";
 
@@ -124,6 +125,16 @@ export default async function TorneoInternoPage({
           }
         />
         </div>
+
+        {/* LA CLASIFICACIÓN DE CHESSPAIRINGS, pintada aquí con nuestros motes. Va en la
+            columna de al lado, en el hueco donde en un torneo de la app está la
+            clasificación propia: es la misma pregunta, respondida por quien la calcula.
+            Si su API falla, el componente enseña el enlace a su página y no rompe nada. */}
+        {torneo.organizadoEn === "chesspairings" && (
+          <div className="space-y-4">
+            <TorneoChessPairings urlPublica={torneo.urlPublica} />
+          </div>
+        )}
 
         {hayPartidas && (
           <section className="space-y-2">
