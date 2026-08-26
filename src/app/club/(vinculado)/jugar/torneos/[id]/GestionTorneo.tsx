@@ -66,6 +66,8 @@ export function GestionTorneo({
   rondasTotales,
   socios,
   esJunta,
+  organizadoEn,
+  urlPublica,
   puedeBorrar,
 }: {
   tournamentId: string;
@@ -75,6 +77,10 @@ export function GestionTorneo({
   rondasTotales: number | null;
   socios: SocioVista[];
   esJunta: boolean;
+  /** 'chesspairings' = presencial, organizado fuera: rondas y resultados solo lectura. */
+  organizadoEn: "app" | "chesspairings";
+  /** Su página pública en ChessPairings. */
+  urlPublica: string | null;
   /** Lo creó quien está mirando (o es admin): puede borrarlo si se equivocó. */
   puedeBorrar: boolean;
 }) {
@@ -155,7 +161,11 @@ export function GestionTorneo({
     rondas.find((r) => r.numero === rondaPinchada) ?? rondas[rondas.length - 1] ?? null;
   // La hora la pone la junta mientras el torneo esté vivo: en uno cerrado no hay
   // nada que avisar y el dato ya es histórico.
-  const puedePonerHora = esJunta && estado !== "terminado";
+  // ORGANIZAR = EMPAREJAR, ANOTAR Y CERRAR. Solo en los torneos de la app: en uno
+  // presencial eso vive en ChessPairings, y tenerlo en los dos sitios daría dos
+  // clasificaciones distintas sin forma de saber cuál vale.
+  const puedeOrganizar = esJunta && organizadoEn === "app";
+  const puedePonerHora = puedeOrganizar && estado !== "terminado";
   /**
    * La lista de inscritos solo se puede tocar antes de empezar.
    *
@@ -171,6 +181,37 @@ export function GestionTorneo({
   return (
     <div className="space-y-4">
       <Mirando sala={`torneo-${tournamentId}`} />
+
+      {/* TORNEO ORGANIZADO FUERA: se dice lo primero y con el enlace delante, porque
+          explica por qué esta pantalla no tiene los botones de siempre. Sin esta tarjeta,
+          la junta entraría buscando "generar ronda" y pensaría que algo se ha roto. */}
+      {organizadoEn === "chesspairings" && (
+        <Tarjeta destacada>
+          <p className="text-sm font-semibold text-tinta">Torneo presencial</p>
+          <p className="mt-1 text-sm text-tinta-suave">
+            Los emparejamientos, los resultados y la clasificación se llevan en
+            ChessPairings, que empareja con el motor oficial de la FIDE. Aquí se apuntan
+            los socios y les llegan los avisos.
+          </p>
+          {urlPublica ? (
+            <p className="mt-2 text-sm">
+              <a
+                href={urlPublica}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-acento-texto underline"
+              >
+                Ver emparejamientos y clasificación ↗
+              </a>
+            </p>
+          ) : (
+            <p className="mt-2 text-xs text-tinta-suave">
+              Todavía no tiene enlace público. Cuando lo crees en ChessPairings, pega
+              aquí su enlace desde el panel de torneos.
+            </p>
+          )}
+        </Tarjeta>
+      )}
       {error && <Banner tipo="error">{error}</Banner>}
 
       {/* ---- Inscritos ---- */}
@@ -408,7 +449,7 @@ export function GestionTorneo({
                       {p.gameId ? "Ver jugadas" : "Subir jugadas"}
                     </Link>
                   )}
-                  {esJunta && estado !== "terminado" ? (
+                  {puedeOrganizar && estado !== "terminado" ? (
                     <span className="flex gap-1">
                       {(["1", "0.5", "0"] as const).map((valor) => (
                         <button
@@ -468,7 +509,7 @@ export function GestionTorneo({
       )}
 
       {/* ---- Acciones del organizador ---- */}
-      {esJunta && estado !== "terminado" && (
+      {puedeOrganizar && estado !== "terminado" && (
         <div className="space-y-2 pt-2">
           {quedanRondas ? (
             <Boton
@@ -585,7 +626,7 @@ export function GestionTorneo({
           "Cerrar el torneo" pegado a "Borrar ronda", cerrar sin querer y quedarse sin
           poder borrar la ronda es un camino de un solo clic, y desde dentro parece que
           la app no te deja. */}
-      {esJunta && estado === "terminado" && (
+      {puedeOrganizar && estado === "terminado" && (
         <div className="space-y-2 pt-2">
           <p className="px-1 text-sm text-tinta-suave">
             El torneo está cerrado: por eso no se pueden generar ni borrar rondas.

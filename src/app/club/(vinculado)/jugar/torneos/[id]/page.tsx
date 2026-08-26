@@ -103,6 +103,16 @@ export default async function TorneoInternoPage({
           rondasTotales={torneo.rondasTotales}
           socios={socios}
           esJunta={Boolean(sesion?.esJunta)}
+          // EN UN TORNEO ORGANIZADO FUERA, LAS RONDAS Y LOS RESULTADOS SON SOLO LECTURA
+          // (migración 0050): allí emparejan, allí anota el árbitro y allí sale la
+          // clasificación. Si desde aquí se pudiera generar una ronda o anotar un
+          // resultado habría dos clasificaciones y ninguna forma de saber cuál vale.
+          //
+          // PERO LAS INSCRIPCIONES SIGUEN SIENDO NUESTRAS, y por eso esto es una prop
+          // aparte y no un `esJunta` a false: apuntarse con su ficha y su mote, y que
+          // le lleguen los avisos, es justo lo que ChessPairings no tiene.
+          organizadoEn={torneo.organizadoEn}
+          urlPublica={torneo.urlPublica}
           // Borrar es para deshacer una equivocación: quien lo creó (o un admin) y
           // solo mientras no se haya jugado nada, porque los resultados cuentan para
           // el ELO del club. El servidor lo vuelve a comprobar, con la partida en vivo

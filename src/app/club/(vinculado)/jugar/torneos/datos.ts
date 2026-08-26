@@ -16,6 +16,13 @@ export type TorneoInterno = {
   notas: string | null;
   /** Cuenta que lo creó (0015). null si esa cuenta ya no existe. */
   creadoPor: string | null;
+  /**
+   * Dónde se organiza (migración 0050). `chesspairings` = presencial, emparejado y
+   * puntuado allí; aquí la pantalla es SOLO LECTURA para no tener dos clasificaciones.
+   */
+  organizadoEn: "app" | "chesspairings";
+  /** Su página pública en ChessPairings, si se organiza allí. */
+  urlPublica: string | null;
   inscritos: { ficha: string; nombre: string; eloInicial: number }[];
   rondas: (RondaJugada & {
     id: string;
@@ -38,7 +45,9 @@ export async function leerTorneo(
 ): Promise<TorneoInterno | null> {
   const { data: t } = await supabase
     .from("club_tournaments")
-    .select("id, nombre, sistema, estado, rondas_totales, fecha_inicio, notas, creado_por")
+    .select(
+      "id, nombre, sistema, estado, rondas_totales, fecha_inicio, notas, creado_por, organizado_en, url_publica"
+    )
     .eq("id", id)
     .maybeSingle();
   if (!t) return null;
@@ -75,6 +84,8 @@ export async function leerTorneo(
     fechaInicio: t.fecha_inicio,
     notas: t.notas,
     creadoPor: t.creado_por ?? null,
+    organizadoEn: t.organizado_en === "chesspairings" ? "chesspairings" : "app",
+    urlPublica: (t.url_publica as string | null) ?? null,
     inscritos: (inscritos ?? []).map((i) => ({
       ficha: i.player_id,
       nombre: nombreDeFila(i.players),

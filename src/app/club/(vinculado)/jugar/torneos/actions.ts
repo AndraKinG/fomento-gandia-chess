@@ -29,6 +29,10 @@ export async function crearTorneoInterno(datos: {
   notas?: string;
   baseMin?: number;
   incrementoS?: number;
+  /** 'app' = se juega aquí; 'chesspairings' = presencial, organizado fuera. */
+  organizadoEn?: string;
+  /** La página pública del torneo en ChessPairings, si se organiza allí. */
+  urlPublica?: string;
 }): Promise<Resultado> {
   const sesion = await sesionActual();
   if (!sesion?.esJunta) return { error: "No autorizado" };
@@ -48,12 +52,25 @@ export async function crearTorneoInterno(datos: {
     return { error: "El incremento va de 0 a 60 segundos." };
   }
 
+  // DÓNDE SE ORGANIZA (migración 0050). 'app' por defecto: un torneo sin decir nada es
+  // de los de siempre, que se juegan aquí.
+  const organizadoEn = datos.organizadoEn === "chesspairings" ? "chesspairings" : "app";
+  const url = datos.urlPublica?.trim() || null;
+  if (url && !/^https?:\/\//i.test(url)) {
+    return { error: "El enlace tiene que empezar por http:// o https://" };
+  }
+  // Un torneo de la app no lleva enlace de fuera, y guardarlo sería sembrar la duda de
+  // quién manda en la clasificación.
+  const urlPublica = organizadoEn === "chesspairings" ? url : null;
+
   const supabase = await createServerSupabase();
   const { data, error } = await supabase
     .from("club_tournaments")
     .insert({
       nombre,
       sistema: datos.sistema,
+      organizado_en: organizadoEn,
+      url_publica: urlPublica,
       fecha_inicio: datos.fechaInicio?.trim() || null,
       notas: datos.notas?.trim() || null,
       creado_por: sesion.userId,
