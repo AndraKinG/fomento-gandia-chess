@@ -13,14 +13,33 @@ export const maxDuration = 300;
 const DIAS_VENTANA_PRUEBA = 60;
 
 /**
- * Cron "director de orquesta": según el día de la semana (UTC), decide qué
- * acción de disponibilidad ejecutar.
- * - Lunes (1): pide disponibilidad de la semana (`pedirDisponibilidadSemana`).
- * - Jueves (4): recuerda a quien no ha contestado (`recordarPendientes`).
- * - Viernes (5): las tres sincronizaciones con la FACV en cadena
- *   (`sincronizarSemanalCore`): orden de fuerza, resultados y clasificación, y actas
- *   por tablero. El orden importa, ver ese fichero.
- * - Resto de días: no hace nada.
+ * Cron "director de orquesta": según el día de la semana (UTC), decide qué toca.
+ *
+ * EL CALENDARIO SALE DE CUÁNDO SE JUEGA DE VERDAD, y esto se corrigió el 2026-08-26
+ * mirando las 31 jornadas de la temporada 2026: **28 se jugaron en SÁBADO y 3 en
+ * domingo, todas a las 17:00**. Ninguna en viernes. Y la sincronización estaba puesta el
+ * VIERNES, o sea el día ANTES de la jornada: recogía los resultados del sábado anterior
+ * con **seis días de retraso**, y durante toda la semana la app enseñaba la clasificación
+ * vieja. Era el peor día posible de los siete.
+ *
+ * - **Domingo (0): sincroniza.** El día después de la jornada, que es cuando la FACV
+ *   publica los resultados —el mismo sábado por la noche o el domingo—.
+ * - **Lunes (1): pide disponibilidad Y VUELVE A SINCRONIZAR.** La segunda pasada es la
+ *   red: si el domingo la FACV aún no había subido las actas, el lunes ya están, y así no
+ *   hay que esperar una semana entera. Es lo que pidió el propietario ("dos crones para
+ *   el resultado, por si el primero llama y no recoge info").
+ * - **Jueves (4): recuerda** a quien no ha contestado la disponibilidad (2 días antes de
+ *   la jornada del sábado).
+ * - Resto de días: solo el reintento de avisos.
+ *
+ * POR QUÉ DOS PASADAS Y NO DOS CRONES DE VERCEL: el plan Hobby permite UNA ejecución al
+ * día, así que un segundo cron no existe. Pero un día puede hacer dos cosas, y sale
+ * gratis. La sincronización es idempotente (crea o actualiza, nunca duplica) y tarda
+ * ~18 s, así que repetirla no cuesta nada.
+ *
+ * SE HACE TODO EL AÑO y no solo en temporada de Interclubs: fuera de temporada no hay
+ * jornadas nuevas que traer, la pasada no encuentra nada y termina igual de rápido.
+ * Condicionarlo por meses sería una fecha más que mantener a cambio de nada.
  *
  * Acepta `?forzar=pedir|recordar|sync` (gated por el mismo CRON_SECRET) para
  * pruebas manuales; `forzar=sync` no depende de ventana de días (a diferencia
@@ -64,20 +83,25 @@ export async function GET(request: NextRequest) {
 
   const dia = new Date().getUTCDay();
   switch (dia) {
-    case 1: {
-      // Lunes: pedir disponibilidad de la semana.
-      const resultado = await pedirDisponibilidadSemana();
-      return NextResponse.json({ dia, accion: "pedir", avisos, ...resultado });
-    }
-    case 4: {
-      // Jueves: recordar a quien no ha contestado.
-      const resultado = await recordarPendientes();
-      return NextResponse.json({ dia, accion: "recordar", avisos, ...resultado });
-    }
-    case 5: {
-      // Viernes: las tres sincronizaciones con la FACV, en cadena.
+    case 0: {
+      // Domingo: el día después de la jornada. Primera pasada por los resultados.
       const resultado = await sincronizarSemanalCore();
       return NextResponse.json({ dia, accion: "sync", avisos, ...resultado });
+    }
+    case 1: {
+      // Lunes: la disponibilidad de la semana Y la segunda pasada de la sync.
+      //
+      // EL ORDEN IMPORTA: primero sincronizar y después pedir. La sync puede crear la
+      // jornada de este fin de semana si la FACV la publicó tarde, y pidiendo antes se
+      // pediría disponibilidad para una jornada que todavía no existe en la base.
+      const sync = await sincronizarSemanalCore();
+      const resultado = await pedirDisponibilidadSemana();
+      return NextResponse.json({ dia, accion: "pedir+sync", avisos, sync, ...resultado });
+    }
+    case 4: {
+      // Jueves: recordar a quien no ha contestado, dos días antes del sábado.
+      const resultado = await recordarPendientes();
+      return NextResponse.json({ dia, accion: "recordar", avisos, ...resultado });
     }
     default:
       return NextResponse.json({ dia, accion: "nada", avisos });

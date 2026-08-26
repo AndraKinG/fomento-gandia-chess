@@ -13,13 +13,40 @@ vacío). Qué hace:
 | Cuándo         | Qué                                                                                                                          |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Todos los días | Reintento de avisos con push fallido (`reintentarAvisosFallidos`; barato: índice parcial, lo normal es 0 filas)              |
-| Lunes          | Pedir disponibilidad de la semana a los jugadores (push)                                                                     |
-| Jueves         | Recordar a quien no ha contestado                                                                                            |
-| Viernes        | La sync FACV **en cadena y en este orden**: orden de fuerza → resultados y clasificación → actas por tablero → **ELO real actual** (FIDE clásicas vía el ranking FACV, `facv-elo-actual.ts`) |
+| **Domingo**    | La sync FACV completa: **el día después de la jornada**                                                                      |
+| **Lunes**      | La sync FACV **otra vez** (segunda pasada) y luego pedir disponibilidad de la semana                                          |
+| Jueves         | Recordar a quien no ha contestado (2 días antes del sábado)                                                                  |
 
-El orden del viernes es una **dependencia, no un gusto**: el orden de fuerza crea
-las fichas, los otros dos cruzan nombres contra ellas, y las actas necesitan que
-las jornadas existan. Vive en `src/lib/import/sync-semanal.ts`.
+**El día sale de cuándo se juega de verdad**, y estuvo mal hasta el 2026-08-26.
+Medido sobre las 31 jornadas de la temporada 2026: **28 se jugaron en SÁBADO y 3 en
+domingo, todas a las 17:00** — ninguna en viernes. Y la sync estaba puesta el
+viernes, o sea el día ANTES de la jornada: recogía los resultados del sábado
+anterior con **seis días de retraso**, y entre medias la app enseñaba la
+clasificación vieja toda la semana. Era el peor día de los siete.
+
+**Dos pasadas, domingo y lunes**, porque la FACV puede subir las actas el mismo
+sábado por la noche, el domingo o el lunes. Si el domingo no hay nada, el lunes lo
+recoge; sin la segunda pasada habría que esperar una semana. **No son dos crones**:
+el plan Hobby de Vercel permite una ejecución al día, pero un día puede hacer dos
+cosas y sale gratis. La sync es idempotente y tarda ~18 s.
+
+**El lunes sincroniza ANTES de pedir disponibilidad**: la sync puede crear la
+jornada de ese fin de semana si la FACV la publicó tarde, y al revés se pediría
+disponibilidad para una jornada que aún no existe.
+
+La cadena de la sync es una **dependencia, no un gusto**: orden de fuerza →
+resultados y clasificación → actas por tablero → ELO real actual → calendario de
+torneos → enlaces de cada torneo. El orden de fuerza crea las fichas, los dos
+siguientes cruzan nombres contra ellas, las actas necesitan que las jornadas
+existan, y los enlaces necesitan que el torneo exista. Vive en
+`src/lib/import/sync-semanal.ts`.
+
+**El ELO FIDE y el día 1 del mes**: la FIDE publica lista nueva mensual, con efecto
+el día 1. No hace falta un día especial en el cron porque hay dos caminos y los dos
+lo cogen: el script local corre **todos los días a las 14:00** (tarea de Windows en
+el PC del propietario, la única vía porque fide.com bloquea las IPs de centro de
+datos) y, como respaldo si ese PC está apagado, el ranking de la FACV —que Vercel sí
+puede descargar— refresca `elo_fide` en la sync del domingo y del lunes.
 
 Para pruebas manuales: `?forzar=pedir|recordar|sync` con el mismo secreto.
 
