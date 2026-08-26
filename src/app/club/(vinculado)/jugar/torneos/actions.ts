@@ -12,6 +12,7 @@ import {
 import { estadoParaEmparejar, rondaCompleta } from "@/lib/club/clasificacion";
 import { difundirTorneo } from "@/lib/vivo/difundir";
 import { leerTorneo } from "./datos";
+import { idDesdeEnlace } from "@/lib/import/chesspairings";
 
 type Resultado = {
   error?: string;
@@ -452,6 +453,19 @@ export async function ponerUrlPublica(
   const limpia = url.trim();
   if (limpia && !/^https?:\/\//i.test(limpia)) {
     return { error: "El enlace tiene que empezar por http:// o https://" };
+  }
+  // TIENE QUE LLEVAR EL id DEL TORNEO, que es lo único que de verdad usamos: con él se
+  // pide su clasificación a la API. Un enlace sin `id=` se guarda tan campante y luego
+  // no trae nada, y desde fuera parece que la integración no funciona.
+  //
+  // Pasó el 2026-08-26: se pegó `my.chesspairings.org/torneo.php?id=5759`, sin el
+  // `/pubblico/` que lleva el enlace de verdad. Funcionó de casualidad —el id estaba— y
+  // el botón de salida habría llevado a una página inexistente si su API hubiera fallado.
+  if (limpia && idDesdeEnlace(limpia) === null) {
+    return {
+      error:
+        "Ese enlace no lleva el id del torneo. Copia la dirección de su página pública, la que tiene «?id=».",
+    };
   }
 
   const supabase = await createServerSupabase();

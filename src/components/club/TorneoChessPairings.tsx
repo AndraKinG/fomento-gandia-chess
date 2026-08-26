@@ -43,13 +43,21 @@ export async function TorneoChessPairings({ urlPublica }: { urlPublica: string |
         : lectura.error === "no-autorizado"
           ? "La clave de ChessPairings no vale o se ha revocado."
           : lectura.error === "no-existe"
-            ? "Ese torneo no está en la cuenta de ChessPairings del club."
+            ? "Ese torneo ya no está en ChessPairings: o se ha borrado allí, o el enlace apunta a la cuenta de otra persona."
             : lectura.error === "limite"
               ? "ChessPairings está limitando las peticiones. Prueba en un minuto."
               : "No se ha podido conectar con ChessPairings.";
     return (
       <Tarjeta compacta>
         <p className="text-sm text-tinta-suave">{texto}</p>
+        {/* QUÉ HACER, no solo qué pasa: si el torneo se borró allí, este de aquí sigue
+            existiendo con sus inscripciones, y hay que decidir — cambiar el enlace o
+            borrar el torneo. Un mensaje que solo describe el problema deja a la junta
+            mirando la pantalla. */}
+        <p className="mt-1 text-xs text-tinta-suave">
+          Las inscripciones de este torneo siguen aquí. Cambia el enlace o borra el torneo
+          si ya no va a jugarse.
+        </p>
         {urlPublica && (
           <p className="mt-1 text-sm">
             <a
