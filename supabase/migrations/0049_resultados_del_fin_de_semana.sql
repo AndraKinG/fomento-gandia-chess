@@ -31,24 +31,46 @@
 -- CORREN TODO EL AÑO. Fuera de temporada no hay jornadas nuevas que traer: la pasada no
 -- encuentra nada y termina. Apagarlas y encenderlas por meses sería otra fecha que
 -- mantener a cambio de nada.
+--
+-- ---------------------------------------------------------------------------
+-- REPROGRAMA TAMBIÉN EL AVISO DE RONDAS DE LA 0037, Y ESO ES A PROPÓSITO
+-- ---------------------------------------------------------------------------
+--
+-- Aquí hay una trampa que conviene entender antes de tocar el secreto: **el CRON_SECRET
+-- queda escrito DENTRO de cada tarea de pg_cron**, en el comando que ejecuta. No lo lee
+-- de ningún sitio al dispararse. Así que si algún día se rota el secreto en Vercel, las
+-- tareas ya programadas siguen mandando el viejo y el endpoint las rechaza con 401 —
+-- **en silencio**, porque a pg_cron le da igual la respuesta: el aviso de "tu ronda
+-- empieza en una hora" simplemente dejaría de llegar y nadie se enteraría.
+--
+-- Por eso esta migración reprograma LAS CUATRO tareas con el mismo valor: se pega el
+-- secreto una vez y todo queda consistente. Si se rota el secreto, se vuelve a ejecutar
+-- este fichero entero (es idempotente) y ya está.
 
 do $ejecutar$
 declare
   -- ↓↓↓ RELLENA ESTA LÍNEA ANTES DE EJECUTAR ↓↓↓
   v_secreto text := 'PEGA_AQUI_TU_CRON_SECRET';
-  -- ↑↑↑ el mismo `CRON_SECRET` que tienes en Vercel y en la 0037 ↑↑↑
-  v_url text := 'https://fomento-gandia-chess-swart.vercel.app/api/cron/director?forzar=resultados';
+  -- ↑↑↑ el mismo `CRON_SECRET` que está en Vercel ↑↑↑
+  v_base text := 'https://fomento-gandia-chess-swart.vercel.app';
+  v_cabeceras text;
   v_tarea record;
 begin
   if v_secreto = 'PEGA_AQUI_TU_CRON_SECRET' then
     raise exception 'Falta poner el CRON_SECRET en la línea de arriba.';
   end if;
 
+  v_cabeceras := json_build_object(
+    'Authorization', 'Bearer ' || v_secreto,
+    'Content-Type', 'application/json'
+  )::text;
+
   -- Idempotente: si esto se ejecuta dos veces, las tareas se reemplazan en vez de
-  -- duplicarse. Dos tareas iguales no harían daño (la importación es idempotente: crea o
-  -- actualiza, nunca duplica una jornada) pero serían el doble de peticiones a la FACV.
+  -- duplicarse. Dos tareas iguales no harían daño (la importación crea o actualiza,
+  -- nunca duplica una jornada) pero serían el doble de peticiones a la FACV.
   for v_tarea in
     select unnest(array[
+      'avisar-rondas',
       'resultados-sabado-noche',
       'resultados-sabado-cierre',
       'resultados-domingo-tarde'
@@ -59,6 +81,18 @@ begin
     end if;
   end loop;
 
+  -- El aviso de ronda, igual que en la 0037: cada 5 min. Se reprograma aquí solo para
+  -- que lleve el mismo secreto que las de abajo.
+  perform cron.schedule(
+    'avisar-rondas',
+    '*/5 * * * *',
+    format(
+      'select net.http_post(url := %L, headers := %L::jsonb, timeout_milliseconds := 30000);',
+      v_base || '/api/cron/rondas',
+      v_cabeceras
+    )
+  );
+
   -- Sábado 22:00 Madrid: la jornada empezó a las 17:00, así que a esta hora ya ha
   -- terminado incluso la partida más larga.
   perform cron.schedule(
@@ -66,11 +100,8 @@ begin
     '0 21 * * 6',
     format(
       'select net.http_post(url := %L, headers := %L::jsonb, timeout_milliseconds := 120000);',
-      v_url,
-      json_build_object(
-        'Authorization', 'Bearer ' || v_secreto,
-        'Content-Type', 'application/json'
-      )::text
+      v_base || '/api/cron/director?forzar=resultados',
+      v_cabeceras
     )
   );
 
@@ -80,11 +111,8 @@ begin
     '55 22 * * 6',
     format(
       'select net.http_post(url := %L, headers := %L::jsonb, timeout_milliseconds := 120000);',
-      v_url,
-      json_build_object(
-        'Authorization', 'Bearer ' || v_secreto,
-        'Content-Type', 'application/json'
-      )::text
+      v_base || '/api/cron/director?forzar=resultados',
+      v_cabeceras
     )
   );
 
@@ -95,11 +123,8 @@ begin
     '0 13 * * 0',
     format(
       'select net.http_post(url := %L, headers := %L::jsonb, timeout_milliseconds := 120000);',
-      v_url,
-      json_build_object(
-        'Authorization', 'Bearer ' || v_secreto,
-        'Content-Type', 'application/json'
-      )::text
+      v_base || '/api/cron/director?forzar=resultados',
+      v_cabeceras
     )
   );
 end
@@ -108,9 +133,10 @@ $ejecutar$;
 -- ---------------------------------------------------------------------------
 -- Verificación
 -- ---------------------------------------------------------------------------
-select 'tareas del fin de semana (esperado 3)' as comprobacion, count(*)::text as valor
+select 'tareas programadas (esperado 4)' as comprobacion, count(*)::text as valor
   from cron.job
   where jobname in (
+    'avisar-rondas',
     'resultados-sabado-noche',
     'resultados-sabado-cierre',
     'resultados-domingo-tarde'
@@ -119,6 +145,7 @@ union all
 select 'horarios', string_agg(jobname || ' = ' || schedule, ' | ' order by jobname)
   from cron.job
   where jobname in (
+    'avisar-rondas',
     'resultados-sabado-noche',
     'resultados-sabado-cierre',
     'resultados-domingo-tarde'

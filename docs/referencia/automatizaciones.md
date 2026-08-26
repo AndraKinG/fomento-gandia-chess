@@ -33,6 +33,15 @@ y actas. Recién acabada la jornada, el orden de fuerza, el ELO, el calendario d
 torneos y sus enlaces son los mismos que por la mañana, así que pedirlos otra vez
 serían tres cuartos de las peticiones para traer lo que ya tenemos.
 
+**Si se rota el `CRON_SECRET`, hay que volver a ejecutar la migración 0049.** El
+secreto queda escrito DENTRO de cada tarea de pg_cron, en el comando que ejecuta:
+no lo lee de ningún sitio al dispararse. Con el secreto rotado en Vercel, las
+tareas viejas siguen mandando el anterior y el endpoint las rechaza con 401 **en
+silencio** —a pg_cron le da igual la respuesta—, así que el aviso de "tu ronda
+empieza en una hora" dejaría de llegar sin que nadie se enterara. Por eso la 0049
+reprograma también `avisar-rondas` (la de la 0037): se pega el secreto una vez y
+las cuatro tareas quedan consistentes.
+
 Las horas están calculadas para **invierno (UTC+1)**, que es cuando se juega el
 Interclubs (10 de enero a 28 de marzo en 2026). En verano caen una hora más tarde
 en local y da igual: no hay jornadas.
