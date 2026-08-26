@@ -45,6 +45,28 @@ export type ResumenSyncSemanal = {
  * necesita algo de una persona (darle el código de acceso, nombrarlo en un equipo), y
  * un contador en la respuesta de un cron que nadie lee no sirve de nada.
  */
+/**
+ * SOLO los resultados y las actas. La pasada corta, para justo después de la jornada.
+ *
+ * POR QUÉ NO LA SYNC COMPLETA (2026-08-26): un sábado por la noche, recién acabada la
+ * jornada, lo único que puede haber cambiado en la FACV son el marcador y el acta. El
+ * orden de fuerza, el ELO de la lista, el calendario de torneos y sus enlaces son los
+ * mismos que por la mañana, así que volver a pedirlos serían tres cuartos de las
+ * peticiones para traer lo que ya tenemos. Con esto la pasada baja de ~18 s a la mitad y
+ * facv.org recibe una fracción de las visitas en un fin de semana con tres pasadas.
+ *
+ * EL ORDEN SIGUE SIENDO UNA DEPENDENCIA: las actas se cuelgan de las jornadas, así que
+ * los resultados van primero (son los que crean o actualizan la jornada).
+ */
+export async function sincronizarResultadosYActas(): Promise<{
+  resultados: Awaited<ReturnType<typeof sincronizarResultadosFACVCore>>;
+  actas: Awaited<ReturnType<typeof sincronizarActasCore>>;
+}> {
+  const resultados = await sincronizarResultadosFACVCore();
+  const actas = await sincronizarActasCore();
+  return { resultados, actas };
+}
+
 export async function sincronizarSemanalCore(): Promise<ResumenSyncSemanal> {
   const ordenFuerza = await sincronizarOrdenFuerzaFACVCore();
   const resultados = await sincronizarResultadosFACVCore();

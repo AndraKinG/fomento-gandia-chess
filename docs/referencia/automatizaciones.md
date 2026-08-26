@@ -17,6 +17,26 @@ vacío). Qué hace:
 | **Lunes**      | La sync FACV **otra vez** (segunda pasada) y luego pedir disponibilidad de la semana                                          |
 | Jueves         | Recordar a quien no ha contestado (2 días antes del sábado)                                                                  |
 
+**Y tres pasadas más el fin de semana de jornada, con pg_cron** (migración 0049),
+porque la FACV publica los resultados el sábado por la noche o el domingo:
+
+| Cuándo (Madrid) | UTC | Qué |
+| --- | --- | --- |
+| Sábado 22:00 | `0 21 * * 6` | Resultados y actas (pasada corta) |
+| Sábado 23:55 | `55 22 * * 6` | Otra vez, por si el acta se subió de noche |
+| Domingo 14:00 | `0 13 * * 0` | Otra vez |
+
+Van por **pg_cron y no por Vercel** porque el plan Hobby permite una ejecución al
+día y aquí hacen falta tres a horas concretas. Llaman a
+`/api/cron/director?forzar=resultados`, que es la **pasada corta**: solo resultados
+y actas. Recién acabada la jornada, el orden de fuerza, el ELO, el calendario de
+torneos y sus enlaces son los mismos que por la mañana, así que pedirlos otra vez
+serían tres cuartos de las peticiones para traer lo que ya tenemos.
+
+Las horas están calculadas para **invierno (UTC+1)**, que es cuando se juega el
+Interclubs (10 de enero a 28 de marzo en 2026). En verano caen una hora más tarde
+en local y da igual: no hay jornadas.
+
 **El día sale de cuándo se juega de verdad**, y estuvo mal hasta el 2026-08-26.
 Medido sobre las 31 jornadas de la temporada 2026: **28 se jugaron en SÁBADO y 3 en
 domingo, todas a las 17:00** — ninguna en viernes. Y la sync estaba puesta el

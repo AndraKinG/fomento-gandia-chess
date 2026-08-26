@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { pedirDisponibilidadSemana, recordarPendientes } from "@/lib/push/disponibilidad";
-import { sincronizarSemanalCore } from "@/lib/import/sync-semanal";
+import {
+  sincronizarResultadosYActas,
+  sincronizarSemanalCore,
+} from "@/lib/import/sync-semanal";
 import { reintentarAvisosFallidos } from "@/lib/avisos/reintentar";
 
 export const maxDuration = 300;
@@ -41,10 +44,17 @@ const DIAS_VENTANA_PRUEBA = 60;
  * jornadas nuevas que traer, la pasada no encuentra nada y termina igual de rápido.
  * Condicionarlo por meses sería una fecha más que mantener a cambio de nada.
  *
- * Acepta `?forzar=pedir|recordar|sync` (gated por el mismo CRON_SECRET) para
- * pruebas manuales; `forzar=sync` no depende de ventana de días (a diferencia
- * de pedir/recordar): la sync de resultados no tiene "ventana semanal", se
- * puede ejecutar cualquier día sin más criterio que forzarla.
+ * Acepta `?forzar=pedir|recordar|sync|resultados` (gated por el mismo CRON_SECRET).
+ * `sync` y `resultados` no dependen de ventana de días, a diferencia de pedir/recordar:
+ * traer resultados no tiene "ventana semanal", se puede ejecutar cualquier día.
+ *
+ * **`forzar=resultados` NO ES SOLO PARA PRUEBAS**: es lo que llaman las tres tareas de
+ * pg_cron del fin de semana de jornada (migración 0049) — sábado 22:00, sábado 23:55 y
+ * domingo 14:00, hora de Madrid. Recién acabada la jornada lo único que puede haber
+ * cambiado son el marcador y el acta, así que esa pasada se salta el orden de fuerza, el
+ * ELO, el calendario de torneos y los enlaces. **Van por pg_cron y no por Vercel porque
+ * el plan Hobby permite UNA ejecución al día**, y aquí hacen falta tres a horas
+ * concretas.
  */
 export async function GET(request: NextRequest) {
   if (
@@ -79,6 +89,12 @@ export async function GET(request: NextRequest) {
   if (forzar === "sync") {
     const resultado = await sincronizarSemanalCore();
     return NextResponse.json({ accion: "sync", forzado: true, avisos, ...resultado });
+  }
+  // LA PASADA CORTA, la que llama pg_cron el sábado por la noche: solo resultados y
+  // actas, que es lo único que cambia recién acabada la jornada. Ver la migración 0049.
+  if (forzar === "resultados") {
+    const resultado = await sincronizarResultadosYActas();
+    return NextResponse.json({ accion: "resultados", forzado: true, avisos, ...resultado });
   }
 
   const dia = new Date().getUTCDay();
