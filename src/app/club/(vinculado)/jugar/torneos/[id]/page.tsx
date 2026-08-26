@@ -129,7 +129,7 @@ export default async function TorneoInternoPage({
         {/* LA CLASIFICACIÓN DE CHESSPAIRINGS, pintada aquí con nuestros motes. Va en la
             columna de al lado, en el hueco donde en un torneo de la app está la
             clasificación propia: es la misma pregunta, respondida por quien la calcula.
-            Si su API falla, el componente enseña el enlace a su página y no rompe nada. */}
+            Si su página no responde, el componente enseña el enlace y no rompe nada. */}
         {torneo.organizadoEn === "chesspairings" && (
           <div className="space-y-4">
             <TorneoChessPairings urlPublica={torneo.urlPublica} />

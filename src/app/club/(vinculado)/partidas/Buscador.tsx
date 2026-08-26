@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 /**
- * Búsqueda por nombre. Es un formulario de verdad (no un filtrado en vivo) para
+ * Búsqueda por nombre o por mote. Es un formulario de verdad (no un filtrado en vivo) para
  * que la búsqueda quede en la URL: así se puede compartir un enlace a "las
  * partidas contra Pérez" y el botón de atrás del móvil funciona como se espera.
  */
@@ -45,8 +45,8 @@ export function Buscador({
         name="q"
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
-        placeholder="Buscar por nombre (tuyo o del rival)"
-        aria-label="Buscar partidas por nombre"
+        placeholder="Buscar por nombre o mote (tuyo o del rival)"
+        aria-label="Buscar partidas por nombre o mote"
         className="flex-1 rounded-xl border border-borde bg-tarjeta px-3 py-2 text-tinta placeholder:text-tinta-suave"
       />
       <button

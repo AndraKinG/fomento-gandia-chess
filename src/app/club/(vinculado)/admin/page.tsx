@@ -9,7 +9,7 @@ const ENLACES = [
     href: "/club/admin/orden-fuerza",
     icono: "📋",
     titulo: "ELO de los socios",
-    detalle: "La lista oficial FACV: sincronizar, crear fichas e importar la temporada",
+    detalle: "El ELO al día y el orden de fuerza: sincronizar, crear fichas e importar",
   },
   {
     href: "/club/admin/acceso",
@@ -45,7 +45,7 @@ const ENLACES = [
     href: "/club/admin/uso",
     icono: "📊",
     titulo: "Datos de uso",
-    detalle: "Socios activos, visitas, tiempo de uso y actividad, por día, semana y mes",
+    detalle: "Socios activos, visitas, tiempo de uso, actividad y preguntas a la IA",
   },
   {
     href: "/club/admin/push",

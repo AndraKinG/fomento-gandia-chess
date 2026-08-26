@@ -73,7 +73,7 @@ export default async function EquiposPage({
           <EstadoVacio
             icono="🛡️"
             titulo="No hay temporada activa"
-            detalle='Crea una temporada sincronizando el "Orden de fuerza" antes de dar de alta equipos.'
+            detalle='Crea una temporada sincronizando desde "ELO de los socios" antes de dar de alta equipos.'
           />
         </Contenedor>
       </main>

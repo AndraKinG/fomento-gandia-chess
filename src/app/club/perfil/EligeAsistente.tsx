@@ -50,10 +50,11 @@ export function EligeAsistente({ actual }: { actual: string }) {
         ))}
       </div>
       {/* El arrastre no se ve venir: un botón redondo no anuncia que se puede mover, y
-          sin decirlo aquí no lo descubriría nadie. */}
+          sin decirlo aquí no lo descubriría nadie. PERO NO SI ESTÁ OCULTO: no hay nada
+          que arrastrar, y decirlo manda a buscar un botón que no existe. */}
       <p className="text-xs text-tinta-suave">
-        {SITIOS.find((s) => s.clave === elegido)?.detalle}. También puedes arrastrarlo
-        por la pantalla y se queda donde lo sueltes.
+        {SITIOS.find((s) => s.clave === elegido)?.detalle}
+        {elegido !== "oculto" && ". También puedes arrastrarlo por la pantalla y se queda donde lo sueltes"}.
       </p>
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>

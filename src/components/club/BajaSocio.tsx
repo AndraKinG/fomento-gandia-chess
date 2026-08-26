@@ -47,8 +47,8 @@ export function BajaSocio({
     return (
       <div className="space-y-1">
         <p className="text-sm text-tinta">
-          <b className="font-semibold">Está de baja.</b> No se le puede retar ni inscribir
-          en torneos, y no sale en las plantillas.
+          <b className="font-semibold">Está de baja.</b> No sale en ninguna lista del
+          club: solo se llega a esta ficha por su enlace directo.
         </p>
         <button
           type="button"
@@ -84,13 +84,12 @@ export function BajaSocio({
       {/* DECIR LAS DOS MITADES: lo que se va y lo que se queda. Sin la segunda, "dar de
           baja" suena a borrar y nadie se atreve a pulsarlo. */}
       <p className="text-sm text-tinta">
-        ¿Dar de baja a {nombre}? Deja de aparecer en los retos, en las inscripciones a
-        torneos del club, en el selector de rival y en las plantillas de equipo.
+        ¿Dar de baja a {nombre}? Deja de verlo todo el mundo: desaparece de los socios,
+        del orden de fuerza, de los retos, de las inscripciones y de las plantillas.
       </p>
       <p className="text-xs text-tinta-suave">
-        Sus partidas, actas y resultados NO se borran, y sigue en el orden de fuerza de la
-        FACV —ese documento no se puede reescribir— marcado como baja. Se puede reactivar
-        cuando quieras.
+        No se borra nada: sus partidas, sus actas y su fila del documento de la FACV
+        siguen guardadas. Si algún día vuelve, se reactiva con todo su historial.
       </p>
       <div className="flex flex-wrap gap-2">
         <button

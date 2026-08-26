@@ -37,7 +37,7 @@ export async function crearEquipo(formData: FormData): Promise<Resultado> {
   const { data: season } = await admin
     .from("seasons").select("id").eq("activa", true).maybeSingle();
   if (!season) {
-    return { error: "No hay temporada activa. Créala primero desde Orden de fuerza." };
+    return { error: "No hay temporada activa. Créala primero desde ELO de los socios." };
   }
 
   const { error } = await admin.from("teams").insert({

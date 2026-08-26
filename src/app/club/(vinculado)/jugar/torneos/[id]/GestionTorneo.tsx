@@ -203,8 +203,9 @@ export function GestionTorneo({
           <p className="text-sm font-semibold text-tinta">Torneo presencial</p>
           <p className="mt-1 text-sm text-tinta-suave">
             Los emparejamientos, los resultados y la clasificación se llevan en
-            ChessPairings, que empareja con el motor oficial de la FIDE. Aquí se apuntan
-            los socios y les llegan los avisos.
+            ChessPairings, que empareja con el motor oficial de la FIDE, y se ven aquí
+            abajo con los motes del club. Aquí se apuntan los socios y les llegan los
+            avisos.
           </p>
           {urlPublica ? (
             <p className="mt-2 text-sm">
@@ -214,13 +215,13 @@ export function GestionTorneo({
                 rel="noopener noreferrer"
                 className="font-semibold text-acento-texto underline"
               >
-                Ver emparejamientos y clasificación ↗
+                Su página oficial ↗
               </a>
             </p>
           ) : (
             <p className="mt-2 text-xs text-tinta-suave">
-              Todavía no tiene enlace público: créalo en ChessPairings y pega aquí su
-              dirección.
+              Todavía no tiene enlace público: lo crea quien organice, con su cuenta de
+              ChessPairings, y aquí se pega su dirección.
             </p>
           )}
           {/* EL ENLACE SÍ LO TOCA LA JUNTA aunque el resto sea solo lectura: es nuestro,
