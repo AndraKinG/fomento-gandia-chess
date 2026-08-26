@@ -138,3 +138,38 @@ App PWA del club de ajedrez Fomento de Gandia (Gandía). Propietario: J. Ribes (
 - **INSTALAR LA PWA: dos bugs encontrados el 2026-08-12 con el primer socio de prueba** (dijo que no le salió lo de instalar — tenía razón, y no era su móvil). (a) **`public/sw.js` no tenía manejador de `fetch`, y Chrome EXIGE que la web responda algo sin conexión para considerarla instalable**: el aviso de instalación no salía NUNCA en Android. Arreglado con `public/sin-conexion.html` precacheada y un `fetch` que **solo atiende NAVEGACIONES y siempre prueba la red primero** — cuando hay red es invisible, así que no puede romper sesión, tiempo real ni jugadas. (b) La notificación push usaba `/icon.svg`, **que no existe**, así que salían con el icono del navegador; ahora `/icon-192.png` con `badge`, y al tocarla se trae al frente la ventana abierta en vez de abrir otra. **Y en iPhone NO EXISTE ningún aviso de instalar** (Safari no tiene `beforeinstallprompt`): de ahí `src/components/InstalarApp.tsx`, con botón real en Android e INSTRUCCIONES en iOS, montado en Inicio y en Perfil, que se esconde solo al estar instalada. Ojo: **en iOS sin instalar NO HAY PUSH**, así que en Perfil va ANTES de activar notificaciones — ese es el orden real de los pasos. Usa `useSyncExternalStore` y no un efecto con `setState`: el linter del compilador de React lo prohíbe y además así la hidratación no discrepa.
 - **ESCALAR A OTROS CLUBES: analizado el 2026-08-12, `docs/referencia/escalar-a-otros-clubes.md`.** Resumen: hasta ~5 clubes, **franquicia** (un repo, N despliegues con su propio Supabase/Vercel/claves) — coste ~0 €, aislamiento gratis, la RLS actual vale tal cual, y solo hay 26 apariciones de "Fomento" en código que extraer a config. **SaaS multi-tenant (club_id + reescribir las 63 policies) solo con 10+ clubes dispuestos a pagar**: es otro proyecto del tamaño de este, y arrastra identidad multi-club, subdominios, capas de pago, facturación y RGPD de datos de menores de N clubes. **NO meter `club_id` "por si acaso"**: duplicaría el coste de cada pantalla nueva para una demanda que no existe. Los importadores solo valen para clubes DE LA FACV (otra federación = adaptadores nuevos).
 - **Regla de pantalla que salió del repaso del 2026-08-08: usar el ancho, no el alto.** Cuando una lista crece sin techo, NO se deja correr hacia abajo. Dos salidas, según lo que sea: (a) **partir en dos columnas** desde `lg` con `partirEnDos` (`src/lib/ui/columnas.ts`, 10 tests) — es lo que se hizo con el ranking oficial de 46 filas y con el del club; (b) **enseñar una sola parte con selector**, que es lo que se hizo con las rondas de los torneos internos (una liguilla de 8 son 28 cruces). Y una columna de tarjetas de dos líneas se convierte en **una caja con filas**, como el calendario de Interclubs, que es el patrón de referencia de la app.
+
+## Auditoria del 2026-08-26
+
+Repaso completo pedido por el propietario ("hazle una auditoria a toda la app"). Lo que
+salio y como quedo, para no volver a buscarlo:
+
+- **LAS BAJAS SEGUIAN VIENDOSE EN CUATRO SITIOS.** La regla es "nadie deberia verlos" y
+  solo la cumplian `/club/socios` y `/club/orden-fuerza`. El resto lee `force_order`,
+  **donde la fila del socio SIGUE** —el documento de la FACV no se reescribe—, asi que
+  filtrar por `activo` en la consulta a `players` no basta: hay que filtrar la tabla
+  incrustada. Arreglados: `/club/vincular` (ofrecia la ficha de quien se fue para que
+  otro la reclamara), la plantilla del equipo, **el motor de convocatorias** (ahi no era
+  cosmetico: el RGC ordena por fuerza, y una baja colada en medio desplaza de tablero a
+  todos los de detras) y la herramienta `orden_de_fuerza` del asistente. **Si se anade
+  otra pantalla que lea `force_order`, este filtro hay que ponerlo tambien.**
+- **NO HABIA NI 404 NI LIMITE DE ERROR.** Un enlace mal escrito caia en la pantalla de
+  fabrica de Next, en ingles y **sin forma de volver** —en un movil, sin barra de
+  direcciones, eso es cerrar la app—. Anadidos `not-found.tsx`, `global-error.tsx` (con
+  su propio `html`/`body` y colores a mano, porque sustituye al layout raiz) y
+  `club/(vinculado)/error.tsx`, que se pinta DENTRO del layout y deja la navegacion.
+- **NEXT 16.2.10 -> 16.3.3**, que cierra 4 avisos de severidad alta, dos de ellos sobre
+  Server Actions, que es de lo que esta hecha la app entera. `npm audit`: 0.
+- **CODIGO MUERTO FUERA**: `EscenaHero.tsx` y `proyeccion.ts` (+ su test) eran el hero de
+  antes del 3D, ya no montado en ninguna parte; `escena3d.ts` no lo importaba nadie; y
+  `@react-three/drei` estaba instalado sin usarse.
+
+**LO QUE SE COMPROBO Y ESTABA BIEN**, para no repetir el trabajo: los 4 endpoints de
+`/api` piden secreto o sesion; las **86 server actions** comprueban permisos (las dos que
+parecen no hacerlo son a proposito: `borrarCoche` se apoya en la RLS y `solicitarIngreso`
+es el formulario publico, con freno por IP); ninguna clave de servicio llega a un
+componente de cliente y ningun secreto lleva prefijo `NEXT_PUBLIC_`; las 35 tablas tienen
+RLS activada y con politicas —`registro_intentos` a proposito sin ninguna, que es como se
+deja solo para la clave de servicio—; ningun enlace interno apunta a una ruta que no
+existe; ningun `.in()` puede recibir un array vacio; y ninguna accion que escribe se
+queda sin revalidar.

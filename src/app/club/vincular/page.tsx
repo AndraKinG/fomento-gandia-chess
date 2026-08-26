@@ -77,7 +77,7 @@ export default async function VincularPage({
   const { data: censo } = temporada
     ? await admin
         .from("force_order")
-        .select("numero, bis_index, elo_oficial, players(id, nombre)")
+        .select("numero, bis_index, elo_oficial, players(id, nombre, activo)")
         .eq("season_id", temporada.id)
         .order("numero")
         .order("bis_index")
@@ -94,10 +94,13 @@ export default async function VincularPage({
 
   const libres = (censo ?? [])
     .map((fila) => ({
-      ...(fila.players as unknown as { id: string; nombre: string }),
+      ...(fila.players as unknown as { id: string; nombre: string; activo: boolean | null }),
       elo: fila.elo_oficial as number | null,
     }))
-    .filter((p) => p?.id && !ocupados.has(p.id));
+    // NI LAS BAJAS: su fila sigue en el documento de la FACV —ese papel no se
+    // reescribe—, pero ofrecerla aquí es ofrecer la identidad de alguien que ya no
+    // es del club. Si vuelve, la junta lo reactiva y entonces aparece.
+    .filter((p) => p?.id && p.activo !== false && !ocupados.has(p.id));
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">

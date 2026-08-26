@@ -458,7 +458,6 @@ export async function ponerApodo(
   return {};
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 type ClienteAdmin = ReturnType<typeof createAdminClient>;
 
 /**
@@ -480,10 +479,16 @@ async function quienTieneElMote(
     .neq("id", exceptoFicha);
   return moteOcupado(
     mote,
-    ((data ?? []) as any[]).map((p) => ({
-      nombre: p.nombre as string,
-      apodo: p.apodo as string | null,
-      apodoSolicitado: p.apodo_solicitado as string | null,
+    (
+      (data ?? []) as {
+        nombre: string;
+        apodo: string | null;
+        apodo_solicitado: string | null;
+      }[]
+    ).map((p) => ({
+      nombre: p.nombre,
+      apodo: p.apodo,
+      apodoSolicitado: p.apodo_solicitado,
     }))
   );
 }

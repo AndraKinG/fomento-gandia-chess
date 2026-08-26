@@ -37,10 +37,15 @@ export default async function PlantillaPage({
 
   const { data: orden } = await supabase
     .from("force_order")
-    .select("numero, bis_index, player_id, players(nombre, apodo)")
+    .select("numero, bis_index, player_id, players(nombre, apodo, activo)")
     .eq("season_id", equipo.season_id)
     .order("numero").order("bis_index");
-  const propioOrden = (orden ?? []) as unknown as {
+  const propioOrden = (orden ?? []).filter((f) => {
+    // LAS BAJAS FUERA: quien se fue del club no se puede convocar, así que en la
+    // plantilla solo sería una fila con la disponibilidad vacía para siempre.
+    const p = f.players as unknown as { activo: boolean | null } | null;
+    return p?.activo !== false;
+  }) as unknown as {
     numero: number; bis_index: number; player_id: string;
     players: { nombre: string } | null;
   }[];

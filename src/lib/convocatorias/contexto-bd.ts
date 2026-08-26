@@ -143,14 +143,19 @@ export async function cargarContextoValidacion(matchId: string): Promise<Context
   const { data: filasOrden, error: ordenError } = await admin
     .from("force_order")
     .select(
-      "player_id, numero, bis_index, elo_oficial, players(nombre, apodo, elo_fide, elo_feda, elo_otro, excepcion_tecnificacion, excepcion_veterano)"
+      "player_id, numero, bis_index, elo_oficial, players(nombre, apodo, elo_fide, elo_feda, elo_otro, excepcion_tecnificacion, excepcion_veterano, activo)"
     )
     .eq("season_id", equipoActual.season_id);
   if (ordenError || !filasOrden) {
     throw new Error("No se pudo cargar el orden de fuerza de la temporada");
   }
 
-  const orden: JugadorOrden[] = filasOrden.map((f) => {
+  const orden: JugadorOrden[] = filasOrden
+    // LAS BAJAS NO SE PUEDEN ALINEAR, y aquí no es cosmético: esta lista alimenta la
+    // propuesta de convocatoria, y el RGC obliga a ordenar por fuerza. Un socio que ya
+    // no está colado en medio desplaza de tablero a todos los que van detrás.
+    .filter((f) => (f.players as unknown as { activo: boolean | null } | null)?.activo !== false)
+    .map((f) => {
     const jugador = f.players as unknown as JugadorFila;
     return {
       playerId: f.player_id as string,

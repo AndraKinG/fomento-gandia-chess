@@ -210,7 +210,10 @@ export async function ejecutar(
       if (!season) return { error: "No hay ninguna temporada activa." };
       let consulta = supabase
         .from("force_order")
-        .select("numero, bis_index, elo_oficial, players(nombre, apodo)")
+        // `!inner` PARA PODER FILTRAR POR LA TABLA INCRUSTADA: sin él, `players.activo`
+        // no filtra nada y las bajas seguirían contándose.
+        .select("numero, bis_index, elo_oficial, players!inner(nombre, apodo)")
+        .eq("players.activo", true)
         .eq("season_id", season.id)
         .order("numero")
         .order("bis_index")
