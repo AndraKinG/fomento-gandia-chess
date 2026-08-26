@@ -97,7 +97,11 @@ export function FormularioTorneoInterno() {
               <p className="text-xs text-tinta-suave">
                 Se puede dejar en blanco y pegarlo después, cuando lo hayas creado allí.
                 Aquí los socios se apuntan y les llegan los avisos; los emparejamientos y
-                la clasificación se llevan allí.
+                la clasificación se llevan allí, y esta pantalla los enseña.
+              </p>
+              <p className="text-xs text-tinta-suave">
+                Lo puede crear cualquiera con su cuenta, siempre que el torneo esté como
+                público en ChessPairings.
               </p>
             </div>
           )}

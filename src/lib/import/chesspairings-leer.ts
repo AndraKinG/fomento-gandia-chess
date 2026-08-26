@@ -1,109 +1,124 @@
 import {
-  BASE_CHESSPAIRINGS,
-  mapearClasificacion,
-  mapearEmparejamientos,
-  mapearTorneo,
-  fideIdsDeInscritos,
-  type FilaClasificacion,
-  type MesaEmparejamiento,
-  type TorneoChessPairings,
-} from "@/lib/import/chesspairings";
+  parsearCabeceraPublica,
+  parsearClasificacionPublica,
+  parsearEmparejamientosPublicos,
+  parsearInscritosPublicos,
+  urlPestana,
+  type FilaClasificacionPublica,
+  type InscritoPublico,
+  type MesaPublica,
+} from "@/lib/import/chesspairings-publico";
 
 /**
- * Traer de ChessPairings lo que hace falta para pintar un torneo presencial del club.
+ * Traer de ChessPairings la clasificación y los emparejamientos de un torneo del club.
  *
- * SOLO SERVIDOR. `CHESSPAIRINGS_API_KEY` da acceso a TODOS los torneos de la cuenta del
- * club, así que no puede pisar el navegador — igual que la de Gemini. Estas funciones se
- * llaman desde componentes de servidor.
+ * SE LEE SU PÁGINA PÚBLICA Y NO SU API, y es una decisión del propietario que conviene
+ * entender antes de "mejorarla" volviendo a la API (2026-08-26):
  *
- * CACHÉ DE 60 SEGUNDOS, que es lo que hace su propio plugin, y no es una optimización:
- * su API contesta **429** si se abusa. Sin caché, cada socio que abre la pantalla del
- * torneo sería una petición suya, y en una ronda con veinte personas mirando eso son
- * veinte por minuto para traer lo mismo. Con `revalidate` es una.
+ * La API estaba escrita, probada y daba JSON limpio. **Pero solo sirve los torneos de la
+ * cuenta cuya clave esté configurada.** Y el club quiere que los torneos los cree quien
+ * organiza, con su propia cuenta, sin depender de una persona — "quiero que ellos creen
+ * los torneos y haya libertad, ya que no me encargo yo de eso". Con la API eso obligaría a
+ * guardar la clave de cada organizador en nuestra base —credenciales de terceros— o a que
+ * todo pasara por el propietario, que es justo lo que se quería evitar.
  *
- * NUNCA LANZA. Un torneo que se cae no puede tumbar la pantalla entera: si su API falla,
- * se devuelve null y arriba se enseña el enlace a su página, que es lo que había antes.
+ * Su página pública **no pide autenticación**: basta el enlace con su token, que es
+ * público por diseño (sus 786 torneos están en el sitemap de chesspairings.org). Probado
+ * con un torneo de otra cuenta: clasificación, emparejamientos e inscritos, sin clave.
+ *
+ * TRES PETICIONES EN PARALELO, una por pestaña: en serie serían tres viajes a Italia por
+ * pantalla.
+ *
+ * CACHÉ DE 60 SEGUNDOS. No es una optimización: sin ella, cada socio que abre la pantalla
+ * de un torneo en marcha sería una visita a su servidor, y con veinte personas mirando una
+ * ronda eso son sesenta peticiones por minuto para traer lo mismo. Es la misma cifra que
+ * usa su plugin oficial de WordPress.
+ *
+ * NUNCA LANZA. Un torneo que falle no puede tumbar la pantalla: se devuelve el error y
+ * arriba se enseña el enlace a su página, que es lo que había antes de todo esto.
  */
 
 const CACHE_SEGUNDOS = 60;
 
-/** El estado de la lectura, para poder decir la verdad en pantalla. */
 export type LecturaChessPairings = {
-  torneo: TorneoChessPairings | null;
-  clasificacion: FilaClasificacion[];
-  emparejamientos: MesaEmparejamiento[];
-  /** La ronda de la que son esos emparejamientos. */
+  /** El nombre que el torneo tiene ALLÍ, y en qué ronda va. */
+  nombre: string | null;
   ronda: number | null;
-  /** Los FIDE ID por inscripción, para cruzar con nuestras fichas. */
-  fidePorInscripcion: Map<number, number>;
-  /** Qué ha fallado, si algo. `sin-clave` se distingue para poder decirlo. */
-  error: "sin-clave" | "no-autorizado" | "no-existe" | "limite" | "red" | null;
+  rondasTotales: number | null;
+  clasificacion: FilaClasificacionPublica[];
+  emparejamientos: MesaPublica[];
+  inscritos: InscritoPublico[];
+  error: "sin-enlace" | "no-existe" | "red" | "vacio" | null;
 };
 
 const VACIO: LecturaChessPairings = {
-  torneo: null,
+  nombre: null,
+  ronda: null,
+  rondasTotales: null,
   clasificacion: [],
   emparejamientos: [],
-  ronda: null,
-  fidePorInscripcion: new Map(),
+  inscritos: [],
   error: null,
 };
 
-async function pedir(
-  ruta: string,
-  clave: string
-): Promise<{ datos: Record<string, unknown> | null; error: LecturaChessPairings["error"] }> {
+async function bajar(
+  url: string
+): Promise<{ html: string | null; error: LecturaChessPairings["error"] }> {
   try {
-    const r = await fetch(`${BASE_CHESSPAIRINGS}/${ruta}`, {
+    const r = await fetch(url, {
       headers: {
-        authorization: `Bearer ${clave}`,
-        accept: "application/json",
-        // Se identifica quién llama: es lo cortés con una API ajena y gratuita, y si
-        // algún día les molestamos sabrán a quién escribir.
+        // EL IDIOMA SE FIJA POR LAS DOS VÍAS, en la URL y aquí: su página traduce las
+        // cabeceras de las tablas según el `Accept-Language`, y el parser busca las
+        // columnas por su nombre en inglés.
+        "accept-language": "en",
+        // Quién llama, que es lo cortés con una web ajena que no nos ha pedido nada.
         "user-agent": "FomentoGandiaChess/1.0 (+https://fomento-gandia-chess-swart.vercel.app)",
       },
       next: { revalidate: CACHE_SEGUNDOS },
     });
-    if (r.status === 401) return { datos: null, error: "no-autorizado" };
-    if (r.status === 404) return { datos: null, error: "no-existe" };
-    if (r.status === 429) return { datos: null, error: "limite" };
-    if (!r.ok) return { datos: null, error: "red" };
-    const datos = (await r.json()) as Record<string, unknown>;
-    return { datos, error: null };
+    if (r.status === 404) return { html: null, error: "no-existe" };
+    if (!r.ok) return { html: null, error: "red" };
+    return { html: await r.text(), error: null };
   } catch {
-    return { datos: null, error: "red" };
+    return { html: null, error: "red" };
   }
 }
 
-/**
- * El torneo, su clasificación y los emparejamientos de la ronda en curso.
- *
- * LAS TRES PETICIONES VAN EN PARALELO: son independientes y en serie sumarían tres
- * viajes a Italia por pantalla.
- */
-export async function leerTorneoChessPairings(id: number): Promise<LecturaChessPairings> {
-  const clave = process.env.CHESSPAIRINGS_API_KEY;
-  if (!clave) return { ...VACIO, error: "sin-clave" };
+/** La clasificación, los emparejamientos y los inscritos de su página pública. */
+export async function leerTorneoChessPairings(
+  enlacePublico: string | null
+): Promise<LecturaChessPairings> {
+  if (!enlacePublico) return { ...VACIO, error: "sin-enlace" };
 
-  const [t, c, a, i] = await Promise.all([
-    pedir(`torneo/${id}`, clave),
-    pedir(`torneo/${id}/classifica`, clave),
-    // `ultimo` es la ronda más avanzada que ellos hayan publicado: es lo que se quiere
-    // ver al abrir la pantalla, sin tener que elegir número.
-    pedir(`torneo/${id}/abbinamenti?turno=ultimo`, clave),
-    pedir(`torneo/${id}/iscritti?ordinamento=rating`, clave),
+  const [c, a, i] = await Promise.all([
+    bajar(urlPestana(enlacePublico, "classifica")),
+    bajar(urlPestana(enlacePublico, "abbinamenti")),
+    bajar(urlPestana(enlacePublico, "iscritti")),
   ]);
 
-  // El error del TORNEO es el que manda: sin él no hay nada que enseñar. Que falle la
-  // clasificación de un torneo que sí existe es otra cosa y no debe borrar el resto.
-  if (!t.datos) return { ...VACIO, error: t.error ?? "red" };
+  // LA CLASIFICACIÓN MANDA: si esa página no responde, no hay torneo que enseñar. Que
+  // falle una de las otras dos es un dato de menos, no una pantalla en blanco.
+  if (!c.html) return { ...VACIO, error: c.error ?? "red" };
+
+  const cabecera = parsearCabeceraPublica(c.html);
+  const clasificacion = parsearClasificacionPublica(c.html);
+  const emparejamientos = a.html ? parsearEmparejamientosPublicos(a.html) : [];
+  const inscritos = i.html ? parsearInscritosPublicos(i.html) : [];
+
+  // NI UNA FILA EN LAS TRES PESTAÑAS es un enlace que no lleva a un torneo —o que apunta
+  // a uno privado, que su página pública no enseña—. Se distingue de un torneo recién
+  // creado, que sí trae inscritos aunque no tenga clasificación.
+  if (clasificacion.length === 0 && emparejamientos.length === 0 && inscritos.length === 0) {
+    return { ...VACIO, error: "vacio" };
+  }
 
   return {
-    torneo: mapearTorneo(t.datos),
-    clasificacion: c.datos ? mapearClasificacion(c.datos) : [],
-    emparejamientos: a.datos ? mapearEmparejamientos(a.datos) : [],
-    ronda: a.datos && typeof a.datos.turno === "number" ? a.datos.turno : null,
-    fidePorInscripcion: i.datos ? fideIdsDeInscritos(i.datos) : new Map(),
+    nombre: cabecera.nombre,
+    ronda: cabecera.ronda,
+    rondasTotales: cabecera.rondasTotales,
+    clasificacion,
+    emparejamientos,
+    inscritos,
     error: null,
   };
 }
