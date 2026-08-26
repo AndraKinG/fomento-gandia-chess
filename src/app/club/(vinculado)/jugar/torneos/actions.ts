@@ -405,6 +405,41 @@ export async function borrarTorneoInterno(tournamentId: string): Promise<Resulta
 }
 
 /** Cierra el torneo. Se puede reabrir por si se cerró antes de tiempo. */
+/**
+ * Pega o cambia el enlace público del torneo en ChessPairings.
+ *
+ * ES DE LA JUNTA Y NO DE `puedeOrganizar`: en un torneo presencial la pantalla es solo
+ * lectura para rondas y resultados —eso lo manda ChessPairings— pero **el enlace es
+ * nuestro**, igual que las inscripciones. Y hace falta poder ponerlo después: lo normal
+ * es crear el torneo aquí para que la gente se apunte y montarlo allí más tarde, así que
+ * al crearlo todavía no existe la página.
+ *
+ * VACÍO LO QUITA. Si el torneo se movió de sitio, dejar un enlace muerto es peor que no
+ * tener ninguno.
+ */
+export async function ponerUrlPublica(
+  tournamentId: string,
+  url: string
+): Promise<Resultado> {
+  const sesion = await sesionActual();
+  if (!sesion?.esJunta) return { error: "No autorizado" };
+
+  const limpia = url.trim();
+  if (limpia && !/^https?:\/\//i.test(limpia)) {
+    return { error: "El enlace tiene que empezar por http:// o https://" };
+  }
+
+  const supabase = await createServerSupabase();
+  const { error } = await supabase
+    .from("club_tournaments")
+    .update({ url_publica: limpia || null })
+    .eq("id", tournamentId);
+  if (error) return { error: error.message };
+
+  refrescar(tournamentId);
+  return {};
+}
+
 export async function cambiarEstadoTorneo(
   tournamentId: string,
   estado: "en_curso" | "terminado"

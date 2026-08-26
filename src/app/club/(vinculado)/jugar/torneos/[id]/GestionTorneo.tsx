@@ -9,6 +9,7 @@ import { Boton } from "@/components/ui/Boton";
 import { Banner } from "@/components/ui/Banner";
 import { jugarEmparejamiento } from "@/app/club/(vinculado)/jugar/actions";
 import { Mirando } from "@/components/presencia/Mirando";
+import { EditorUrlPublica } from "@/components/club/EditorUrlPublica";
 import { diaYHora } from "@/lib/torneos/hora-de-ronda";
 import {
   anotarResultado,
@@ -206,9 +207,16 @@ export function GestionTorneo({
             </p>
           ) : (
             <p className="mt-2 text-xs text-tinta-suave">
-              Todavía no tiene enlace público. Cuando lo crees en ChessPairings, pega
-              aquí su enlace desde el panel de torneos.
+              Todavía no tiene enlace público: créalo en ChessPairings y pega aquí su
+              dirección.
             </p>
+          )}
+          {/* EL ENLACE SÍ LO TOCA LA JUNTA aunque el resto sea solo lectura: es nuestro,
+              como las inscripciones. Y hace falta poder ponerlo después, porque lo normal
+              es abrir el torneo aquí para que la gente se apunte y montarlo allí más
+              tarde. */}
+          {esJunta && (
+            <EditorUrlPublica tournamentId={tournamentId} urlActual={urlPublica} />
           )}
         </Tarjeta>
       )}
