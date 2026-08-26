@@ -56,8 +56,16 @@ declare
   v_cabeceras text;
   v_tarea record;
 begin
-  if v_secreto = 'PEGA_AQUI_TU_CRON_SECRET' then
-    raise exception 'Falta poner el CRON_SECRET en la línea de arriba.';
+  -- LA GUARDA NO COMPARA CONTRA EL TEXTO DEL HUECO, y esto es un fallo aprendido: la
+  -- 0037 lo hacía así, el texto aparecía DOS veces en el bloque (la asignación y la
+  -- comprobación) y al sustituirlo con buscar-y-reemplazar la comprobación acababa
+  -- comparando contra el secreto de verdad — así que saltaba igual, diciendo que faltaba
+  -- justo lo que sí estaba puesto. Se mira la FORMA: que no siga empezando por PEGA y
+  -- que tenga pinta de secreto.
+  if v_secreto is null or v_secreto like 'PEGA%' or length(v_secreto) < 16 then
+    raise exception
+      'Pon el CRON_SECRET en la línea de v_secreto (sigue el hueco sin rellenar, o lo pegado es demasiado corto: %  caracteres).',
+      coalesce(length(v_secreto), 0);
   end if;
 
   v_cabeceras := json_build_object(
