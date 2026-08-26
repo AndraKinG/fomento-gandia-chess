@@ -65,13 +65,15 @@ export function EditorUrlPublica({
       <p className="text-xs text-tinta-suave">
         En ChessPairings, la dirección de la página pública del torneo. Vacío lo quita.
       </p>
-      {/* EL TORNEO TIENE QUE ESTAR EN LA CUENTA DEL CLUB, y decirlo aquí ahorra un
-          misterio: la clave de la API es de UNA cuenta, así que un torneo creado en la
-          cuenta personal de otro miembro de la junta devuelve 404 y la clasificación no
-          se puede traer — solo quedaría el enlace. */}
+      {/* EL TORNEO TIENE QUE ESTAR EN LA CUENTA CONFIGURADA EN LA APP, y decirlo aquí
+          ahorra un misterio: la clave de la API es de UNA cuenta, así que un torneo creado
+          en otra devuelve 404 y la clasificación no se puede traer — quedaría solo el
+          enlace. Hoy esa cuenta es la del propietario; el club no tiene una propia (misma
+          situación que Supabase y Vercel). */}
       <p className="text-xs text-tinta-suave">
-        Créalo con la cuenta de ChessPairings del club: si está en la cuenta personal de
-        otra persona, el enlace funciona pero la clasificación no se puede traer aquí.
+        El torneo tiene que estar en la cuenta de ChessPairings que usa la app. Si lo crea
+        otra persona con la suya, el enlace funciona pero la clasificación no se puede
+        traer aquí.
       </p>
       {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
       <div className="flex flex-wrap gap-2">
