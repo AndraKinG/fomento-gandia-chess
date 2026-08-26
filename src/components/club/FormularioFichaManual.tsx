@@ -63,6 +63,26 @@ export function FormularioFichaManual({ volverA }: { volverA: string }) {
         <input name="feda_id" placeholder="ID FEDA (si lo tiene)"
           className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta" />
       </div>
+      {/* AL ORDEN DE FUERZA SOLO SI TOCA, y por defecto NO. Ese documento lo publica
+          la FACV al empezar la temporada y decide en qué tablero juega cada uno: quien
+          entra al club con el plazo abierto sí va dentro, con su número "bis"; quien
+          llega después, no — meterlo sería reescribir un papel con el que ya se han hecho
+          convocatorias. Su ficha existe igual y sale en los socios del club. */}
+      <label className="flex items-start gap-2 text-sm text-tinta">
+        <input
+          type="checkbox"
+          name="al_orden"
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border-borde"
+        />
+        <span>
+          Meterlo también en el orden de fuerza del Interclubs
+          <span className="block text-xs text-tinta-suave">
+            Solo si el plazo sigue abierto y va a poder jugar esta temporada. Si ya se
+            cerró, déjalo sin marcar: la sincronización lo colocará cuando la FACV lo
+            publique.
+          </span>
+        </span>
+      </label>
       <p className="text-xs text-tinta-suave">
         Los ELO son opcionales. Sin ninguno se le asigna 1400 (RGC 52.1) y queda al final
         del orden.

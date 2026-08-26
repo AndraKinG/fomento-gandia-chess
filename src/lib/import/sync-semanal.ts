@@ -5,12 +5,15 @@ import { sincronizarResultadosFACVCore } from "@/lib/import/facv-resultados-appl
 import { sincronizarActasCore } from "@/lib/import/chessresults-apply";
 import { actualizarEloActualCore } from "@/lib/import/facv-elo-actual-apply";
 import { sincronizarFichasTorneoFACV } from "@/lib/import/facv-fichas-apply";
+import { sincronizarTorneosFACVCore } from "@/lib/import/facv-torneos-apply";
 
 export type ResumenSyncSemanal = {
   ordenFuerza: Awaited<ReturnType<typeof sincronizarOrdenFuerzaFACVCore>>;
   resultados: Awaited<ReturnType<typeof sincronizarResultadosFACVCore>>;
   actas: Awaited<ReturnType<typeof sincronizarActasCore>>;
   eloActual: Awaited<ReturnType<typeof actualizarEloActualCore>>;
+  /** El calendario de torneos de la FACV: los que ha publicado nuevos. */
+  torneos: Awaited<ReturnType<typeof sincronizarTorneosFACVCore>>;
   /** Los enlaces de cada torneo a su página de la FACV y a sus resultados. */
   fichasTorneo: Awaited<ReturnType<typeof sincronizarFichasTorneoFACV>>;
   /** Cuántos admins y miembros de junta se han avisado de que hay fichas nuevas. */
@@ -28,6 +31,8 @@ export type ResumenSyncSemanal = {
  *    marcador.
  * 3. **Actas por tablero**: necesita que las jornadas existan ya, porque cada tablero
  *    se cuelga de una de ellas.
+ * 4. **Calendario de torneos** y, detrás, **sus enlaces**: un torneo recién publicado
+ *    tiene que existir antes de poder ponerle su página de la FACV.
  *
  * POR QUÉ EL ORDEN DE FUERZA ESTABA FUERA DEL CRON, y por qué es un problema: solo se
  * sincronizaba pulsando un botón en Administración. Y **quien entra al club a mitad de
@@ -48,11 +53,26 @@ export async function sincronizarSemanalCore(): Promise<ResumenSyncSemanal> {
   //    que Vercel sí puede descargar). Después del orden de fuerza por lo mismo
   //    que los demás: cruza nombres contra las fichas.
   const eloActual = await actualizarEloActualCore();
-  // 5. Los ENLACES de cada torneo: su página en la FACV con las bases y la de
+  // 5. EL CALENDARIO DE TORNEOS de la FACV.
+  //
+  //    ESTO ESTABA FUERA DEL CRON Y ERA UN AGUJERO (visto el 2026-08-26, con el
+  //    propietario preguntando justo por esto: "me preocupa que cuando llegue info nueva
+  //    como torneos todo funcione ok"). Los 168 torneos que la FACV publica al año solo
+  //    entraban pulsando un botón en Administración, así que un torneo anunciado esta
+  //    semana no existía para el club hasta que alguien se acordara. Y es el mismo tipo
+  //    de agujero que tenía el orden de fuerza hasta el 2026-08-06.
+  //
+  //    No avisa por push: son ~168 al año y llegan con `de_interes = false`, así que un
+  //    aviso por cada uno sería ruido. Se marcan a mano los que interesan.
+  const torneos = await sincronizarTorneosFACVCore();
+  // 6. Los ENLACES de cada torneo: su página en la FACV con las bases y la de
   //    resultados. Va al final porque no depende de nada de lo anterior, y va AQUÍ
   //    —y no en un script a mano como los ELOs de la FIDE— porque facv.org sí se
   //    puede descargar desde Vercel. Si falla, no estropea el resto: los enlaces se
   //    quedan como estaban hasta el viernes siguiente.
+  //    VA DESPUÉS DEL CALENDARIO, y el orden importa: un torneo que la FACV acaba de
+  //    publicar tiene que existir en nuestra tabla antes de poder ponerle su enlace. Al
+  //    revés, el torneo nuevo se quedaría sin URL hasta el viernes siguiente.
   const fichasTorneo = await sincronizarFichasTorneoFACV();
 
   let avisadosFichasNuevas = 0;
@@ -60,7 +80,15 @@ export async function sincronizarSemanalCore(): Promise<ResumenSyncSemanal> {
     avisadosFichasNuevas = await avisarFichasNuevas(ordenFuerza.creados);
   }
 
-  return { ordenFuerza, resultados, actas, eloActual, fichasTorneo, avisadosFichasNuevas };
+  return {
+    ordenFuerza,
+    resultados,
+    actas,
+    eloActual,
+    torneos,
+    fichasTorneo,
+    avisadosFichasNuevas,
+  };
 }
 
 /**

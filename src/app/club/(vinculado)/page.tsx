@@ -246,6 +246,7 @@ export default async function Home() {
     { data: actaHome },
     { data: miInscripcion },
     { data: rondasInterno },
+    { count: totalSocios },
   ] = await Promise.all([
     playerId && idsTorneos.length > 0
       ? supabase
@@ -306,6 +307,13 @@ export default async function Home() {
           .order("numero", { ascending: false })
           .limit(1)
       : Promise.resolve({ data: [] as { numero: number }[] }),
+    // Cuántos socios hay, para la tarjeta de "Socios del club". `head: true` así que no
+    // trae filas: es solo el número.
+    supabase
+      .from("players")
+      .select("id", { count: "exact", head: true })
+      .eq("activo", true)
+      .eq("de_prueba", false),
   ]);
 
   const asistenciaPorTorneo = new Map(
@@ -508,6 +516,25 @@ export default async function Home() {
           </div>
 
           <div className="space-y-4">
+            {/* LA PUERTA A LOS SOCIOS, EN INICIO (propietario, 2026-08-26). Antes la
+                única lista de jugadores estaba dentro de Interclubs, y era el orden de
+                fuerza: un documento congelado de la FACV donde quien entra tarde no
+                aparece. Así que había socios a cuya ficha no se podía llegar por
+                ninguna parte. */}
+            <section className="space-y-2">
+              <Titulo enlace="/club/socios">Socios del club</Titulo>
+              <Link href="/club/socios" className="block">
+                <Tarjeta compacta className="transition hover:border-borde-acento">
+                  <p className="font-semibold text-tinta">
+                    {totalSocios ? `${totalSocios} socios` : "Los socios del club"}
+                  </p>
+                  <p className="text-sm text-tinta-suave">
+                    Su ELO, sus partidas y su ficha.
+                  </p>
+                </Tarjeta>
+              </Link>
+            </section>
+
             <section className="space-y-2">
               <Titulo enlace="/club/jugar/torneos">Torneos del club</Titulo>
               {internoVivo ? (

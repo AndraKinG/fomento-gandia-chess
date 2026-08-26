@@ -165,6 +165,13 @@ export async function crearFichaManual(formData: FormData): Promise<{
   }
   const fideId = String(formData.get("fide_id") ?? "").trim() || null;
   const fedaId = String(formData.get("feda_id") ?? "").trim() || null;
+  // AL ORDEN DE FUERZA, SOLO SI TOCA (decisión del propietario, 2026-08-26). El orden de
+  // fuerza es el documento que publica la FACV al empezar la temporada: quien entra al
+  // club con el plazo abierto SÍ va dentro, con su número "bis", porque puede jugar el
+  // Interclubs. Quien llega después NO — meterlo ahí sería reescribir un papel que ya
+  // decidió los tableros de las convocatorias hechas. Su ficha existe igual y sale en
+  // /club/socios, que es la lista de la gente.
+  const alOrden = formData.get("al_orden") === "on";
 
   const admin = createAdminClient();
 
@@ -175,12 +182,41 @@ export async function crearFichaManual(formData: FormData): Promise<{
   // Si ya existe una ficha para esa persona no se crea otra: es justo el duplicado que
   // este módulo intenta evitar. Se compara por conjunto de palabras, no por cadena,
   // porque en la base conviven los dos formatos de nombre.
-  const { data: todas } = await admin.from("players").select("id, nombre");
+  const { data: todas } = await admin.from("players").select("id, nombre, activo");
   const existente = buscarFicha(
     nombre,
     indicePorNombre((todas ?? []).map((p) => ({ id: p.id as string, nombre: p.nombre as string })))
   );
   if (existente) {
+    // SI VUELVE ALGUIEN QUE SE DIO DE BAJA, SE RESCATA SU FICHA en vez de crear otra
+    // (lo pidió el propietario el 2026-08-26: "que se pueda rescatar y actualizar sus
+    // datos"). Es lo que hace que dar de baja no sea una vía muerta: quien vuelve
+    // recupera sus partidas, su historial y su ELO en lugar de empezar de cero con una
+    // ficha nueva que además dejaría dos personas donde hay una.
+    const fila = (todas ?? []).find((p) => p.id === existente);
+    if (fila && fila.activo === false) {
+      const { error: errorAlta } = await admin
+        .from("players")
+        .update({
+          activo: true,
+          // Se aprovecha para actualizar lo que se haya escrito, pero SOLO lo que venga
+          // relleno: un campo vacío en el formulario no es "bórralo".
+          ...(eloFide !== null ? { elo_fide: eloFide } : {}),
+          ...(eloFeda !== null ? { elo_feda: eloFeda } : {}),
+          ...(eloOtro !== null ? { elo_otro: eloOtro } : {}),
+          ...(fideId ? { fide_id: fideId } : {}),
+          ...(fedaId ? { feda_id: fedaId } : {}),
+        })
+        .eq("id", existente);
+      if (errorAlta) return { error: "No se pudo reactivar la ficha." };
+      revalidatePath("/club/socios");
+      revalidatePath(`/club/socios/${existente}`);
+      revalidatePath("/club/orden-fuerza");
+      revalidatePath("/club/vincular");
+      return {
+        ok: `${nombre} ya tenía ficha y estaba de baja: se ha reactivado con sus partidas y su historial.`,
+      };
+    }
     return { error: `Ya hay una ficha para ese nombre. Revísala en la lista antes de crear otra.` };
   }
 
@@ -199,6 +235,16 @@ export async function crearFichaManual(formData: FormData): Promise<{
     .select("id")
     .single();
   if (errorFicha) return { error: errorFicha.message };
+
+  if (!alOrden) {
+    revalidatePath("/club/socios");
+    revalidatePath("/club/vincular");
+    return {
+      ok:
+        `Ficha creada: ${nombre}. Ya sale en los socios del club y puede vincular su cuenta. ` +
+        `NO se ha metido en el orden de fuerza del Interclubs; cuando la FACV lo publique, la sincronización lo colocará.`,
+    };
+  }
 
   // Colocación en el orden: por ELO, y en la franja de bis reservada a las manuales
   // para no chocar nunca con una posición que la FACV vaya a ocupar.
@@ -232,6 +278,7 @@ export async function crearFichaManual(formData: FormData): Promise<{
 
   revalidatePath("/club/admin/orden-fuerza");
   revalidatePath("/club/orden-fuerza");
+  revalidatePath("/club/socios");
   // La lista de `/club/vincular` sale del orden de fuerza: sin esto el socio nuevo no
   // se vería a sí mismo para vincularse, que es justo para lo que se crea la ficha.
   revalidatePath("/club/vincular");

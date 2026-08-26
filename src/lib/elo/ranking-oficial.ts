@@ -9,7 +9,13 @@
  */
 
 export type JugadorRanking = {
-  numero: number;
+  /**
+   * El número del orden de fuerza. **NULLABLE desde el 2026-08-26**: la lista de socios
+   * del club (`/club/socios`) sale de `players` y ahí hay gente sin número — quien entró
+   * después de que la FACV publicara el documento. No es un dato que falte: es que no le
+   * toca tenerlo. Nada de este módulo ordena por él, así que no afecta a las cuentas.
+   */
+  numero: number | null;
   bisIndex: number;
   nombre: string;
   eloOficial: number | null;

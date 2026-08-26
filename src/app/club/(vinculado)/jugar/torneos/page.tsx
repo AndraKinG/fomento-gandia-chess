@@ -79,35 +79,43 @@ export default async function InternoPage() {
 
         <ul className={REJILLA[3]}>
           {(torneos ?? []).map((t) => (
-            <li key={t.id}>
-              <Link href={`/club/jugar/torneos/${t.id}`} className="block">
+            // TODAS LAS TARJETAS IGUAL DE ALTAS. Dos cosas hacen falta y ninguna
+            // basta sola: `h-full` en los tres eslabones (li, Link, Tarjeta) para que
+            // la altura de la fila llegue al borde de la tarjeta, y una ESTRUCTURA FIJA
+            // de tres filas para que las tarjetas de filas distintas también midan lo
+            // mismo. La fecha es opcional, así que sin el pie con `mt-auto` una tarjeta
+            // sin fecha salía más baja que la de al lado.
+            <li key={t.id} className="h-full">
+              <Link href={`/club/jugar/torneos/${t.id}`} className="block h-full">
                 <Tarjeta
                   destacada={t.estado === "en_curso"}
-                  className="flex items-start justify-between gap-3 transition hover:border-borde-acento"
+                  className="flex h-full flex-col gap-1 transition hover:border-borde-acento"
                 >
-                  <div className="min-w-0">
-                    <p className="font-semibold text-tinta">{t.nombre}</p>
-                    <p className="mt-0.5 text-sm text-tinta-suave">
-                      {t.sistema === "liguilla" ? "Liguilla" : "Suizo"}
-                      {t.rondas_totales ? ` · ${t.rondas_totales} rondas` : ""}
-                      {" · "}
-                      {cuantos.get(t.id) ?? 0} inscritos
-                    </p>
-                    {t.fecha_inicio && (
-                      <p className="text-sm text-tinta-suave">
-                        {formatearRangoFechas(t.fecha_inicio, t.fecha_inicio)}
-                      </p>
-                    )}
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="min-w-0 font-semibold text-tinta">{t.nombre}</p>
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${
+                        t.estado === "terminado"
+                          ? "bg-tarjeta text-tinta-suave ring-borde"
+                          : "bg-tarjeta-suave text-acento-texto ring-borde-acento"
+                      }`}
+                    >
+                      {ETIQUETA_ESTADO[t.estado]}
+                    </span>
                   </div>
-                  <span
-                    className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${
-                      t.estado === "terminado"
-                        ? "bg-tarjeta text-tinta-suave ring-borde"
-                        : "bg-tarjeta-suave text-acento-texto ring-borde-acento"
-                    }`}
-                  >
-                    {ETIQUETA_ESTADO[t.estado]}
-                  </span>
+                  <p className="text-sm text-tinta-suave">
+                    {t.sistema === "liguilla" ? "Liguilla" : "Suizo"}
+                    {t.rondas_totales ? ` · ${t.rondas_totales} rondas` : ""}
+                    {" · "}
+                    {cuantos.get(t.id) ?? 0} inscritos
+                  </p>
+                  {/* El pie existe siempre, aunque no haya fecha: es lo que iguala las
+                      alturas entre filas. */}
+                  <p className="mt-auto text-sm text-tinta-suave">
+                    {t.fecha_inicio
+                      ? formatearRangoFechas(t.fecha_inicio, t.fecha_inicio)
+                      : " "}
+                  </p>
                 </Tarjeta>
               </Link>
             </li>

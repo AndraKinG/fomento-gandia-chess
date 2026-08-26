@@ -131,38 +131,44 @@ export default async function TorneosPage({
             const estado = miEstado.get(t.id);
             const van = cuantosVan.get(t.id) ?? 0;
             return (
-              <li key={t.id}>
+              // TODAS IGUAL DE ALTAS: `h-full` en los tres eslabones para la fila, y
+              // estructura FIJA de tres filas para que también cuadren entre filas
+              // distintas. Aquí varían el sitio, el ritmo, si vas y cuántos van — con
+              // todo apilado a la derecha, una tarjeta con las cuatro cosas medía el
+              // doble que una con ninguna.
+              <li key={t.id} className="h-full">
                 <Link href={`/club/torneos/facv/${t.id}`} className="block h-full">
-                  <Tarjeta className="h-full transition hover:border-borde-acento">
+                  <Tarjeta className="flex h-full flex-col gap-1 transition hover:border-borde-acento">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="font-semibold text-tinta">{t.nombre}</p>
-                        <p className="mt-0.5 text-sm text-tinta-suave">
-                          {formatearRangoFechas(t.fecha_inicio, t.fecha_fin)}
-                          {t.hora ? ` · ${t.hora}` : ""}
-                        </p>
-                        {t.lugar && (
-                          <p className="text-sm text-tinta-suave">{t.lugar}</p>
-                        )}
-                      </div>
-                      <div className="flex shrink-0 flex-col items-end gap-1">
-                        {t.ritmo && (
-                          <span className="rounded-full bg-tarjeta-suave px-2.5 py-0.5 text-xs font-medium text-acento-texto ring-1 ring-borde-acento">
-                            {t.ritmo}
-                          </span>
-                        )}
+                      <p className="min-w-0 font-semibold text-tinta">{t.nombre}</p>
+                      {t.ritmo && (
+                        <span className="shrink-0 rounded-full bg-tarjeta-suave px-2.5 py-0.5 text-xs font-medium text-acento-texto ring-1 ring-borde-acento">
+                          {t.ritmo}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-tinta-suave">
+                      {formatearRangoFechas(t.fecha_inicio, t.fecha_fin)}
+                      {t.hora ? ` · ${t.hora}` : ""}
+                    </p>
+                    {/* EL PIE, SIEMPRE: sitio a la izquierda y a la derecha si vas y
+                        cuántos van. Existe aunque esté vacío — es lo que iguala las
+                        alturas. */}
+                    <div className="mt-auto flex items-end justify-between gap-2 text-xs text-tinta-suave">
+                      <span className="min-w-0 truncate">{t.lugar ?? " "}</span>
+                      <span className="flex shrink-0 items-center gap-2">
                         {estado && (
-                          <span className="text-xs text-tinta-suave">
+                          <span>
                             {ICONO[estado]}{" "}
                             {estado === "voy" ? "Vas" : estado === "no_voy" ? "No vas" : "Duda"}
                           </span>
                         )}
                         {van > 0 && (
-                          <span className="text-xs text-tinta-suave">
+                          <span>
                             {van} {van === 1 ? "va" : "van"}
                           </span>
                         )}
-                      </div>
+                      </span>
                     </div>
                   </Tarjeta>
                 </Link>
