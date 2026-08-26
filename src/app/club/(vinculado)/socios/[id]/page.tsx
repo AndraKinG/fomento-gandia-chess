@@ -12,6 +12,7 @@ import { nombreVisible } from "@/lib/club/nombre-socio";
 import { EditorMote } from "@/components/club/EditorMote";
 import { EditorEloEstimado } from "@/components/club/EditorEloEstimado";
 import { ElosFide, elosDeFila } from "@/components/club/ElosFide";
+import { BajaSocio } from "@/components/club/BajaSocio";
 
 /**
  * La ficha pública de un socio: lo que los demás ven de él.
@@ -44,7 +45,7 @@ export default async function SocioPage({
   const { data: socio } = await supabase
     .from("players")
     .select(
-      "id, nombre, apodo, apodo_solicitado, foto_url, aperturas, elo_fide, elo_feda, elo_otro, fide_id, elo_fide_rapidas, elo_fide_blitz, variacion_fide, variacion_fide_rapidas, variacion_fide_blitz, elo_fide_leido_en"
+      "id, nombre, apodo, apodo_solicitado, foto_url, aperturas, elo_fide, elo_feda, elo_otro, fide_id, elo_fide_rapidas, elo_fide_blitz, variacion_fide, variacion_fide_rapidas, variacion_fide_blitz, elo_fide_leido_en, activo"
     )
     .eq("id", id)
     .maybeSingle();
@@ -148,6 +149,14 @@ export default async function SocioPage({
                   )}
                 </span>
               )}
+              {/* QUE ESTÁ DE BAJA LO VE TODO EL CLUB, no solo la junta: si alguien
+                  busca a un socio para retarlo y no le sale el botón, la explicación
+                  tiene que estar en su ficha y no ser un misterio. */}
+              {socio.activo === false && (
+                <span className="rounded-full bg-tarjeta-suave px-2.5 py-0.5 text-xs font-semibold text-tinta-suave ring-1 ring-borde">
+                  Ya no está en el club
+                </span>
+              )}
               {orden && (
                 <span className="rounded-full bg-tarjeta-suave px-2.5 py-0.5 text-xs font-medium text-acento-texto ring-1 ring-borde-acento">
                   Nº {orden.numero}
@@ -240,6 +249,15 @@ export default async function SocioPage({
                     : "Para quien aún no tiene ELO oficial. Se usa en las convocatorias."}
                 </p>
               </div>
+            </div>
+            {/* DAR DE BAJA VA AL FINAL Y SEPARADO: es lo único de esta tarjeta que
+                cambia lo que el socio puede hacer, no solo cómo se le llama. */}
+            <div className="border-t border-borde pt-3">
+              <BajaSocio
+                playerId={socio.id}
+                nombre={nombreVisible(socio)}
+                activo={socio.activo !== false}
+              />
             </div>
           </Tarjeta>
         )}

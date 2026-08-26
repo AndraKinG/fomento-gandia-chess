@@ -147,7 +147,12 @@ export async function crearFichaManual(formData: FormData): Promise<{
   ok?: string;
   error?: string;
 }> {
-  if (!(await esAdmin())) return { error: "Solo el admin puede hacer esto" };
+  // JUNTA Y ADMIN desde el 2026-08-26: dar de alta a quien acaba de entrar al club es
+  // trabajo de la junta, y dejarlo solo en manos del admin significaba que un socio
+  // nuevo no podía vincular su cuenta hasta que él tuviera un rato. La pantalla de
+  // /club/admin no la ve la junta, así que el formulario vive además en
+  // /club/solicitudes, que es su sitio.
+  if (!(await esJunta())) return { error: "No autorizado" };
 
   const nombre = String(formData.get("nombre") ?? "").trim().replace(/\s+/g, " ");
   if (nombre.length < 3) return { error: "Escribe el nombre completo del socio" };
@@ -313,6 +318,48 @@ export async function ponerEloEstimado(
   revalidatePath("/club/admin/orden-fuerza");
   revalidatePath(`/club/socios/${playerId}`);
   revalidatePath("/club/orden-fuerza");
+  return {};
+}
+
+/**
+ * Da de baja a un socio, o lo reactiva.
+ *
+ * NO SE BORRA LA FICHA, Y ESTO ES LA DECISIÓN DEL ASUNTO. `games.player_id` está con
+ * `on delete cascade` (migración 0014), así que borrar a alguien se llevaría por delante
+ * TODAS sus partidas del repositorio, y con ellas los ELOs del club que se recalculan de
+ * esas partidas; también sus filas de actas y clasificaciones. Alguien que se va del
+ * club es historia del club, no una equivocación que haya que hacer desaparecer.
+ *
+ * QUÉ HACE UNA BAJA, que es lo que hay que saber para explicarlo: la ficha deja de
+ * ofrecerse donde se juega o se organiza —lista de retos, inscripción a torneos internos,
+ * selector de rival de una partida, plantillas de equipo, panel de uso y registro de
+ * cuentas nuevas— y sus partidas y resultados se quedan donde están.
+ *
+ * DÓNDE SIGUE APARECIENDO, y a propósito: en `/club/orden-fuerza`. Esa lista es el
+ * documento que publica la FACV, y no se puede reescribir hasta que ellos publiquen otro;
+ * lo que se hace es marcarlo como "baja" para que nadie lo confunda con un socio activo.
+ *
+ * Junta y admin, como el resto de la gestión de socios.
+ */
+export async function cambiarActivoSocio(
+  playerId: string,
+  activo: boolean
+): Promise<{ error?: string }> {
+  if (!(await esJunta())) return { error: "No autorizado" };
+
+  const { error } = await createAdminClient()
+    .from("players")
+    .update({ activo })
+    .eq("id", playerId);
+  if (error) return { error: "No se pudo cambiar el estado del socio." };
+
+  // La baja se nota en media app, así que se rehacen las pantallas que ofrecen fichas.
+  revalidatePath(`/club/socios/${playerId}`);
+  revalidatePath("/club/orden-fuerza");
+  revalidatePath("/club/admin/orden-fuerza");
+  revalidatePath("/club/jugar");
+  revalidatePath("/club/equipos");
+  revalidatePath("/club");
   return {};
 }
 

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { actualizarEloActual, crearFichaManual, importarOrdenFuerza, sincronizarOrdenFuerzaFACV } from "./actions";
+import { actualizarEloActual, importarOrdenFuerza, sincronizarOrdenFuerzaFACV } from "./actions";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Banner } from "@/components/ui/Banner";
 import { ChipElo } from "@/components/ui/ChipElo";
@@ -8,6 +8,7 @@ import { FilaJugadorOF } from "@/components/ui/FilaJugadorOF";
 import { EditorMote } from "@/components/club/EditorMote";
 import { Contenedor } from "@/components/ui/Contenedor";
 import { BotonAccion } from "@/components/ui/BotonAccion";
+import { FormularioFichaManual } from "@/components/club/FormularioFichaManual";
 import { partirEnDos } from "@/lib/ui/columnas";
 
 const SEPARADOR_AVISOS = "||";
@@ -61,15 +62,6 @@ export default async function OrdenFuerzaPage({
     redirect(`/club/admin/orden-fuerza?${params.toString()}`);
   }
 
-  async function accionCrearFicha(formData: FormData) {
-    "use server";
-    const resultado = await crearFichaManual(formData);
-    const params = new URLSearchParams({
-      msg: resultado.ok ?? resultado.error ?? "",
-      tipo: resultado.ok ? "ok" : "error",
-    });
-    redirect(`/club/admin/orden-fuerza?${params.toString()}`);
-  }
 
   async function accionEloActual() {
     "use server";
@@ -185,35 +177,12 @@ export default async function OrdenFuerzaPage({
             <b className="font-semibold">funde esta ficha con la oficial</b>. Si sabes su
             ID FIDE, ponlo.
           </p>
-          <form action={accionCrearFicha} className="mt-3 flex flex-col gap-3">
-            <input
-              name="nombre"
-              required
-              placeholder="Nombre y apellidos"
-              className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta"
-            />
-            <div className="grid gap-3 sm:grid-cols-3">
-              <input name="elo_fide" type="number" min={0} max={3500} placeholder="ELO FIDE"
-                className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta" />
-              <input name="elo_feda" type="number" min={0} max={3500} placeholder="ELO FEDA"
-                className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta" />
-              <input name="elo_otro" type="number" min={0} max={3500} placeholder="ELO estimado"
-                className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta" />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <input name="fide_id" placeholder="ID FIDE (si lo tiene)"
-                className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta" />
-              <input name="feda_id" placeholder="ID FEDA (si lo tiene)"
-                className="rounded-xl border border-borde bg-tarjeta p-3 text-tinta" />
-            </div>
-            <p className="text-xs text-tinta-suave">
-              Los ELO son opcionales. Sin ninguno se le asigna 1400 (RGC 52.1) y queda al
-              final del orden.
-            </p>
-            <BotonAccion variante="solido" trabajando="Creando la ficha…">
-              Crear ficha y colocarla en el orden
-            </BotonAccion>
-          </form>
+          {/* EL MISMO FORMULARIO QUE USA LA JUNTA en /club/solicitudes. Estaba escrito
+              a mano aquí, y al darle acceso a la junta habría quedado duplicado — dos
+              copias del mismo formulario acaban validando y avisando distinto. */}
+          <div className="mt-3">
+            <FormularioFichaManual volverA="/club/admin/orden-fuerza" />
+          </div>
         </details>
 
         <details className="group rounded-xl border border-borde bg-tarjeta p-3">

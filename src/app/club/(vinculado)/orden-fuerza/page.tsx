@@ -32,6 +32,9 @@ type Fila = {
   eloFeda: number | null;
   /** El estimado que pone la junta a mano, para quien no tiene FIDE (`players.elo_otro`). */
   eloOtro: number | null;
+  /** false = ya no es del club. Sigue en la lista porque el orden de fuerza es un
+   *  documento de la FACV que no se puede reescribir; se marca. */
+  activo: boolean;
 };
 
 /** Cómo se ordena la lista. Son los dos criterios que pidió el propietario. */
@@ -168,6 +171,15 @@ function TablaRanking({
                           nº {etiquetaNumero(f.numero, f.bisIndex)}
                         </span>
                       )}
+                      {/* LAS BAJAS SE MARCAN, NO SE QUITAN: esta lista es el orden de
+                          fuerza que publica la FACV y no se puede reescribir hasta la
+                          temporada siguiente. Pero un socio que ya no está y sin marca
+                          se lee como uno más. */}
+                      {!f.activo && (
+                        <span className="rounded-full bg-tarjeta-suave px-1.5 text-[0.65rem] font-semibold uppercase text-tinta-suave ring-1 ring-borde">
+                          baja
+                        </span>
+                      )}
                     </span>
                     {/* EL OFICIAL DEBAJO, y solo si el mote no es él: esta lista es el
                         orden de fuerza que publica la FACV, así que el nombre de la
@@ -264,7 +276,7 @@ export default async function OrdenFuerzaPage({
   const { data: orden } = season
     ? await supabase
         .from("force_order")
-        .select("numero, bis_index, elo_oficial, player_id, players(nombre, apodo, elo_fide, elo_feda, elo_otro)")
+        .select("numero, bis_index, elo_oficial, player_id, players(nombre, apodo, elo_fide, elo_feda, elo_otro, activo)")
         .eq("season_id", season.id)
         .order("numero")
         .order("bis_index")
@@ -277,6 +289,7 @@ export default async function OrdenFuerzaPage({
       elo_fide: number | null;
       elo_feda: number | null;
       elo_otro: number | null;
+      activo: boolean | null;
     } | null;
     return {
       numero: f.numero,
@@ -290,6 +303,7 @@ export default async function OrdenFuerzaPage({
       eloFide: p?.elo_fide ?? null,
       eloFeda: p?.elo_feda ?? null,
       eloOtro: p?.elo_otro ?? null,
+      activo: p?.activo !== false,
     };
   });
 

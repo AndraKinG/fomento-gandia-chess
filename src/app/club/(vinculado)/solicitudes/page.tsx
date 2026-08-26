@@ -5,6 +5,8 @@ import { Cabecera } from "@/components/ui/Cabecera";
 import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 import { ListaSolicitudes, type SolicitudVista } from "./ListaSolicitudes";
 import { Contenedor } from "@/components/ui/Contenedor";
+import { Tarjeta } from "@/components/ui/Tarjeta";
+import { FormularioFichaManual } from "@/components/club/FormularioFichaManual";
 
 /**
  * Solicitudes de ingreso al club.
@@ -58,8 +60,42 @@ export default async function SolicitudesPage() {
         }
         volverA="/club" medida="panel"
       />
-      <Contenedor medida="panel">
+      <Contenedor medida="panel" className="space-y-4">
         <ListaSolicitudes pendientes={pendientes} resueltas={resueltas} />
+
+        {/* DAR DE ALTA LA FICHA, AQUÍ Y NO SOLO EN ADMIN. Aprobar una solicitud y crear
+            la ficha del socio nuevo son el mismo trabajo seguido, y esta es la pantalla
+            de la junta —que no entra en `/club/admin`—, así que tenerlo solo allí hacía
+            que dar de alta a alguien dependiera del propietario. Va en un `details`
+            cerrado porque casi siempre no hace falta: la sincronización del viernes trae
+            solas las fichas en cuanto la FACV publica al socio. */}
+        <Tarjeta>
+          <details className="group">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-medium text-tinta">
+              Crear la ficha de un socio nuevo
+              <span
+                aria-hidden
+                className="shrink-0 text-tinta-suave transition-transform group-open:rotate-180"
+              >
+                ▾
+              </span>
+            </summary>
+            <p className="mt-2 text-sm text-tinta-suave">
+              Normalmente no hace falta: cada viernes se sincroniza el orden de fuerza de
+              la FACV y las fichas nuevas entran solas, con aviso a la junta. Esto es para
+              el hueco de semanas entre que alguien entra al club y la FACV lo publica —
+              sin ficha no puede vincular su cuenta.
+            </p>
+            <p className="mt-2 text-sm text-tinta-suave">
+              Cuando la FACV lo publique, la sincronización{" "}
+              <b className="font-semibold">funde esta ficha con la oficial</b>. Si sabes su
+              ID FIDE, ponlo.
+            </p>
+            <div className="mt-3">
+              <FormularioFichaManual volverA="/club/orden-fuerza" />
+            </div>
+          </details>
+        </Tarjeta>
       </Contenedor>
     </main>
   );
