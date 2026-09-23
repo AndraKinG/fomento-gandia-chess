@@ -62,6 +62,40 @@ El script recorre todos los socios con `fide_id`, lee su perfil FIDE y actualiza
 rating todavía (federados que no han jugado nada válido) — contarlos como errores
 pintaba la tarea programada en rojo cada día. Esos 10 son los del ELO estimado.
 
+## La tarea programada falla en silencio: dos causas, las dos vistas
+
+**MIRAR SIEMPRE `logs/elo-fide.log` PRIMERO.** Es lo que distingue las dos: si NO hay
+cabecera nueva con la fecha de hoy, el `.cmd` ni siquiera llegó a ejecutarse, y el
+problema está en la tarea, no en el script.
+
+**1. La tarea apunta a una ruta que ya no existe (2026-09-23).** Costó 18 días de ELO sin
+actualizar. El proyecto se movió a `Desktop\Joan\Proyectos\...` el 5 de septiembre y la
+tarea seguía apuntando a `Desktop\Joan\Web Chess Fomento\...`: arrancaba, no encontraba
+el `.cmd` y moría con resultado 1 **sin escribir una sola línea en el log**. Nadie se
+entera, porque la app sigue enseñando los ELOs viejos como si fueran de hoy. **Al mover o
+renombrar la carpeta del proyecto, hay que reapuntar la tarea:**
+
+```powershell
+$t = Get-ScheduledTask -TaskName "Fomento - ELO FIDE"; $t.Actions[0].Execute = '"<RUTA NUEVA>\scripts\elo-fide-programado.cmd"'; Set-ScheduledTask -TaskName "Fomento - ELO FIDE" -Action $t.Actions
+```
+
+**2. El portátil a batería.** Windows crea las tareas con `DisallowStartIfOnBatteries` a
+`True`, así que en un portátil se rechazan casi siempre (resultado `0x800710E0`, "petición
+rechazada", y tampoco escriben en el log). Y con `StartWhenAvailable` a `False`, la pasada
+de un día con el PC apagado se pierde sin recuperarse:
+
+```powershell
+$t = Get-ScheduledTask -TaskName "Fomento - ELO FIDE"; $t.Settings.DisallowStartIfOnBatteries = $false; $t.Settings.StopIfGoingOnBatteries = $false; $t.Settings.StartWhenAvailable = $true; Set-ScheduledTask -TaskName "Fomento - ELO FIDE" -Settings $t.Settings
+```
+
+**Comprobar que funciona de verdad**, sin esperar a mañana: `Start-ScheduledTask -TaskName
+"Fomento - ELO FIDE"`, esperar un minuto, y mirar que `LastTaskResult` sea `0` **y** que
+`logs/elo-fide.log` tenga cabecera nueva. Lo primero solo dice que arrancó.
+
+**`variacion_fide` a null en TODAS las fichas no es un fallo.** La FIDE solo publica
+variación pendiente de quien ha jugado valorado en el mes en curso; fuera de temporada es
+normal que no la tenga nadie.
+
 ## Si un perfil deja de responder
 
 **Si el script no ve NINGÚN rating en un perfil, NO escribe nada** — evita que un
