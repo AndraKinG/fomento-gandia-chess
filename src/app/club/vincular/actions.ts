@@ -8,7 +8,7 @@ import { avisar } from "@/lib/avisos/enviar";
 /**
  * Avisa por push a los admins de que hay una solicitud esperando.
  *
- * Sin esto el admin tiene que acordarse de entrar en /admin/vinculaciones a
+ * Sin esto la junta tiene que acordarse de entrar en /club/vinculaciones a
  * mirar, y durante el alta del club llegan de golpe. Se hace con el cliente de
  * servicio porque hay que leer los `profiles` de OTRA gente (los admins), algo
  * que la RLS niega al socio que acaba de solicitar — y con razón.
@@ -17,6 +17,9 @@ import { avisar } from "@/lib/avisos/enviar";
  * guardada y aparecerá igual en el panel. Es un aviso, no parte del flujo.
  */
 async function avisarAdminsDeSolicitud(nombreFicha: string): Promise<void> {
+  // A LA JUNTA TAMBIÉN desde el 2026-09-23: si pueden aprobarlas, tienen que
+  // enterarse. Avisar solo al admin de un trabajo que ahora es de varios deja las
+  // solicitudes esperando a la única persona que recibe el aviso.
   try {
     const admin = createAdminClient();
     // Las DOS fuentes de rango, igual que `is_admin()` en Postgres: la columna
@@ -24,7 +27,7 @@ async function avisarAdminsDeSolicitud(nombreFicha: string): Promise<void> {
     // no le llegarían las solicitudes que tiene que aprobar.
     const [{ data: porColumna }, { data: porRol }] = await Promise.all([
       admin.from("profiles").select("id").eq("is_admin", true),
-      admin.from("member_roles").select("profile_id").eq("rol", "admin"),
+      admin.from("member_roles").select("profile_id").in("rol", ["admin", "junta"]),
     ]);
     const ids = [
       ...new Set([
@@ -37,7 +40,7 @@ async function avisarAdminsDeSolicitud(nombreFicha: string): Promise<void> {
       tipo: "vinculacion",
       titulo: "Nueva solicitud de vinculación",
       cuerpo: `Alguien dice ser ${nombreFicha}. Revísalo para darle acceso.`,
-      url: "/club/admin/vinculaciones",
+      url: "/club/vinculaciones",
     });
   } catch {
     // Silencio a propósito: ver comentario de arriba.

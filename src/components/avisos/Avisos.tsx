@@ -54,7 +54,7 @@ import { nombreDeFila } from "@/lib/club/nombre-socio";
 const PANTALLAS_QUE_LISTAN_AVISOS = [
   "/club/avisos",
   "/club/solicitudes",
-  "/club/admin/vinculaciones",
+  "/club/vinculaciones",
 ];
 
 type Aviso =

@@ -65,6 +65,7 @@ describe("la guía cubre la app", () => {
     partidas: "partidas",
     socios: "socios",
     solicitudes: "solicitudes",
+    vinculaciones: "vinculaciones",
     torneos: "torneos",
   };
 

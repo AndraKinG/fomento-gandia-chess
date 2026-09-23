@@ -150,6 +150,18 @@ export const GUIA: readonly SeccionGuia[] = [
     ],
   },
   {
+    clave: "vinculaciones",
+    icono: "🔗",
+    titulo: "Vinculaciones pendientes",
+    rango: "junta",
+    que: "Quién dice ser quién, para darle acceso. Se entra desde el perfil.",
+    puntos: [
+      "Aprobar que un socio es quien dice: hasta entonces NO puede entrar",
+      "Rechazar si algo no cuadra; el socio puede volver a pedirlo",
+      "Es lo más urgente de la junta: al otro lado hay alguien esperando",
+    ],
+  },
+  {
     clave: "solicitudes",
     icono: "📥",
     titulo: "Solicitudes de ingreso",

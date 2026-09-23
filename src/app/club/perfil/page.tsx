@@ -65,6 +65,20 @@ export default async function PerfilPage() {
         .select("id", { count: "exact", head: true })
         .eq("estado", "pendiente")
     : { count: 0 };
+
+  // Vinculaciones sin aprobar. MISMA HISTORIA que las solicitudes de ingreso: desde el
+  // 2026-09-23 las aprueba también la junta, y esta es su única puerta — la pantalla
+  // vivía bajo /club/admin, donde no entran.
+  //
+  // ES LA MÁS URGENTE DE LAS DOS, y por eso va primera: quien espera aprobación NO
+  // PUEDE ENTRAR a la app. Una solicitud de ingreso que tarda un día es normal; una
+  // vinculación que tarda un día es un socio mirando una pantalla de espera.
+  const { count: vinculacionesPendientes } = sesion?.esJunta
+    ? await supabase
+        .from("link_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pendiente")
+    : { count: 0 };
   const p = profile?.players as unknown as {
     nombre: string; apodo: string | null; apodo_solicitado: string | null;
     elo_fide: number | null; elo_feda: number | null;
@@ -251,6 +265,18 @@ export default async function PerfilPage() {
               titulo="¿Qué puedes hacer aquí?"
               detalle="La app, sección a sección"
             />
+            {sesion?.esJunta && (
+              <FilaEnlace
+                href="/club/vinculaciones"
+                titulo="Vinculaciones pendientes"
+                detalle={
+                  (vinculacionesPendientes ?? 0) === 0
+                    ? "Nadie esperando"
+                    : `${vinculacionesPendientes} esperando para entrar`
+                }
+                destacado={(vinculacionesPendientes ?? 0) > 0}
+              />
+            )}
             {sesion?.esJunta && (
               <FilaEnlace
                 href="/club/solicitudes"

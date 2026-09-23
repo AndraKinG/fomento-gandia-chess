@@ -18,7 +18,7 @@ const ENLACES = [
     detalle: "Código de registro para los socios: ver, regenerar o cerrar",
   },
   {
-    href: "/club/admin/vinculaciones",
+    href: "/club/vinculaciones",
     icono: "🔗",
     titulo: "Vinculaciones",
     detalle: "Aprobar o rechazar solicitudes de vinculación pendientes",
@@ -82,7 +82,7 @@ export default async function AdminPage() {
           <Rejilla columnas={3}>
             {ENLACES.map((enlace) => {
               const aviso =
-                enlace.href === "/club/admin/vinculaciones" ? (pendientes ?? 0) : 0;
+                enlace.href === "/club/vinculaciones" ? (pendientes ?? 0) : 0;
               return (
                 <Link key={enlace.href} href={enlace.href}>
                   <Tarjeta className="flex h-full items-center gap-3 transition hover:border-borde-acento">
