@@ -62,18 +62,16 @@ const porId = new Map(fichas.map((f) => [f.id, f]));
 // Una fila del documento que apunta a una ficha borrada deja un hueco en la lista
 // SIN error: la pantalla pinta "Socio" y nadie sabe de quién era ese número.
 const huerfanas = orden.filter((f) => !porId.has(f.player_id));
-huerfanas.length
-  ? mal(`${huerfanas.length} filas del orden de fuerza apuntan a fichas que ya no existen`)
-  : bien(`las ${orden.length} filas del orden de fuerza tienen ficha`);
+if (huerfanas.length) mal(`${huerfanas.length} filas del orden de fuerza apuntan a fichas que ya no existen`);
+else bien(`las ${orden.length} filas del orden de fuerza tienen ficha`);
 
 // Dos personas con el mismo número de orden es una convocatoria ambigua: el RGC ordena
 // por ese número, y con un empate el desempate lo decide el orden en que salgan de la
 // base, que no es ningún criterio.
 const claves = orden.map((f) => `${f.season_id}/${f.numero}/${f.bis_index}`);
 const repes = claves.filter((c, i) => claves.indexOf(c) !== i);
-repes.length
-  ? mal(`números de orden repetidos: ${[...new Set(repes)].join(", ")}`)
-  : bien("ningún número de orden repetido");
+if (repes.length) mal(`números de orden repetidos: ${[...new Set(repes)].join(", ")}`);
+else bien("ningún número de orden repetido");
 
 // El mote es la identidad del socio en toda la app. Dos iguales y no se sabe quién
 // jugó qué.
@@ -103,12 +101,12 @@ const sinElo = fichas.filter(
       eloOtro: f.elo_otro,
     }) === null
 );
-sinElo.length
-  ? mal(`${sinElo.length} socios sin ningún ELO (van al final de las listas): ${sinElo
-      .map((f) => nombreVisible(f))
-      .slice(0, 5)
-      .join(", ")}`)
-  : bien("todos los socios activos tienen algún ELO con el que ordenar");
+if (sinElo.length) {
+  mal(
+    `${sinElo.length} socios sin ningún ELO (van al final de las listas): ` +
+      sinElo.map((f) => nombreVisible(f)).slice(0, 5).join(", ")
+  );
+} else bien("todos los socios activos tienen algún ELO con el que ordenar");
 
 // ---------------------------------------------------------------------------
 // 2. Convocatorias publicadas contra el RGC
@@ -136,11 +134,12 @@ for (const l of lineups ?? []) {
       ctx.ctx
     );
     const errores = infracciones.filter((i) => i.nivel === "error");
-    errores.length
-      ? mal(`"${rival}": ${errores.length} infracción(es) — ${errores
-          .map((e) => `art. ${e.articulo}: ${e.mensaje}`)
-          .join(" | ")}`)
-      : bien(`"${rival}": ${tableros.length} tableros, sin infracciones`);
+    if (errores.length) {
+      mal(
+        `"${rival}": ${errores.length} infracción(es) — ` +
+          errores.map((e) => `art. ${e.articulo}: ${e.mensaje}`).join(" | ")
+      );
+    } else bien(`"${rival}": ${tableros.length} tableros, sin infracciones`);
   } catch (e) {
     mal(`"${rival}": no se ha podido validar — ${e.message}`);
   }
@@ -221,12 +220,14 @@ for (const t of torneos ?? []) {
     ).length;
     const descansos = rondasJugadas.filter((r) => r.descansa).length;
     const esperado = conResultado + descansos * 0.5;
-    Math.abs(suma - esperado) > 0.001
-      ? mal(`"${t.nombre}": los puntos suman ${suma} y deberían sumar ${esperado}`)
-      : bien(
-          `"${t.nombre}" (${t.sistema}, ${t.estado}): ${ids.size} inscritos, ` +
-            `${rondas.length} rondas, ${cruces} cruces, puntos cuadran`
-        );
+    if (Math.abs(suma - esperado) > 0.001) {
+      mal(`"${t.nombre}": los puntos suman ${suma} y deberían sumar ${esperado}`);
+    } else {
+      bien(
+        `"${t.nombre}" (${t.sistema}, ${t.estado}): ${ids.size} inscritos, ` +
+          `${rondas.length} rondas, ${cruces} cruces, puntos cuadran`
+      );
+    }
   } catch (e) {
     mal(`"${t.nombre}": la clasificación revienta — ${e.message}`);
   }

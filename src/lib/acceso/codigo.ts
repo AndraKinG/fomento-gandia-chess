@@ -28,7 +28,7 @@ export function generarCodigo(): string {
 /**
  * Normaliza lo que teclea el socio para compararlo con el guardado: mayúsculas
  * y sin nada que no sea del alfabeto (espacios, guiones del formato
- * `CDRL-85C3-CAP6`, saltos de línea al pegar desde WhatsApp).
+ * `ABCD-2345-EFGH`, saltos de línea al pegar desde WhatsApp).
  *
  * NO corrige confusiones de caracteres (O -> 0) porque el alfabeto ya las
  * evita: si aparece una `O` es que el código está mal, y hacerla pasar por `0`
@@ -38,7 +38,7 @@ export function normalizarCodigo(entrada: string): string {
   return entrada.toUpperCase().replace(/[^A-Z2-9]/g, "");
 }
 
-/** Formato bonito para mostrarlo en /admin: `CDRL-85C3-CAP6`. */
+/** Formato bonito para mostrarlo en /admin: `ABCD-2345-EFGH`. */
 export function formatearCodigo(codigo: string): string {
   return (normalizarCodigo(codigo).match(/.{1,4}/g) ?? []).join("-");
 }

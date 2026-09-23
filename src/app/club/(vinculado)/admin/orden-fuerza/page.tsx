@@ -26,7 +26,7 @@ export default async function OrdenFuerzaPage({
   const { data: orden } = season
     ? await supabase
         .from("force_order")
-        .select("numero, bis_index, player_id, elo_oficial, players(nombre, apodo, apodo_solicitado, elo_fide, elo_feda)")
+        .select("numero, bis_index, player_id, elo_oficial, players(nombre, apodo, apodo_solicitado, elo_fide, elo_feda, activo)")
         .eq("season_id", season.id)
         .order("numero").order("bis_index")
     : { data: null };
@@ -217,10 +217,16 @@ export default async function OrdenFuerzaPage({
                 {trozo.map((f) => {
                   const p = f.players as unknown as {
                     nombre: string; apodo: string | null; apodo_solicitado: string | null;
-                    elo_fide: number | null; elo_feda: number | null;
+                    elo_fide: number | null; elo_feda: number | null; activo: boolean | null;
                   };
+                  // LAS BAJAS SÍ SALEN AQUÍ, Y MARCADAS. Es la excepción a "no las ve
+                  // nadie", y a propósito: esta es la pantalla desde la que la junta
+                  // llega a una ficha, así que si se ocultaran no habría forma de
+                  // reactivar a quien vuelve. Pero sin marca se leían como un socio
+                  // más, y a un socio más se le pone el mote y se le convoca.
+                  const deBaja = p.activo === false;
                   return (
-                    <li key={`${f.numero}-${f.bis_index}`}>
+                    <li key={`${f.numero}-${f.bis_index}`} className={deBaja ? "opacity-60" : ""}>
                       <FilaJugadorOF
                         numero={f.numero}
                         bisIndex={f.bis_index}
@@ -243,6 +249,11 @@ export default async function OrdenFuerzaPage({
                                 la foto del documento detrás ("Orden de fuerza") — con
                                 sus nombres, que "Oficial" y "FIDE" a secas ya
                                 despistaron al propietario una vez. Solo con dato. */}
+                            {deBaja && (
+                              <span className="rounded-full bg-tarjeta-suave px-2 py-0.5 text-[11px] font-semibold text-tinta-suave ring-1 ring-borde">
+                                Ya no está en el club
+                              </span>
+                            )}
                             {p.elo_fide !== null && <ChipElo valor={p.elo_fide} etiqueta="Actual" />}
                             <ChipElo valor={f.elo_oficial} etiqueta="Orden de fuerza" />
                             {p.elo_feda !== null && <ChipElo valor={p.elo_feda} etiqueta="FEDA" />}

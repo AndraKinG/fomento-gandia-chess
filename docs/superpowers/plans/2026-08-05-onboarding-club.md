@@ -30,6 +30,6 @@ Si se desactivan los signups antes de desplegar, nadie puede registrarse en el h
 
 ## Notas de implementación
 
-- **El código inicial va sembrado en la migración** para que el flujo funcione desde el primer minuto: `CDRL-85C3-CAP6` (12 caracteres de alfabeto sin `I/O/0/1`, ~60 bits de entropía, generado, no elegido). Se guarda sin guiones; la normalización de la entrada los ignora para que se pueda dictar por teléfono.
+- **El código inicial va sembrado en la migración** para que el flujo funcione desde el primer minuto: `ABCD-2345-EFGH` (ejemplo; el de verdad no se escribe en el repo — 12 caracteres de alfabeto sin `I/O/0/1`, ~60 bits de entropía, generado, no elegido). Se guarda sin guiones; la normalización de la entrada los ignora para que se pueda dictar por teléfono.
 - **La comprobación de "no vinculado" va en el layout raíz, no en `proxy.ts`**: el layout ya consulta `profiles` para saber si eres admin, así que añadir `player_id` a ese mismo `select` sale gratis. Meterlo en el proxy costaría una consulta extra en cada petición.
 - El redirect es **UX, no seguridad**: la barrera real son las policies de la tarea 1. Un no vinculado que llegue a una pantalla por URL directa la verá vacía aunque falle el redirect.

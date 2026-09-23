@@ -23,18 +23,18 @@ describe("generarCodigo", () => {
 
 describe("normalizarCodigo", () => {
   it.each([
-    ["CDRL85C3CAP6", "CDRL85C3CAP6"],
-    ["cdrl85c3cap6", "CDRL85C3CAP6"],
-    ["CDRL-85C3-CAP6", "CDRL85C3CAP6"],
-    ["cdrl 85c3 cap6", "CDRL85C3CAP6"],
-    ["  CDRL85C3CAP6\n", "CDRL85C3CAP6"],
-    ["CDRL–85C3–CAP6", "CDRL85C3CAP6"], // guion largo del autocorrector del móvil
+    ["ABCD2345EFGH", "ABCD2345EFGH"],
+    ["abcd2345efgh", "ABCD2345EFGH"],
+    ["ABCD-2345-EFGH", "ABCD2345EFGH"],
+    ["abcd 2345 efgh", "ABCD2345EFGH"],
+    ["  ABCD2345EFGH\n", "ABCD2345EFGH"],
+    ["ABCD–2345–EFGH", "ABCD2345EFGH"], // guion largo del autocorrector del móvil
   ])("normaliza %j → %s", (entrada, esperado) => {
     expect(normalizarCodigo(entrada)).toBe(esperado);
   });
 
   it("un código pegado desde WhatsApp con salto de línea sigue valiendo", () => {
-    expect(normalizarCodigo("CDRL-85C3-\nCAP6")).toBe("CDRL85C3CAP6");
+    expect(normalizarCodigo("ABCD-2345-\nEFGH")).toBe("ABCD2345EFGH");
   });
 
   it("cadena vacía o solo basura da cadena vacía (no coincidirá con nada)", () => {
@@ -45,11 +45,11 @@ describe("normalizarCodigo", () => {
 
 describe("formatearCodigo", () => {
   it("agrupa de 4 en 4 para leerlo de un vistazo", () => {
-    expect(formatearCodigo("CDRL85C3CAP6")).toBe("CDRL-85C3-CAP6");
+    expect(formatearCodigo("ABCD2345EFGH")).toBe("ABCD-2345-EFGH");
   });
 
   it("es idempotente sobre un código ya formateado", () => {
-    expect(formatearCodigo(formatearCodigo("CDRL85C3CAP6"))).toBe("CDRL-85C3-CAP6");
+    expect(formatearCodigo(formatearCodigo("ABCD2345EFGH"))).toBe("ABCD-2345-EFGH");
   });
 
   it("un código generado se puede formatear y volver a normalizar sin perder nada", () => {
