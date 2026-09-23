@@ -233,6 +233,31 @@ export default async function Home() {
     teams: { nombre: string } | null;
   } | undefined;
 
+  /**
+   * ARRANQUE EN FRÍO: si NADIE va a ningún torneo, se enseñan los tres siguientes del
+   * calendario igualmente.
+   *
+   * NO CONTRADICE LA DECISIÓN DE ARRIBA ("que salgan cuando alguien pone que va"), la
+   * completa: esa regla decide QUÉ torneos destacar cuando hay de dónde elegir, y aquí
+   * no hay nada que elegir. Sin esto, el día que la app se abre al club —con la lista
+   * de asistencia entera a cero— la portada no menciona ni uno de los 39 torneos que
+   * vienen; nadie se entera de que existen, así que nadie dice que va, así que siguen
+   * sin salir. Se muerde la cola justo el día que más importa.
+   *
+   * SOLO EN EL CASO VACÍO, y por eso la consulta va aquí y no arriba: en cuanto alguien
+   * se apunta a algo, manda la regla de siempre y esto no se ejecuta.
+   */
+  const nadieApuntado = (torneosProximos ?? []).length === 0;
+  const { data: torneosDelCalendario } = nadieApuntado
+    ? await supabase
+        .from("tournaments")
+        .select("id, nombre, fecha_inicio, fecha_fin, lugar")
+        .gte("fecha_fin", hoy)
+        .order("fecha_inicio")
+        .limit(3)
+    : { data: null };
+  const torneosAEnsenar = nadieApuntado ? (torneosDelCalendario ?? []) : (torneosProximos ?? []);
+
   const idsTorneos = (torneosProximos ?? []).map((t) => t.id);
   const idsVentana = (jornadasVentana ?? []).map((j) => j.id);
   const internoVivo =
@@ -465,11 +490,19 @@ export default async function Home() {
               )}
             </section>
 
-            {(torneosProximos ?? []).length > 0 && (
+            {torneosAEnsenar.length > 0 && (
               <section className="space-y-2">
                 <Titulo enlace="/club/torneos/facv">Próximos torneos</Titulo>
+                {/* CUANDO NO VA NADIE, se dice qué son y qué se espera del socio: sin
+                    esta línea, la lista parece "torneos a los que vamos" y quien la mire
+                    dará por hecho que ya está todo decidido. */}
+                {nadieApuntado && (
+                  <p className="px-1 text-xs text-tinta-suave">
+                    Del calendario de la FACV. Di si vas y aparecerá para todos.
+                  </p>
+                )}
                 <ul className="space-y-2">
-                  {(torneosProximos ?? []).map((t) => {
+                  {torneosAEnsenar.map((t) => {
                     const estado = asistenciaPorTorneo.get(t.id);
                     const gente = gentePorTorneo.get(t.id);
                     // "2 van" manda sobre "1 en duda": si hay alguien decidido, es lo
