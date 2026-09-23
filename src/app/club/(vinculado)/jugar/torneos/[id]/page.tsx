@@ -8,6 +8,9 @@ import { clasificar } from "@/lib/club/clasificacion";
 import { leerTorneo } from "../datos";
 import { GestionTorneo, type RondaVista, type SocioVista } from "./GestionTorneo";
 import { TorneoChessPairings } from "@/components/club/TorneoChessPairings";
+import { BotonCompartir } from "@/components/club/BotonCompartir";
+import { enlace, mensajeTorneoClub } from "@/lib/compartir/mensaje";
+import { formatearRangoFechas } from "@/lib/torneos/fechas";
 import { Contenedor } from "@/components/ui/Contenedor";
 import { nombreVisible } from "@/lib/club/nombre-socio";
 
@@ -67,6 +70,20 @@ export default async function TorneoInternoPage({
     r.emparejamientos.some((e) => e.resultado !== null)
   );
 
+  // Compartirlo sirve para DOS cosas según el momento: mientras admite gente, para que
+  // se apunten; una vez empezado, para enseñar cómo va. El mensaje cambia solo.
+  const textoCompartir = mensajeTorneoClub({
+    nombre: torneo.nombre,
+    sistema: torneo.sistema,
+    // Formateada, no la fecha cruda de la base: en el mensaje quedaba "📅 2026-10-12".
+    fecha: torneo.fechaInicio
+      ? formatearRangoFechas(torneo.fechaInicio, torneo.fechaInicio)
+      : null,
+    inscritos: torneo.inscritos.length,
+    abierto: torneo.estado === "inscripcion",
+    url: enlace(`/club/jugar/torneos/${torneo.id}`),
+  });
+
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera
@@ -89,6 +106,16 @@ export default async function TorneoInternoPage({
           <Tarjeta compacta>
             <p className="whitespace-pre-line text-sm text-tinta">{torneo.notas}</p>
           </Tarjeta>
+        )}
+
+        {/* Un torneo terminado ya no se comparte: no hay a qué apuntarse y la
+            clasificación final la ve quien entra. */}
+        {torneo.estado !== "terminado" && (
+          <BotonCompartir
+            texto={textoCompartir}
+            titulo={torneo.nombre}
+            etiqueta="Compartir el torneo"
+          />
         )}
 
         {/* Rondas y clasificación en paralelo desde `lg`, igual que en el detalle de

@@ -7,6 +7,8 @@ import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 import { colorDeTablero } from "@/lib/validador/colores";
 import { calcularMarcador, formatearPunto, marcadorPreferido } from "@/lib/marcador";
 import { Cabecera } from "@/components/ui/Cabecera";
+import { BotonCompartir } from "@/components/club/BotonCompartir";
+import { enlace, mensajeJornada } from "@/lib/compartir/mensaje";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Banner } from "@/components/ui/Banner";
 import { ChipTablero } from "@/components/ui/ChipTablero";
@@ -245,6 +247,18 @@ export default async function JornadaPage({
     resultadoInicial: (resultadosPorBoard.get(b.id) as 1 | 0.5 | 0 | undefined) ?? null,
   }));
 
+  // Compartir una jornada es "quedamos aquí a esta hora": va la fecha y la sede, que es
+  // lo que hace falta para presentarse. Solo en las que quedan por jugar — una jugada se
+  // mira, no se convoca.
+  const textoCompartir = mensajeJornada({
+    equipo: equipoNombre,
+    rival: match.rival,
+    esLocal: match.es_local,
+    fecha,
+    sede: match.sede,
+    url: enlace(`/club/jornadas/${match.id}`),
+  });
+
   return (
     <main className="min-h-dvh bg-fondo pb-24">
       <Cabecera
@@ -253,6 +267,14 @@ export default async function JornadaPage({
         volverA={`/club/equipos/${match.team_id}`} medida="panel"
       />
       <Contenedor medida="panel" className="space-y-4">
+        {match.estado === "pendiente" && (
+          <BotonCompartir
+            texto={textoCompartir}
+            titulo={`${equipoNombre} · ${match.rival}`}
+            etiqueta="Compartir la jornada"
+          />
+        )}
+
         {/* Marcador con los dos nombres, no solo las cifras. Antes ponía "Fuera" y
             "3½ – 4½" sin decir de quién era cada número, y en un encuentro fuera de
             casa el orden no es evidente. */}

@@ -52,8 +52,24 @@ export const GUIA: readonly SeccionGuia[] = [
     puntos: [
       "Calendario de cada equipo con el acta tablero a tablero",
       "Marcar tu disponibilidad para las jornadas",
-      "Orden de fuerza oficial, por número o por ELO",
+      // Decía "Orden de fuerza oficial, por número o por ELO". Las dos mitades se
+      // quedaron viejas el 2026-08-26: la pantalla ya no se llama "oficial" —el ELO
+      // oficial es el FIDE— y la ordenación por ELO se fue con la lista de socios.
+      "El orden de fuerza que manda en las convocatorias",
+      "Compartir una jornada por WhatsApp con la fecha y la sede",
       "Temporadas pasadas, con el desplegable de arriba",
+    ],
+  },
+  {
+    clave: "socios",
+    icono: "👥",
+    titulo: "Socios del club",
+    rango: "jugador",
+    que: "Todos los socios con su ELO y su ficha. Se entra desde Inicio.",
+    puntos: [
+      "Ver la ficha de cualquiera: foto, aperturas y sus partidas",
+      "Están TODOS, también quien entró a mitad de temporada",
+      "Tu mote y tu ELO estimado se cambian en tu propia ficha",
     ],
   },
   {
@@ -65,6 +81,7 @@ export const GUIA: readonly SeccionGuia[] = [
     puntos: [
       "Decir si vas a cada torneo",
       "Cuadrar los coches para ir",
+      "Compartirlo por WhatsApp con quién va y si queda sitio en un coche",
       "Los torneos del club NO están aquí: están en Jugar",
     ],
   },
@@ -81,6 +98,7 @@ export const GUIA: readonly SeccionGuia[] = [
       // guía es lo primero que lee un socio nuevo, así que prometer una pantalla que
       // ya no existe es peor aquí que en cualquier otro sitio.
       "Torneos del club: inscribirte, rondas y clasificación",
+      "Compartir un torneo del club para que se apunte más gente",
       "Al acabar, la partida entra sola en el repositorio",
     ],
   },

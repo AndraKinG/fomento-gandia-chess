@@ -13,6 +13,8 @@ import { Contenedor } from "@/components/ui/Contenedor";
 import { nombreVisible } from "@/lib/club/nombre-socio";
 import { enlaceInfo64, URL_CALENDARIO_FACV } from "@/lib/torneos/enlaces-torneo";
 import { EditorFichaTorneo } from "@/components/club/EditorFichaTorneo";
+import { BotonCompartir } from "@/components/club/BotonCompartir";
+import { enlace, mensajeTorneoFuera } from "@/lib/compartir/mensaje";
 
 type Asistencia = "voy" | "no_voy" | "duda";
 
@@ -118,6 +120,19 @@ export default async function TorneoPage({
   // publica nada de eso.
   const puedeEditar = Boolean(sesion?.esJunta);
 
+  // EL MENSAJE PARA EL GRUPO DE WHATSAPP. Lleva cuántos vamos y si queda sitio en
+  // algún coche, que es lo que de verdad hace que alguien se apunte — un enlace pelado
+  // no lo lee nadie.
+  const textoCompartir = mensajeTorneoFuera({
+    nombre: torneo.nombre,
+    fechas: formatearRangoFechas(torneo.fecha_inicio, torneo.fecha_fin),
+    lugar: torneo.lugar,
+    hora: torneo.hora,
+    van: van.length,
+    plazasLibres: vista.reduce((total, c) => total + c.libres, 0),
+    url: enlace(`/club/torneos/facv/${torneo.id}`),
+  });
+
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera
@@ -129,6 +144,17 @@ export default async function TorneoPage({
       <Contenedor medida="panel" className="space-y-4">
         {enCurso && <Banner tipo="ok">Se está jugando ahora mismo.</Banner>}
         {terminado && <Banner tipo="aviso">Este torneo ya ha terminado.</Banner>}
+
+        {/* COMPARTIR ARRIBA Y NO AL FINAL: el gesto es "mira, vamos a esto, ¿te
+            apuntas?", y va con el torneo, no detrás de los coches. En uno terminado no
+            se enseña — no hay a qué apuntarse. */}
+        {!terminado && (
+          <BotonCompartir
+            texto={textoCompartir}
+            titulo={torneo.nombre}
+            etiqueta="Compartir el torneo"
+          />
+        )}
 
         {/* Dos columnas desde `lg`: a la izquierda el torneo y tu respuesta, que no
             cambian de tamaño; a la derecha quién va y los coches, que es lo que crece

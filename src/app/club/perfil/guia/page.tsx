@@ -5,6 +5,8 @@ import { guiaPara } from "@/lib/guia/guia";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Contenedor, Rejilla } from "@/components/ui/Contenedor";
+import { BotonCompartir } from "@/components/club/BotonCompartir";
+import { mensajeApp, URL_APP } from "@/lib/compartir/mensaje";
 
 /**
  * "¿Qué puedes hacer aquí?": la guía de la app, recortada al rango de quien mira.
@@ -36,6 +38,23 @@ export default async function GuiaPage() {
         medida="panel"
       />
       <Contenedor medida="panel" className="space-y-4">
+        {/* COMPARTIR LA APP ENTERA, y esta es su pantalla: quien acaba de leer para qué
+            sirve es justo quien se la quiere pasar a otro socio. Hace falta para el
+            lanzamiento — el mensaje al grupo de WhatsApp se escribía a mano. */}
+        <Tarjeta className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-semibold text-tinta">Pásasela a otro socio</p>
+            <p className="text-sm text-tinta-suave">
+              Con el código del club, cualquiera del Fomento puede entrar.
+            </p>
+          </div>
+          <BotonCompartir
+            texto={mensajeApp(URL_APP)}
+            titulo="La app del Fomento de Gandia"
+            etiqueta="Compartir la app"
+          />
+        </Tarjeta>
+
         <Rejilla columnas={2}>
           {secciones.map((s) => (
             <Tarjeta key={s.clave} className="space-y-2">
