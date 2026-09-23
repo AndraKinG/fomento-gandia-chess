@@ -7,9 +7,17 @@
  * desaparecer de la interfaz: los datos seguían en la base, pero sin ninguna puerta
  * para llegar a ellos.
  *
- * Solo las pantallas de CONSULTA eligen temporada. Las de administración y los
- * importadores siguen atados a la activa a propósito: se importa sobre la temporada
- * en curso, y `/club/vincular` lista el orden de fuerza vigente.
+ * Solo las pantallas de CONSULTA eligen temporada. Los IMPORTADORES siguen atados a la
+ * activa a propósito: se importa sobre la temporada en curso, y `/club/vincular` lista
+ * el orden de fuerza vigente.
+ *
+ * LAS PANTALLAS DE ADMIN NO, y esto se corrigió el 2026-09-23 al cerrar la temporada
+ * 2026 (terminó en marzo y seguía marcada como activa). El diseño daba por hecho que
+ * SIEMPRE hay una temporada activa, y no es verdad: el Interclubs va de enero a marzo,
+ * así que **nueve meses al año no hay ninguna en curso**. Con la 2026 cerrada, la lista
+ * de 46 socios de `/club/admin/orden-fuerza` desapareció —con ella, los editores de
+ * mote— y `/club/admin/equipos` se quedó en "No hay temporada activa". Se leía como que
+ * la app había perdido los datos.
  */
 
 export type Temporada = {
@@ -68,4 +76,20 @@ export async function leerTemporadas(supabase: Cliente): Promise<Temporada[]> {
     .select("id, nombre, activa")
     .order("created_at", { ascending: false });
   return (data ?? []) as Temporada[];
+}
+
+/**
+ * La temporada sobre la que trabajan las pantallas de ADMINISTRACIÓN.
+ *
+ * La activa si la hay; si no, la más reciente. Administrar la última temporada fuera
+ * de temporada es lo normal —repasar el orden de fuerza, poner motes, mirar quién fue
+ * capitán—, y quedarse sin pantalla nueve meses al año no lo es.
+ *
+ * NO SE USA PARA IMPORTAR: los importadores crean la temporada si hace falta y siguen
+ * mirando la activa, que es lo correcto — importar el orden de fuerza nuevo sobre la
+ * temporada vieja lo machacaría.
+ */
+export async function temporadaDeAdmin(supabase: Cliente): Promise<Temporada | null> {
+  const temporadas = await leerTemporadas(supabase);
+  return temporadas.find((t) => t.activa) ?? temporadas[0] ?? null;
 }

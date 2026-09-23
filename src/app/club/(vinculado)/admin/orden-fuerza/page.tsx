@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { temporadaDeAdmin } from "@/lib/temporadas";
 import { actualizarEloActual, importarOrdenFuerza, sincronizarOrdenFuerzaFACV } from "./actions";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Banner } from "@/components/ui/Banner";
@@ -21,8 +22,10 @@ export default async function OrdenFuerzaPage({
   const { msg, tipo, avisos } = await searchParams;
   const listaAvisos = avisos ? avisos.split(SEPARADOR_AVISOS) : [];
   const supabase = await createServerSupabase();
-  const { data: season } = await supabase
-    .from("seasons").select("id, nombre").eq("activa", true).maybeSingle();
+  // La activa, o la última si no hay ninguna (ver `temporadaDeAdmin`): el Interclubs va
+  // de enero a marzo, así que nueve meses al año no hay temporada en curso y esta
+  // pantalla se quedaba sin la lista de socios.
+  const season = await temporadaDeAdmin(supabase);
   const { data: orden } = season
     ? await supabase
         .from("force_order")

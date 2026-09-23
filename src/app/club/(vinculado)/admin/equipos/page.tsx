@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { temporadaDeAdmin } from "@/lib/temporadas";
 import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 import {
   crearEquipo,
@@ -56,8 +57,8 @@ export default async function EquiposPage({
   const { msg, tipo, equipo } = await searchParams;
   const supabase = await createServerSupabase();
 
-  const { data: season } = await supabase
-    .from("seasons").select("id, nombre").eq("activa", true).maybeSingle();
+  // Igual que en "ELO de los socios": la activa o, fuera de temporada, la última.
+  const season = await temporadaDeAdmin(supabase);
 
   async function accionCrear(formData: FormData) {
     "use server";
@@ -186,7 +187,14 @@ export default async function EquiposPage({
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
-      <Cabecera titulo="Equipos y capitanes" subtitulo={season.nombre} volverA="/club/admin" medida="panel" />
+      {/* SE DICE SI LA TEMPORADA ESTÁ TERMINADA: fuera de temporada esta pantalla
+          enseña la última, y sin decirlo parece que el Interclubs sigue en marcha. */}
+      <Cabecera
+        titulo="Equipos y capitanes"
+        subtitulo={season.activa ? season.nombre : `${season.nombre} · terminada`}
+        volverA="/club/admin"
+        medida="panel"
+      />
       <Contenedor medida="panel" className="space-y-4">
         {msg ? <Banner tipo={tipo === "ok" ? "ok" : "error"}>{msg}</Banner> : null}
 
