@@ -5,9 +5,14 @@ import { pedirRecuperacion } from "../actions";
 import { Banner } from "@/components/ui/Banner";
 import { Boton } from "@/components/ui/Boton";
 import { Escudo } from "@/components/ui/Escudo";
+import { RECUPERACION_POR_EMAIL } from "@/lib/acceso/recuperacion";
 
 /**
- * "He olvidado la contraseña": se pide el correo y Supabase manda el enlace.
+ * "No puedo entrar": qué hacer cuando no recuerdas la contraseña.
+ *
+ * TIENE DOS CARAS SEGÚN `RECUPERACION_POR_EMAIL` (ver `src/lib/acceso/recuperacion.ts`,
+ * donde está el porqué). Apagada —hoy— explica que hay que pedírselo a la junta y no
+ * enseña formulario. Encendida, pide el correo y Supabase manda el enlace.
  *
  * NO DICE SI EL EMAIL EXISTE, y el mensaje de "enviado" sale igual en los dos casos.
  * Decir "ese email no está registrado" dejaría averiguar quién es socio del club
@@ -36,13 +41,33 @@ export default async function RecuperarPage({
       <div className="flex w-full max-w-sm flex-col gap-6">
         <div className="flex flex-col items-center gap-2 text-center">
           <Escudo version="completo" lado={140} priority />
-          <h1 className="text-2xl font-bold text-tinta">¿Has olvidado la contraseña?</h1>
-          <p className="text-sm text-tinta-suave">
-            Te mandamos un enlace para poner una nueva.
-          </p>
+          <h1 className="text-2xl font-bold text-tinta">¿No puedes entrar?</h1>
+          {RECUPERACION_POR_EMAIL && (
+            <p className="text-sm text-tinta-suave">
+              Te mandamos un enlace para poner una nueva contraseña.
+            </p>
+          )}
         </div>
 
-        {enviado ? (
+        {!RECUPERACION_POR_EMAIL ? (
+          <>
+            {/* SE DICE LO QUE HAY, sin formulario. Un campo de email que manda un
+                correo con un enlace que no funciona deja al socio esperando, y encima
+                convencido de que la app está rota. */}
+            <Banner tipo="aviso">
+              Todavía no se puede cambiar la contraseña desde aquí.
+            </Banner>
+            <p className="text-sm text-tinta">
+              Escribe a la junta por el grupo del club y te la cambian en un momento.
+              Diles con qué email creaste la cuenta.
+            </p>
+            <p className="text-center text-sm text-tinta">
+              <Link className="text-acento-texto underline" href="/login">
+                Volver
+              </Link>
+            </p>
+          </>
+        ) : enviado ? (
           <>
             <Banner tipo="ok">
               Si hay una cuenta con ese email, el enlace ya está de camino. Mira también

@@ -5,6 +5,7 @@ import { login } from "../actions";
 import { Banner } from "@/components/ui/Banner";
 import { Boton } from "@/components/ui/Boton";
 import { Escudo } from "@/components/ui/Escudo";
+import { RECUPERACION_POR_EMAIL } from "@/lib/acceso/recuperacion";
 
 export default async function LoginPage({
   searchParams,
@@ -73,10 +74,16 @@ export default async function LoginPage({
         </form>
         {/* EL ENLACE DE RECUPERAR VA PEGADO AL FORMULARIO y antes que el de
             registrarse: quien no recuerda la contraseña ya tiene cuenta, y buscarlo
-            debajo de "¿Sin cuenta?" es justo donde no mira. */}
+            debajo de "¿Sin cuenta?" es justo donde no mira.
+
+            APAGADO HASTA QUE HAYA SMTP PROPIO (ver `recuperacion.ts`): sigue llevando a
+            una pantalla, pero a una que dice la verdad en vez de prometer un correo que
+            llega roto. */}
         <p className="text-center text-sm text-tinta">
           <Link className="text-acento-texto underline" href="/recuperar">
-            He olvidado la contraseña
+            {RECUPERACION_POR_EMAIL
+              ? "He olvidado la contraseña"
+              : "No puedo entrar"}
           </Link>
         </p>
         <p className="text-center text-sm text-tinta">

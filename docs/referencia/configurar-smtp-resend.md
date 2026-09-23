@@ -17,9 +17,15 @@ nombre. Sigue estos pasos tú mismo.
 1. Ve a [resend.com](https://resend.com) → **Sign Up** (gratis, sin tarjeta).
 2. Verifica tu email.
 3. Elige una de estas dos opciones para el remitente:
-   - **Rápida (recomendada para empezar)**: usa el dominio de pruebas de
-     Resend, `onboarding@resend.dev`. No requiere verificar nada, pero los
-     emails identifican a Resend como remitente técnico.
+   - **`onboarding@resend.dev` NO SIRVE PARA EL CLUB.** Estaba aquí como opción
+     rápida y es un error: el dominio de pruebas de Resend **solo entrega a la
+     dirección con la que te registraste**. Vale para probar que el SMTP está bien
+     puesto, y para nada más — a los 46 socios no les llegaría nada.
+   - **Sin dominio propio, SMTP de Gmail.** La cuenta del club con una contraseña
+     de aplicación (hace falta la verificación en dos pasos activada). En Supabase:
+     host `smtp.gmail.com`, puerto `465`, usuario el correo del club y contraseña la
+     de aplicación. Límite de ~500 al día, de sobra. Los correos salen desde esa
+     dirección de Gmail.
    - **Con dominio propio del club** (si el club tiene un dominio, p. ej.
      `fomentogandia.com`): en Resend, **Domains → Add Domain**, añade el
      dominio y crea en tu proveedor DNS los registros TXT/CNAME que Resend
@@ -145,3 +151,39 @@ Si no has solicitado esta cuenta, puedes ignorar este email.
 3. Pulsa "Confirmar mi cuenta" y verifica que redirige a la app ya con la
    sesión iniciada (la ruta `/auth/confirm` llama a `verifyOtp` y redirige a
    `/`).
+
+## Mientras no haya SMTP: desatascar a un socio a mano
+
+La recuperación por email está **apagada** (`RECUPERACION_POR_EMAIL` en
+`src/lib/acceso/recuperacion.ts`), porque sin SMTP propio Supabase no deja editar la
+plantilla y la de fábrica manda al socio a la portada sin sesión. Hasta entonces, a
+quien se quede fuera se le genera un enlace de un solo uso **sin pasar por el correo**,
+con la clave de servicio:
+
+```js
+const { data } = await db.auth.admin.generateLink({ type: "recovery", email: "<su correo>" });
+// data.properties.hashed_token  ->  se monta el enlace a mano:
+// https://<dominio>/auth/confirm?token_hash=<hashed_token>&type=recovery&next=/nueva-contrasena
+```
+
+Caduca en una hora y se gasta al usarlo. Se le pasa por WhatsApp y él pone la
+contraseña en `/nueva-contrasena`. **No hace falta saber ni tocar su contraseña.**
+
+## Al encender la recuperación
+
+1. SMTP propio configurado y probado (pasos de arriba).
+2. Plantilla **Reset password** con el HTML de abajo — la de fábrica NO vale, porque
+   pasa por el `/auth/v1/verify` de Supabase y devuelve la sesión en el `#`, que la app
+   no lee.
+3. `RECUPERACION_POR_EMAIL = true`.
+
+```html
+<h2>Cambiar tu contraseña</h2>
+<p>Has pedido volver a entrar en la app del Fomento de Gandia.</p>
+<p>
+  <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/nueva-contrasena">
+    Poner una contraseña nueva
+  </a>
+</p>
+<p>El enlace vale una hora. Si no has sido tú, ignora este correo.</p>
+```
