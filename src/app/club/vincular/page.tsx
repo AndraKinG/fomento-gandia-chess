@@ -65,14 +65,25 @@ export default async function VincularPage({
     );
   }
 
-  // El censo del club es el ORDEN DE FUERZA de la temporada activa, no la tabla
-  // `players` entera: `players` incluye fichas que no son socios (restos de
-  // probar los importadores de ELO) y ofrecerlas aquí permitiría reclamarlas.
-  const { data: temporada } = await admin
+  // El censo del club es el ORDEN DE FUERZA, no la tabla `players` entera: `players`
+  // incluye fichas que no son socios (restos de probar los importadores de ELO) y
+  // ofrecerlas aquí permitiría reclamarlas.
+  //
+  // LA ACTIVA, O LA ÚLTIMA SI NO HAY NINGUNA, y esto costó caro el 2026-09-23: al
+  // cerrar la temporada 2026 —terminó en marzo— esta consulta dejó de encontrar nada y
+  // la pantalla empezó a decir "No queda ninguna ficha libre" a TODO EL MUNDO. El
+  // primer socio que se registró tras abrir la app al club se quedó fuera por esto, y
+  // no dejó rastro en ninguna parte: sin ficha no hay solicitud, así que no salía como
+  // pendiente ni generaba aviso. Parecía que se había ido a medias por su cuenta.
+  //
+  // El Interclubs va de enero a marzo: nueve meses al año NO hay temporada activa, así
+  // que atar a ella la única puerta de entrada de un socio nuevo era dejar la app sin
+  // altas tres cuartos del año.
+  const { data: temporadas } = await admin
     .from("seasons")
-    .select("id")
-    .eq("activa", true)
-    .maybeSingle();
+    .select("id, activa")
+    .order("created_at", { ascending: false });
+  const temporada = (temporadas ?? []).find((t) => t.activa) ?? (temporadas ?? [])[0] ?? null;
 
   const { data: censo } = temporada
     ? await admin
