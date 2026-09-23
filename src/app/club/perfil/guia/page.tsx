@@ -50,7 +50,7 @@ export default async function GuiaPage() {
           </div>
           <BotonCompartir
             texto={mensajeApp(URL_APP)}
-            titulo="La app del Fomento de Gandia"
+            titulo="La app del Club de Ajedrez Fomento de Gandia"
             etiqueta="Compartir la app"
           />
         </Tarjeta>

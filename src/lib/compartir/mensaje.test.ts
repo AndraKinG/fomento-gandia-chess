@@ -131,7 +131,7 @@ describe("mensajeJornada", () => {
 describe("mensajeApp", () => {
   it("se explica sin abrir el enlace", () => {
     const t = mensajeApp("https://fomento-gandia-chess-swart.vercel.app");
-    expect(t).toContain("La app del Fomento de Gandia");
+    expect(t).toContain("La app del Club de Ajedrez Fomento de Gandia");
     expect(t).toContain("código del club");
     expect(t.endsWith("https://fomento-gandia-chess-swart.vercel.app")).toBe(true);
   });

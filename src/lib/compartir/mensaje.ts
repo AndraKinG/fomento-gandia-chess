@@ -120,7 +120,7 @@ export function mensajeJornada(j: {
  */
 export function mensajeApp(url: string): string {
   return mensaje(
-    "♟️ La app del Fomento de Gandia",
+    "♟️ La app del Club de Ajedrez Fomento de Gandia",
     [
       "Calendario, convocatorias, resultados, quién va a cada torneo y con quién ir.",
       "Entra con el código del club y vincula tu ficha.",

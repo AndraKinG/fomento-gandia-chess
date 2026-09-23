@@ -179,7 +179,7 @@ contraseña en `/nueva-contrasena`. **No hace falta saber ni tocar su contraseñ
 
 ```html
 <h2>Cambiar tu contraseña</h2>
-<p>Has pedido volver a entrar en la app del Fomento de Gandia.</p>
+<p>Has pedido volver a entrar en la app del Club de Ajedrez Fomento de Gandia.</p>
 <p>
   <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/nueva-contrasena">
     Poner una contraseña nueva
