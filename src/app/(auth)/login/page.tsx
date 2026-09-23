@@ -71,6 +71,14 @@ export default async function LoginPage({
           </div>
           <Boton variante="degradado">Entrar</Boton>
         </form>
+        {/* EL ENLACE DE RECUPERAR VA PEGADO AL FORMULARIO y antes que el de
+            registrarse: quien no recuerda la contraseña ya tiene cuenta, y buscarlo
+            debajo de "¿Sin cuenta?" es justo donde no mira. */}
+        <p className="text-center text-sm text-tinta">
+          <Link className="text-acento-texto underline" href="/recuperar">
+            He olvidado la contraseña
+          </Link>
+        </p>
         <p className="text-center text-sm text-tinta">
           ¿Sin cuenta?{" "}
           <Link className="text-acento-texto underline" href="/registro">
