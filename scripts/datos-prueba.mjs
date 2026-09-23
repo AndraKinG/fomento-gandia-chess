@@ -4,24 +4,52 @@
  *   node scripts/datos-prueba.mjs poner
  *   node scripts/datos-prueba.mjs quitar
  *
- * POR QUÉ ES SEGURO HACERLO SOBRE PRODUCCIÓN, comprobado antes de escribirlo:
- * solo existe UNA cuenta (la del propietario), así que nadie más puede ver esto; y
- * las seis tablas que se rellenan —`games`, `club_tournaments` y sus hijas,
- * `tournament_attendance`, `cars`, `availability` y `lineups`— están **todas a cero**.
- * Por eso `quitar` puede simplemente vaciarlas, y las jornadas inventadas se borran por
- * su marca. NO se toca nada real: ni las 46 fichas, ni las 31 jornadas de 2026, ni las
- * 248 filas del acta oficial.
+ * LA PREMISA DE SEGURIDAD DE AGOSTO YA NO SE CUMPLE, y por eso esto se reescribió el
+ * 2026-09-23. Entonces decía "es seguro sobre producción porque solo existe UNA cuenta y
+ * las seis tablas están a cero", así que `quitar` vaciaba tablas enteras. Hoy hay CUATRO
+ * cuentas y hay datos de verdad dentro: 3 partidas en el repositorio, 3 torneos internos
+ * ("Social 2026" G1, G2 y Final) y 5 respuestas de asistencia. Con el código viejo,
+ * `quitar` se habría llevado las partidas y las asistencias por delante —y de hecho ni
+ * llegaba a correr: su única guarda aborta en cuanto ve un torneo interno que no sea de
+ * prueba, así que lo sembrado se habría quedado dentro sin forma limpia de sacarlo.
+ *
+ * AHORA `quitar` NO BORRA NADA QUE NO HAYA PUESTO `poner`. Dos mecanismos, y hacen falta
+ * los dos:
+ *
+ * 1. **La marca `PRUEBA` en un campo de texto visible** — jornadas, partidas, torneos
+ *    internos y coches. Se ve en la pantalla, así que no hay duda mirando; y se puede
+ *    borrar por ella aunque se pierda el manifiesto.
+ * 2. **Un manifiesto** (`scripts/.datos-prueba.json`, gitignorado) con los ids de lo que
+ *    NO puede llevar marca: las respuestas de asistencia (no tienen ningún campo de
+ *    texto) y los torneos REALES que se marcan como "de interés" (ahí solo se cambia un
+ *    booleano de una fila que ya existía). Sin manifiesto, `quitar` deja esas dos cosas
+ *    en su sitio y lo dice, en vez de adivinar.
+ *
+ * Y LAS TABLAS HIJAS NO SE TOCAN A MANO: `availability`, `lineups`, `club_rounds`,
+ * `club_pairings`, `club_tournament_players` y `car_seats` cuelgan con `on delete
+ * cascade` de algo que sí lleva marca. Borrar el padre se las lleva, y así no hay un
+ * `delete` suelto que pueda apuntar a la fila equivocada.
  *
  * Los participantes son los socios REALES a propósito: con nombres inventados no se ve
  * si la pantalla aguanta un "Luca Luvisi Figueres Wright" de 28 caracteres.
  *
- * MARCA: todo lo inventado lleva `PRUEBA` en un campo de texto visible, para que no
- * haya duda mirando la pantalla.
+ * OJO AL SEMBRAR EN PRODUCCIÓN: los otros socios con cuenta ven esto mientras esté
+ * puesto. Es para un rato de revisión, no para dejarlo.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, rmSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
 const MARCA = "PRUEBA";
+/** Dónde se apunta lo que no puede llevar la marca dentro. Gitignorado. */
+const MANIFIESTO = "scripts/.datos-prueba.json";
+
+const leerManifiesto = () => {
+  try {
+    return JSON.parse(readFileSync(MANIFIESTO, "utf8"));
+  } catch {
+    return null;
+  }
+};
 
 const env = readFileSync(".env.local", "utf8").replace(/^﻿/, "");
 const leer = (k) => (env.match(new RegExp("^" + k + "=(.*)$", "m")) || [])[1]?.trim();
@@ -57,7 +85,13 @@ async function poner() {
   const eloPorFicha = new Map((orden ?? []).map((f) => [f.player_id, f.elo_oficial ?? 1500]));
   const numeroPorFicha = new Map((orden ?? []).map((f) => [f.player_id, f.numero]));
   const { data: equipos } = await db.from("teams").select("id, nombre").order("nombre");
-  const { data: perfil } = await db.from("profiles").select("id, player_id").limit(1).single();
+  // EL ADMIN, no "el primero que salga": desde que hay cuatro cuentas, `limit(1)` era
+  // una lotería, y `creado_por` decide quién puede borrar el torneo luego.
+  const { data: perfiles } = await db.from("profiles").select("id, player_id, is_admin");
+  const perfil = (perfiles ?? []).find((x) => x.is_admin) ?? (perfiles ?? [])[0] ?? null;
+
+  // Lo que no puede llevar la marca dentro se apunta aquí para poder deshacerlo luego.
+  const creado = { fecha: new Date().toISOString(), asistencias: [], deInteres: [] };
 
   console.log(`${socios.length} socios, ${equipos.length} equipos\n`);
 
@@ -149,18 +183,30 @@ async function poner() {
     .limit(3);
 
   for (const [n, torneo] of (proximos ?? []).entries()) {
-    comprobar(await db.from("tournaments").update({ de_interes: true }).eq("id", torneo.id));
+    // SOLO SE APUNTA SI NO ESTABA YA MARCADO: si la junta marcó de verdad este torneo
+    // como de interés, `quitar` no debe desmarcarlo después.
+    const { data: antes } = await db
+      .from("tournaments").select("de_interes").eq("id", torneo.id).single();
+    if (!antes?.de_interes) {
+      comprobar(await db.from("tournaments").update({ de_interes: true }).eq("id", torneo.id));
+      creado.deInteres.push(torneo.id);
+    }
+
     const cuantos = 9 - n * 2;
-    const asistentes = socios.slice(n * 3, n * 3 + cuantos);
-    comprobar(
-      await db.from("tournament_attendance").insert(
-        asistentes.map((s, i) => ({
-          tournament_id: torneo.id,
-          player_id: s.id,
-          estado: i % 6 === 0 ? "duda" : i % 9 === 0 ? "no_voy" : "voy",
-        }))
-      )
-    );
+    // LAS RESPUESTAS QUE YA EXISTEN NO SE TOCAN. Hay 5 de verdad en la base, y volver a
+    // insertar el mismo par (torneo, ficha) revienta contra la clave primaria: el script
+    // moría a la mitad dejando media siembra dentro.
+    const { data: yaRespondieron } = await db
+      .from("tournament_attendance").select("player_id").eq("tournament_id", torneo.id);
+    const ocupados = new Set((yaRespondieron ?? []).map((a) => a.player_id));
+    const asistentes = socios.slice(n * 3, n * 3 + cuantos).filter((s) => !ocupados.has(s.id));
+    const filas = asistentes.map((s, i) => ({
+      tournament_id: torneo.id,
+      player_id: s.id,
+      estado: i % 6 === 0 ? "duda" : i % 9 === 0 ? "no_voy" : "voy",
+    }));
+    comprobar(await db.from("tournament_attendance").insert(filas));
+    for (const f of filas) creado.asistencias.push([f.tournament_id, f.player_id]);
     // Un coche en los dos primeros, con pasajeros de los que van.
     if (n < 2) {
       const van = asistentes.filter((_, i) => i % 6 !== 0 && i % 9 !== 0);
@@ -172,7 +218,12 @@ async function poner() {
           plazas: 4,
           hora_salida: "08:15",
           punto_salida: "Parking del Poliesportiu",
-          notas: n === 0 ? `${MARCA}: volvemos en cuanto acabe la última ronda` : null,
+          // LA MARCA SIEMPRE, no solo en el primero: el segundo coche salía con `notas`
+          // a null y era indistinguible de uno de verdad a la hora de limpiar.
+          notas:
+            n === 0
+              ? `${MARCA}: volvemos en cuanto acabe la última ronda`
+              : `${MARCA}: coche de ejemplo`,
         })
         .select("id")
         .single();
@@ -245,7 +296,12 @@ async function poner() {
     creadoPor: perfil?.id ?? null,
   });
 
-  console.log("\nListo. Recuerda: `node scripts/datos-prueba.mjs quitar` cuando acabemos.");
+  writeFileSync(MANIFIESTO, JSON.stringify(creado, null, 2));
+  console.log(
+    `\nApuntado en ${MANIFIESTO}: ${creado.asistencias.length} asistencias y ` +
+      `${creado.deInteres.length} torneos marcados de interés.`
+  );
+  console.log("Listo. Recuerda: `node scripts/datos-prueba.mjs quitar` cuando acabemos.");
 }
 
 /** Crea un torneo interno con sus rondas, emparejamientos y resultados. */
@@ -314,43 +370,81 @@ async function torneoInterno({
 }
 
 async function quitar() {
-  // Se comprueba ANTES de borrar que lo que hay es lo que se sembró: si alguien ha
-  // metido datos de verdad por el camino, este script no debe llevárselos.
-  const { data: reales } = await db
-    .from("club_tournaments")
-    .select("nombre")
-    .not("nombre", "ilike", `${MARCA}%`);
-  if (reales?.length) {
-    throw new Error(
-      `Hay ${reales.length} torneo(s) interno(s) que NO son de prueba: ${reales
-        .map((t) => t.nombre)
-        .join(", ")}. Borra a mano lo de prueba en vez de usar este script.`
+  const manifiesto = leerManifiesto();
+  let quedaAlgo = false;
+
+  // --- 1. Lo que lleva la marca dentro -----------------------------------------
+  //
+  // SE BORRA EL PADRE Y CASCADE HACE EL RESTO: `availability`, `lineups`,
+  // `lineup_boards`, `club_rounds`, `club_pairings`, `club_tournament_players` y
+  // `car_seats` cuelgan con `on delete cascade`. Un `delete` suelto por cada tabla hija
+  // es una oportunidad más de apuntar a la fila equivocada, y aquí no hace falta.
+  const borrarMarcados = async (tabla, campo, etiqueta) => {
+    const { data: filas, error } = await db
+      .from(tabla).select("id").ilike(campo, `${MARCA}%`);
+    if (error) throw new Error(`${tabla}: ${error.message}`);
+    if (!filas?.length) {
+      console.log(`  0 ${etiqueta}`);
+      return;
+    }
+    comprobar(await db.from(tabla).delete().in("id", filas.map((f) => f.id)));
+    console.log(`  ${filas.length} ${etiqueta}`);
+  };
+
+  console.log("Borrando lo que lleva la marca:");
+  await borrarMarcados("club_tournaments", "nombre", "torneos internos (con sus rondas y cruces)");
+  await borrarMarcados("games", "torneo_texto", "partidas del repositorio");
+  await borrarMarcados("cars", "notas", "coches (con sus plazas)");
+  await borrarMarcados("matches", "rival", "jornadas (con su disponibilidad y convocatoria)");
+
+  // --- 2. Lo que no puede llevarla: solo por manifiesto -------------------------
+  //
+  // Una respuesta de asistencia no tiene ningún campo de texto, y "de interés" es un
+  // booleano de una fila que ya existía. Sin saber CUÁLES pusimos nosotros, la única
+  // forma de limpiarlas sería vaciar la tabla o desmarcarlo todo — que es exactamente
+  // lo que hacía la versión vieja y lo que se llevaba por delante los datos de verdad.
+  if (!manifiesto) {
+    console.log(
+      `\nNo hay ${MANIFIESTO}, así que NO se tocan las respuestas de asistencia ni los ` +
+        `torneos marcados de interés: sin él no se puede saber cuáles pusimos nosotros y ` +
+        `cuáles son de verdad. Si hace falta, se quitan a mano desde la app.`
     );
+    quedaAlgo = true;
+  } else {
+    const asistencias = manifiesto.asistencias ?? [];
+    for (const [torneo, ficha] of asistencias) {
+      comprobar(
+        await db.from("tournament_attendance").delete()
+          .eq("tournament_id", torneo).eq("player_id", ficha)
+      );
+    }
+    const deInteres = manifiesto.deInteres ?? [];
+    if (deInteres.length) {
+      comprobar(
+        await db.from("tournaments").update({ de_interes: false }).in("id", deInteres)
+      );
+    }
+    console.log(
+      `\nDel manifiesto: ${asistencias.length} respuestas de asistencia y ` +
+        `${deInteres.length} torneos desmarcados de interés.`
+    );
+    rmSync(MANIFIESTO, { force: true });
   }
 
-  const { data: jornadas } = await db
-    .from("matches").select("id, rival").ilike("rival", `${MARCA}%`);
-  const ids = (jornadas ?? []).map((j) => j.id);
-
-  // Las convocatorias de un encuentro 'jugado' las bloquea el trigger de blindaje;
-  // las de prueba están 'pendiente', así que salen sin problema.
-  comprobar(await db.from("lineups").delete().in("match_id", ids.length ? ids : ["-"]));
-  comprobar(await db.from("availability").delete().in("match_id", ids.length ? ids : ["-"]));
-  comprobar(await db.from("car_seats").delete().not("car_id", "is", null));
-  comprobar(await db.from("cars").delete().not("id", "is", null));
-  comprobar(await db.from("tournament_attendance").delete().not("player_id", "is", null));
-  comprobar(await db.from("games").delete().not("id", "is", null));
-  comprobar(await db.from("club_tournaments").delete().not("id", "is", null));
-  comprobar(await db.from("tournaments").update({ de_interes: false }).eq("de_interes", true));
-  if (ids.length) comprobar(await db.from("matches").delete().in("id", ids));
-
+  // --- 3. Lo que queda, contado ------------------------------------------------
   const contar = async (t) => (await db.from(t).select("*", { count: "exact", head: true })).count;
-  console.log("Limpio. Ahora quedan:");
-  for (const t of ["games", "club_tournaments", "tournament_attendance", "cars", "availability", "lineups"]) {
+  const { count: marcadas } = await db
+    .from("games").select("*", { count: "exact", head: true }).ilike("torneo_texto", `${MARCA}%`);
+  console.log("\nQueda en la base (todo esto es REAL, no se ha tocado):");
+  for (const t of ["players", "force_order", "matches", "match_boards", "games",
+                   "club_tournaments", "tournament_attendance", "cars", "tournaments"]) {
     console.log(`  ${String(await contar(t)).padStart(4)} ${t}`);
   }
-  console.log(`  ${await contar("players")} fichas y ${await contar("matches")} jornadas (intactas)`);
-  console.log(`  ${await contar("match_boards")} filas del acta oficial (intactas)`);
+  if (marcadas) {
+    console.log(`\nOJO: quedan ${marcadas} partidas con la marca ${MARCA}. Revisa a mano.`);
+    quedaAlgo = true;
+  }
+  if (!quedaAlgo) console.log("\nLimpio del todo.");
 }
 
 const accion = process.argv[2];

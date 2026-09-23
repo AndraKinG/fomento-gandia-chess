@@ -46,3 +46,4 @@ logs/
 
 # ajustes personales de Claude Code (permisos de esta maquina, no del proyecto)
 .claude/settings.local.json
+scripts/.datos-prueba.json
