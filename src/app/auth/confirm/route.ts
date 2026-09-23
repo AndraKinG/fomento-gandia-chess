@@ -15,9 +15,16 @@ import { createServerSupabase } from "@/lib/supabase/server";
  * nuestro dominio lo llevara a una copia del login que le roba la contraseña. Y el
  * enlace vendría de verdad desde nuestro correo, que es lo que lo hace creíble.
  */
-function destino(next: string | null): string {
-  if (!next || !next.startsWith("/") || next.startsWith("//")) return "/club";
-  return next;
+function destino(next: string | null, type: EmailOtpType | null): string {
+  if (next && next.startsWith("/") && !next.startsWith("//")) return next;
+  // UNA RECUPERACIÓN ACABA SIEMPRE EN LA PANTALLA DE PONER LA CONTRASEÑA, aunque el
+  // enlace no traiga `next`. Pasa con el botón "Send password recovery" del panel de
+  // Supabase, que es el que usará la junta para desatascar a un socio: ese correo lo
+  // compone Supabase y no lleva nuestro parámetro. Sin esto, el socio entraba en la app
+  // con sesión y sin haber cambiado nada — creyendo que ya estaba resuelto, y al
+  // siguiente inicio de sesión volvía a quedarse fuera.
+  if (type === "recovery") return "/nueva-contrasena";
+  return "/club";
 }
 
 export async function GET(request: NextRequest) {
@@ -29,10 +36,14 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.verifyOtp({ type, token_hash });
     // A /club por defecto: quien acaba de confirmar su email es un socio entrando, no
     // una visita que llega a la web pública.
-    if (!error) redirect(destino(searchParams.get("next")));
+    if (!error) redirect(destino(searchParams.get("next"), type));
   }
   // Un token caducado en una recuperación NO va al login: allí no hay nada que hacer
   // sin contraseña. La pantalla de la nueva ya sabe decir que el enlace ha caducado y
   // ofrecer otro.
-  redirect(searchParams.get("next") === "/nueva-contrasena" ? "/nueva-contrasena" : "/login");
+  redirect(
+    type === "recovery" || searchParams.get("next") === "/nueva-contrasena"
+      ? "/nueva-contrasena"
+      : "/login"
+  );
 }
