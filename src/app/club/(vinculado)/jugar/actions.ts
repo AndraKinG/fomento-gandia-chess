@@ -326,6 +326,27 @@ export async function retar(datos: {
   if (!tieneCuenta) {
     return { error: "Ese socio todavía no tiene cuenta en la app." };
   }
+
+  // UN SOLO RETO PENDIENTE POR PERSONA. Sin esto, cada toque del botón crea otro: la
+  // noche del lanzamiento un socio retó al mismo rival dos veces y al otro le
+  // aparecieron dos retos idénticos, sin forma de saber si eran dos partidas o un
+  // dedazo. Y no es raro — el botón no da acuse de recibo inmediato, así que volver a
+  // pulsarlo es la reacción natural de quien cree que no ha ido.
+  //
+  // SE BLOQUEA CUALQUIER SEGUNDO RETO, no solo el de la misma cadencia: dos retos a la
+  // vez a la misma persona no sirven para nada, y comparando cadencias un 5+3 y un 5+0
+  // pasarían por distintos cuando en la práctica son el mismo "¿jugamos?".
+  const { data: yaPendiente } = await db
+    .from("challenges")
+    .select("id")
+    .eq("reta_id", sesion.playerId)
+    .eq("retado_id", datos.aQuien)
+    .eq("estado", "pendiente")
+    .maybeSingle();
+  if (yaPendiente) {
+    return { error: "Ya le has retado. Espera a que conteste." };
+  }
+
   const { data, error } = await db
     .from("challenges")
     .insert({
