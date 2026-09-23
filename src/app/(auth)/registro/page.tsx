@@ -5,6 +5,7 @@ import { registro } from "../actions";
 import { Banner } from "@/components/ui/Banner";
 import { Boton } from "@/components/ui/Boton";
 import { Escudo } from "@/components/ui/Escudo";
+import { RECUPERACION_POR_EMAIL } from "@/lib/acceso/recuperacion";
 
 export default async function RegistroPage({
   searchParams,
@@ -84,9 +85,15 @@ export default async function RegistroPage({
               Te lo pasa el club. Solo los socios pueden crear cuenta.
             </p>
           </div>
+          {/* ESTE AVISO PROMETÍA LO QUE LA APP NO HACE. Decía "usa un email al que
+              tengas acceso: lo necesitarás si olvidas la contraseña" cuando la
+              recuperación por correo está apagada (ver `recuperacion.ts`). Es
+              exactamente la frase que hizo que nadie notara durante meses que no
+              existía: sonaba a que el sistema estaba montado. */}
           <p className="rounded-xl border border-borde bg-tarjeta-suave p-3 text-xs text-tinta-suave">
-            Usa un email al que tengas acceso: lo necesitarás si olvidas la
-            contraseña.
+            {RECUPERACION_POR_EMAIL
+              ? "Usa un email al que tengas acceso: lo necesitarás si olvidas la contraseña."
+              : "Apunta la contraseña donde no se pierda: de momento no se puede recuperar sola. Si la olvidas, te la cambia la junta."}
           </p>
           <Boton variante="degradado">Registrarme</Boton>
         </form>

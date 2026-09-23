@@ -52,8 +52,12 @@ async function anotarIntentoFallido(ip: string): Promise<void> {
  * código del club es la prueba de pertenencia y la identidad la verifica el
  * admin al aprobar la ficha, así que no hace falta el circuito de confirmación
  * por email — que además no aguantaría a 46 socios registrándose la misma tarde
- * con el SMTP compartido de Supabase. Contrapartida asumida en la spec: un
- * email mal escrito deja a ese socio sin recuperar contraseña por su cuenta.
+ * con el SMTP compartido de Supabase. La spec daba por contrapartida que "un email mal
+ * escrito deja a ese socio sin recuperar contraseña por su cuenta"; desde el 2026-09-23
+ * se sabe que la contrapartida era mayor — la recuperación por correo no existía, y
+ * ahora está APAGADA a propósito hasta que haya SMTP propio (ver
+ * `src/lib/acceso/recuperacion.ts`). Mientras tanto se desatasca a mano con
+ * `auth.admin.generateLink`.
  */
 export async function crearCuentaConCodigo(
   email: string,
