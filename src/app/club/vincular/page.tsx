@@ -6,14 +6,16 @@ import { Tarjeta } from "@/components/ui/Tarjeta";
 import { Banner } from "@/components/ui/Banner";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 import { ListaFichas } from "./ListaFichas";
+import { BotonAccion } from "@/components/ui/BotonAccion";
+import { avisarQueNoEstoy } from "./actions";
 import { Contenedor } from "@/components/ui/Contenedor";
 
 export default async function VincularPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; avisado?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, avisado } = await searchParams;
 
   const supabase = await createServerSupabase();
   const {
@@ -132,22 +134,42 @@ export default async function VincularPage({
             ella. Abajo del todo, detrás de 46 nombres, este aviso solo lo lee quien
             ya ha bajado buscándose — y para entonces o se ha encontrado o ha elegido
             una ficha que no es la suya, que es justo lo que quería evitar. */}
-        {libres.length > 0 && (
-          <Tarjeta compacta>
+        {/* SE ENSEÑA TAMBIÉN CON LA LISTA VACÍA, que es justo donde antes se ocultaba:
+            el único momento en que el socio no puede hacer nada por su cuenta se
+            quedaba sin la explicación Y sin el botón. */}
+        {avisado ? (
+          <Banner tipo="ok">
+            Avisado. La junta te creará la ficha y podrás entrar; te llegará el aviso.
+          </Banner>
+        ) : (
+          <Tarjeta compacta className="space-y-2">
             <p className="text-sm text-tinta">
               <b className="font-semibold">¿No encuentras tu nombre?</b> La lista es
               el orden de fuerza de esta temporada. Si acabas de entrar en el club
               puede que todavía no estés en él:{" "}
-              <b className="font-semibold">no elijas otra ficha</b>, avisa al admin y
-              te añade.
+              <b className="font-semibold">no elijas otra ficha</b>, avísanos y te la
+              creamos.
             </p>
+            {/* UN BOTÓN Y NO "escríbele al admin": quien no se encuentra no puede hacer
+                NADA en la app, y pedirle que se acuerde de mandar un WhatsApp es perder
+                por el camino a quien no se acuerde — sin que quede rastro de que estuvo
+                aquí. Pasó con el primer socio que entró el día del lanzamiento. */}
+            <form action={avisarQueNoEstoy}>
+              <BotonAccion
+                variante="secundario"
+                trabajando="Avisando…"
+                className="px-3 py-1.5 text-sm font-medium"
+              >
+                No estoy en la lista, avisad
+              </BotonAccion>
+            </form>
           </Tarjeta>
         )}
 
         {libres.length === 0 ? (
           <EstadoVacio
-            titulo="No queda ninguna ficha libre"
-            detalle="Todas las fichas del orden de fuerza están ya vinculadas o pendientes. Avisa al admin del club."
+            titulo="No hay ninguna ficha libre"
+            detalle="O ya están todas vinculadas, o tu ficha todavía no está en el orden de fuerza. Usa el botón de arriba y te la creamos."
           />
         ) : (
           <ListaFichas fichas={libres.map((p) => ({ id: p.id, nombre: p.nombre, elo: p.elo }))} />

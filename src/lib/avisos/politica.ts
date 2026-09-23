@@ -23,7 +23,8 @@ export type TipoAviso =
   | "reto_aceptado"
   | "alta_socio"
   | "vinculacion"
-  | "fichas_nuevas";
+  | "fichas_nuevas"
+  | "ficha_no_encontrada";
 
 /** A qué grupo pertenece cada tipo (tabla de la spec): así se silencia por grupo. */
 export const GRUPO_DE: Record<TipoAviso, GrupoAviso> = {
@@ -38,6 +39,11 @@ export const GRUPO_DE: Record<TipoAviso, GrupoAviso> = {
   ronda_hora: "torneos",
   // Los motes son gestión del club: "X pide llamarse Ximo" va a la junta y la
   // respuesta al socio. No es de partidas ni de torneos.
+  // "No me encuentro en la lista": lo manda un socio que se ha registrado y no
+  // puede vincularse porque su ficha no está en el orden de fuerza. Es gestión pura
+  // y va a la junta — y es de lo más urgente que reciben, porque al otro lado hay
+  // alguien que NO puede entrar en la app.
+  ficha_no_encontrada: "gestion",
   mote_pedido: "gestion",
   mote_resuelto: "gestion",
   coche_plaza_libre: "torneos",
