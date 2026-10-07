@@ -74,10 +74,25 @@ titulo("Se quedaron a medias");
 // buscarse en la lista. No hay aviso de esto en ninguna parte.
 const conSolicitud = new Set((solicitudes ?? []).map((s) => s.user_id));
 const aMedias = reales.filter((p) => !p.player_id && !conSolicitud.has(p.id));
-if (aMedias.length === 0) console.log("   ninguno");
-else {
-  for (const p of aMedias) console.log(`   ${p.email} — creó la cuenta y no eligió ficha`);
-  console.log("\n   Escríbeles: solo les falta entrar y buscarse en la lista.");
+
+// Y LOS RECHAZADOS, que se escapaban por el hueco entre las dos listas: tienen
+// solicitud (luego no son "a medias") pero no está pendiente (luego no salían arriba),
+// y siguen sin ficha. Pasó el 2026-10-07 con un socio que pidió la ficha de otro por
+// error: se la rechazaron, y se quedó fuera sin que nada lo contara.
+const rechazados = reales.filter(
+  (p) =>
+    !p.player_id &&
+    (solicitudes ?? []).some((s) => s.user_id === p.id && s.status === "rechazada")
+);
+
+if (aMedias.length === 0 && rechazados.length === 0) console.log("   ninguno");
+for (const p of aMedias) console.log(`   ${p.email} — creó la cuenta y no eligió ficha`);
+for (const p of rechazados) {
+  console.log(`   ${p.email} — le rechazaron la ficha y sigue sin elegir otra`);
+}
+if (aMedias.length || rechazados.length) {
+  console.log("");
+  console.log("   Escríbeles: solo les falta entrar y buscarse en la lista.");
 }
 
 // ---------------------------------------------------------------------------

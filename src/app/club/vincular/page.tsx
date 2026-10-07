@@ -45,6 +45,22 @@ export default async function VincularPage({
     .eq("status", "pendiente")
     .maybeSingle();
 
+  // SI SE LA RECHAZARON, SE LE DICE AQUÍ. Es el único sitio donde puede leerlo: su
+  // bandeja de avisos vive detrás de tener ficha, así que a quien no la tiene no hay
+  // forma de avisarle dentro de la app. Pasó el 2026-10-07 — un socio pidió la ficha de
+  // otro por error, se la rechazaron, y volvió a ver la lista sin entender qué había
+  // pasado con su solicitud.
+  const { data: rechazada } = solicitud
+    ? { data: null }
+    : await admin
+        .from("link_requests")
+        .select("player_id")
+        .eq("user_id", user.id)
+        .eq("status", "rechazada")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
   if (solicitud) {
     const { data: ficha } = await admin
       .from("players")
@@ -124,6 +140,12 @@ export default async function VincularPage({
       />
       <Contenedor medida="panel" className="space-y-4">
         {error && <Banner tipo="error">{error}</Banner>}
+        {rechazada && (
+          <Banner tipo="aviso">
+            Tu solicitud anterior no se aprobó: esa ficha no era la tuya. Búscate otra
+            vez en la lista y elige la que lleve tu nombre.
+          </Banner>
+        )}
         <p className="text-sm text-tinta-suave">
           Elige tu ficha y el admin del club confirmará que eres tú antes de darte
           acceso.
