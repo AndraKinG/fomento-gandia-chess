@@ -26,6 +26,8 @@ import { clasificar } from "../src/lib/club/clasificacion.ts";
 import { eloParaOrdenar } from "../src/lib/elo/ranking-oficial.ts";
 import { nombreVisible } from "../src/lib/club/nombre-socio.ts";
 import { claveMote } from "../src/lib/club/mote.ts";
+import { leerTorneoChessPairings } from "../src/lib/import/chesspairings-leer.ts";
+import { buscarFicha, indicePorNombre } from "../src/lib/import/cruzar-nombres.ts";
 
 const env = readFileSync(".env.local", "utf8").replace(/^﻿/, "");
 const leer = (k) => (env.match(new RegExp("^" + k + "=(.*)$", "m")) || [])[1]?.trim();
@@ -268,7 +270,57 @@ if (coches?.length) bien(`${coches.length} coches, ${plazas.length} plazas ocupa
 else bien("no hay coches");
 
 // ---------------------------------------------------------------------------
-// 5. Bajas: la regla es que no las ve nadie
+// 5. Torneos que se llevan en ChessPairings
+// ---------------------------------------------------------------------------
+titulo("Torneos en ChessPairings");
+const { data: deFuera } = await db
+  .from("club_tournaments")
+  .select("nombre, url_publica")
+  .eq("organizado_en", "chesspairings")
+  .not("url_publica", "is", null);
+
+if (!deFuera?.length) bien("ninguno");
+for (const t of deFuera ?? []) {
+  const lectura = await leerTorneoChessPairings(t.url_publica);
+  if (lectura.error) {
+    mal(`"${t.nombre}": no se puede leer su página (${lectura.error})`);
+    continue;
+  }
+  bien(
+    `"${lectura.nombre ?? t.nombre}": ${lectura.inscritos.length} inscritos, ` +
+      `${lectura.clasificacion.length} en la clasificación, ${lectura.emparejamientos.length} mesas`
+  );
+
+  // EL CRUCE ES LO ÚNICO QUE SE DEGRADA EN SILENCIO. Si quien organiza escribe un
+  // nombre distinto del oficial de la FACV, ese socio sale sin su mote y sin enlace a
+  // su ficha. No falla nada: solo se ve peor, y nadie sabe por qué.
+  const indiceFichas = indicePorNombre(
+    fichas
+      .filter((f) => f.activo !== false && !f.de_prueba)
+      .map((f) => ({ id: f.id, nombre: f.nombre }))
+  );
+  const porFide = new Map(
+    fichas.filter((f) => f.fide_id).map((f) => [String(f.fide_id), f.id])
+  );
+  const sinCruzar = [];
+  for (const i of lectura.inscritos) {
+    if (i.fideId && porFide.has(String(i.fideId))) continue;
+    if (buscarFicha(i.nombre, indiceFichas)) continue;
+    sinCruzar.push(i.nombre);
+  }
+  if (sinCruzar.length) {
+    console.log(
+      `   AVISO ${sinCruzar.length} participante(s) sin ficha del club — saldrán sin mote:`
+    );
+    for (const x of sinCruzar) console.log(`         ${x}`);
+    console.log("         (normal si son invitados de fuera; si es un socio, revisa cómo está escrito su nombre allí)");
+  } else if (lectura.inscritos.length) {
+    bien(`   todos los participantes cruzan con una ficha del club`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 6. Bajas: la regla es que no las ve nadie
 // ---------------------------------------------------------------------------
 titulo("Bajas");
 const bajas = fichas.filter((f) => f.activo === false);
