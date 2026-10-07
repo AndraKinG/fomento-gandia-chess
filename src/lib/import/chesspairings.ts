@@ -62,3 +62,36 @@ export function idDesdeEnlace(url: string | null | undefined): number | null {
   const n = Number(m[1]);
   return Number.isInteger(n) && n > 0 ? n : null;
 }
+
+/**
+ * El enlace canónico de un torneo, siguiendo el atajo si hace falta.
+ *
+ * CHESSPAIRINGS REPARTE DOS ENLACES DEL MISMO TORNEO, y el que la gente comparte es el
+ * corto: `t.php?c=BGSKRBCQ`. Es el que trae el botón de compartir y el que llegó por
+ * WhatsApp el 2026-10-06 para el social de lentas. No lleva `id=`, así que `idDesdeEnlace`
+ * lo rechazaba y el formulario decía "ese enlace no lleva el id del torneo" — cierto,
+ * pero inútil: el enlace era el bueno.
+ *
+ * SE RESUELVE SIGUIENDO LA REDIRECCIÓN, una sola vez y al guardar, no en cada visita: lo
+ * que queda en la base es ya la dirección larga, y a partir de ahí todo funciona igual
+ * que antes. Comprobado contra el torneo real: el atajo responde 200 y la URL final trae
+ * `id=7001`.
+ *
+ * SI NO SE PUEDE RESOLVER se devuelve lo que había. Quien llama ya comprueba que haya
+ * id, así que el error sale allí con su mensaje — y una caída de su web no debe
+ * convertirse aquí en un fallo distinto.
+ */
+export async function resolverEnlacePublico(url: string): Promise<string> {
+  if (idDesdeEnlace(url) !== null) return url;
+  try {
+    const r = await fetch(url, {
+      redirect: "follow",
+      headers: { "user-agent": "FomentoGandiaChess/1.0 (+https://fomento-gandia-chess-swart.vercel.app)" },
+      // Sin caché: un atajo puede reapuntarse, y esto solo corre al guardar.
+      cache: "no-store",
+    });
+    return idDesdeEnlace(r.url) !== null ? r.url : url;
+  } catch {
+    return url;
+  }
+}

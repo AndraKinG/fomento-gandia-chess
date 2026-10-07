@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { idDesdeEnlace, resultadoDesdeBlancas } from "./chesspairings";
+import { idDesdeEnlace, resolverEnlacePublico, resultadoDesdeBlancas } from "./chesspairings";
 
 describe("resultadoDesdeBlancas", () => {
   it("traduce su notación a la de la app", () => {
@@ -45,5 +45,21 @@ describe("idDesdeEnlace", () => {
     expect(idDesdeEnlace("https://my.chesspairings.org/")).toBeNull();
     expect(idDesdeEnlace(null)).toBeNull();
     expect(idDesdeEnlace("")).toBeNull();
+  });
+});
+
+describe("resolverEnlacePublico", () => {
+  it("un enlace que ya trae el id se devuelve tal cual, sin pedir nada", async () => {
+    // SIN RED: es la mitad de la gracia. El caso normal —alguien pega la dirección
+    // larga— no puede depender de que chesspairings responda.
+    const largo = "https://my.chesspairings.org/pubblico/torneo.php?id=7001&token=abc";
+    expect(await resolverEnlacePublico(largo)).toBe(largo);
+  });
+
+  it("si no se puede seguir el atajo, devuelve lo que había", async () => {
+    // Quien llama ya comprueba que haya id y da su mensaje: una caída de su web no debe
+    // convertirse aquí en un fallo distinto.
+    const corto = "https://no-existe.invalido/t.php?c=XXXX";
+    expect(await resolverEnlacePublico(corto)).toBe(corto);
   });
 });

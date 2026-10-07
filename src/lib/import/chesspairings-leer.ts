@@ -105,10 +105,22 @@ export async function leerTorneoChessPairings(
   const emparejamientos = a.html ? parsearEmparejamientosPublicos(a.html) : [];
   const inscritos = i.html ? parsearInscritosPublicos(i.html) : [];
 
-  // NI UNA FILA EN LAS TRES PESTAÑAS es un enlace que no lleva a un torneo —o que apunta
-  // a uno privado, que su página pública no enseña—. Se distingue de un torneo recién
-  // creado, que sí trae inscritos aunque no tenga clasificación.
-  if (clasificacion.length === 0 && emparejamientos.length === 0 && inscritos.length === 0) {
+  // "SIN FILAS" NO ES "SIN TORNEO", y confundirlos costó un susto el 2026-10-07: el
+  // social de lentas se creó con las inscripciones abiertas dos semanas antes de la
+  // primera ronda, así que durante dos semanas tenía CERO participantes. Con la regla
+  // vieja —ni una fila en las tres pestañas, luego el enlace no vale— la pantalla le
+  // habría dicho al club "ese enlace no lleva a un torneo con datos; comprueba que esté
+  // como público" durante todo el periodo de inscripción. El enlace era perfecto.
+  //
+  // LO QUE DISTINGUE UN TORNEO DE UN ENLACE ROTO ES SU NOMBRE: la cabecera `<h1>` está
+  // en la página desde que se crea, con cero inscritos y cero rondas. Si hay nombre, hay
+  // torneo; lo demás ya llegará.
+  if (
+    !cabecera.nombre &&
+    clasificacion.length === 0 &&
+    emparejamientos.length === 0 &&
+    inscritos.length === 0
+  ) {
     return { ...VACIO, error: "vacio" };
   }
 

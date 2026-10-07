@@ -123,8 +123,14 @@ export async function TorneoChessPairings({ urlPublica }: { urlPublica: string |
         </div>
         {lectura.clasificacion.length === 0 ? (
           <Tarjeta compacta>
+            {/* SE DISTINGUE "AÚN NO HA EMPEZADO" DE "AÚN NO SE HA INSCRITO NADIE": en el
+                periodo de inscripción —dos semanas en el social de lentas— decir "la
+                habrá en cuanto se juegue la primera ronda" deja al club sin saber si
+                alguien se ha apuntado ya, que es justo lo que quiere mirar entonces. */}
             <p className="text-sm text-tinta-suave">
-              Todavía no hay clasificación: la habrá en cuanto se juegue la primera ronda.
+              {lectura.inscritos.length === 0
+                ? "Todavía no hay nadie inscrito allí. Aparecerán aquí según se vayan apuntando."
+                : `${lectura.inscritos.length} inscritos. La clasificación saldrá al jugarse la primera ronda.`}
             </p>
           </Tarjeta>
         ) : (

@@ -12,7 +12,7 @@ import {
 import { estadoParaEmparejar, rondaCompleta } from "@/lib/club/clasificacion";
 import { difundirTorneo } from "@/lib/vivo/difundir";
 import { leerTorneo } from "./datos";
-import { idDesdeEnlace } from "@/lib/import/chesspairings";
+import { idDesdeEnlace, resolverEnlacePublico } from "@/lib/import/chesspairings";
 
 type Resultado = {
   error?: string;
@@ -461,17 +461,22 @@ export async function ponerUrlPublica(
   // Pasó el 2026-08-26: se pegó `my.chesspairings.org/torneo.php?id=5759`, sin el
   // `/pubblico/` que lleva el enlace de verdad. Funcionó de casualidad —el id estaba— y
   // el botón de salida habría llevado a una página inexistente si su API hubiera fallado.
-  if (limpia && idDesdeEnlace(limpia) === null) {
+  // EL ATAJO SE RESUELVE ANTES DE JUZGARLO: el enlace que reparte su botón de compartir
+  // (`t.php?c=...`) no lleva id, pero redirige al que sí. Rechazarlo sin seguirlo era
+  // mandar al organizador a buscar "la buena" cuando ya tenía la buena.
+  const resuelta = limpia ? await resolverEnlacePublico(limpia) : "";
+
+  if (resuelta && idDesdeEnlace(resuelta) === null) {
     return {
       error:
-        "Ese enlace no lleva el id del torneo. Copia la dirección de su página pública, la que tiene «?id=».",
+        "Ese enlace no lleva a un torneo de ChessPairings. Copia el que da su botón de compartir, o la dirección de su página pública.",
     };
   }
 
   const supabase = await createServerSupabase();
   const { error } = await supabase
     .from("club_tournaments")
-    .update({ url_publica: limpia || null })
+    .update({ url_publica: resuelta || null })
     .eq("id", tournamentId);
   if (error) return { error: error.message };
 
