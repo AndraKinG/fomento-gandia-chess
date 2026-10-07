@@ -21,7 +21,7 @@ export default async function InternoPage() {
 
   const { data: torneos } = await supabase
     .from("club_tournaments")
-    .select("id, nombre, sistema, estado, rondas_totales, fecha_inicio")
+    .select("id, nombre, sistema, estado, rondas_totales, fecha_inicio, organizado_en")
     .order("created_at", { ascending: false });
 
   const ids = (torneos ?? []).map((t) => t.id);
@@ -106,8 +106,12 @@ export default async function InternoPage() {
                   <p className="text-sm text-tinta-suave">
                     {t.sistema === "liguilla" ? "Liguilla" : "Suizo"}
                     {t.rondas_totales ? ` · ${t.rondas_totales} rondas` : ""}
-                    {" · "}
-                    {cuantos.get(t.id) ?? 0} inscritos
+                    {/* EN LOS QUE SE LLEVAN FUERA NO SE CUENTAN INSCRITOS: la lista de
+                        la app no se usa ahí —la buena está en ChessPairings—, así que
+                        "0 inscritos" era un dato falso sobre un torneo con gente. */}
+                    {t.organizado_en === "chesspairings"
+                      ? " · En ChessPairings"
+                      : ` · ${cuantos.get(t.id) ?? 0} inscritos`}
                   </p>
                   {/* El pie existe siempre, aunque no haya fecha: es lo que iguala las
                       alturas entre filas. */}

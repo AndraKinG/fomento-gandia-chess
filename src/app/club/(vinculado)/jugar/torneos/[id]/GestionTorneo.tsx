@@ -198,14 +198,17 @@ export function GestionTorneo({
       {/* TORNEO ORGANIZADO FUERA: se dice lo primero y con el enlace delante, porque
           explica por qué esta pantalla no tiene los botones de siempre. Sin esta tarjeta,
           la junta entraría buscando "generar ronda" y pensaría que algo se ha roto. */}
+      {/* NO PROMETE INSCRIPCIONES: antes acababa en "aquí se apuntan los socios y les
+          llegan los avisos", y desde que la inscripción de la app se esconde en estos
+          torneos esa frase chocaba con las notas del propio torneo, que decían lo
+          contrario. Quien organiza fuera decide dónde se apunta la gente. */}
       {organizadoEn === "chesspairings" && (
         <Tarjeta destacada>
           <p className="text-sm font-semibold text-tinta">Torneo presencial</p>
           <p className="mt-1 text-sm text-tinta-suave">
             Los emparejamientos, los resultados y la clasificación se llevan en
             ChessPairings, que empareja con el motor oficial de la FIDE, y se ven aquí
-            abajo con los motes del club. Aquí se apuntan los socios y les llegan los
-            avisos.
+            abajo con los motes del club.
           </p>
           {urlPublica ? (
             <p className="mt-2 text-sm">
@@ -236,7 +239,18 @@ export function GestionTorneo({
       {error && <Banner tipo="error">{error}</Banner>}
       {aviso && <Banner tipo="aviso">{aviso}</Banner>}
 
-      {/* ---- Inscritos ---- */}
+      {/* ---- Inscritos ----
+
+           NO SE ENSEÑA EN LOS TORNEOS DE CHESSPAIRINGS (decisión del propietario,
+           2026-10-07). Allí la lista de participantes es la suya, y las bases del social
+           de lentas dicen que se apunta uno por WhatsApp. Con esta sección puesta, la
+           pantalla enseñaba "Inscritos (0) — todavía no hay nadie inscrito" justo al
+           lado del bloque que lista a los participantes de verdad: dos listas de lo
+           mismo que se contradicen, y la vacía arriba.
+
+           Las inscripciones de la app siguen enteras para los torneos organizados AQUÍ;
+           esto solo las esconde donde no mandan. */}
+      {organizadoEn === "app" && (
       <section className="space-y-2">
         <div className="flex items-center justify-between gap-2 px-1">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-tinta-suave">
@@ -314,6 +328,7 @@ export function GestionTorneo({
           </Tarjeta>
         )}
       </section>
+      )}
 
       {/* ---- Rondas ----
           UNA RONDA A LA VISTA, en una caja de filas como el calendario de Interclubs.

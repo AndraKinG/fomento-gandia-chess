@@ -210,7 +210,7 @@ export default async function Home() {
     // columna `estado` solo lo cumpliría por casualidad alfabética.
     supabase
       .from("club_tournaments")
-      .select("id, nombre, sistema, estado, rondas_totales, fecha_inicio")
+      .select("id, nombre, sistema, estado, rondas_totales, fecha_inicio, organizado_en")
       .in("estado", ["en_curso", "inscripcion"])
       .order("created_at", { ascending: false })
       .limit(3),
@@ -588,7 +588,11 @@ export default async function Home() {
                           }`
                         : ""}
                     </p>
-                    {playerId && (
+                    {/* EN LOS DE FUERA NO SE DICE SI JUEGAS O NO: quien se apunta lo
+                        hace en ChessPairings, y nuestra lista de inscritos está vacía a
+                        propósito. "No juegas este" le saldría a todo el mundo, incluidos
+                        los que están jugando. */}
+                    {playerId && internoVivo.organizado_en !== "chesspairings" && (
                       <p className="mt-2 text-sm font-medium text-acento-texto">
                         {estoyInscrito
                           ? "✅ Estás dentro"
