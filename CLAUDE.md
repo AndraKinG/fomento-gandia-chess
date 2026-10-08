@@ -110,6 +110,7 @@ lo que aquí resumo, manda `decisiones.md`.
 
 En [ESTADO.md](ESTADO.md).
 
-## Auditoría 2026-08-26
+## Auditorías
 
-En [docs/auditorias/2026-08-26.md](docs/auditorias/2026-08-26.md).
+- [2026-08-26](docs/auditorias/2026-08-26.md): bajas visibles, 404, Next.
+- [2026-10-08](docs/auditorias/2026-10-08.md): región de Vercel (−52 a −75 % en todas las pantallas), SSRF, cabeceras, cierre de sesión global.
