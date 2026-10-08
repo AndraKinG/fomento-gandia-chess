@@ -51,9 +51,22 @@ export async function registro(formData: FormData): Promise<{ error?: string }> 
   redirect("/club/vincular");
 }
 
+/**
+ * Cerrar sesión EN ESTE DISPOSITIVO, y solo en este.
+ *
+ * `signOut()` sin parámetros NO hace eso, y no se ve venir: la propia librería avisa de
+ * que su valor por defecto es `scope: 'global'`, que cierra la sesión del socio en TODOS
+ * sus dispositivos a la vez. Encontrado en la auditoría del 2026-10-08, al ir a probar el
+ * botón: pulsarlo en una sesión de prueba habría echado al propietario de su móvil.
+ *
+ * Y AQUÍ ES PEOR QUE EN OTRAS APPS: la recuperación de contraseña está apagada (ver
+ * `src/lib/acceso/recuperacion.ts`). Un socio que cierra sesión en un ordenador prestado
+ * se quedaba también fuera del móvil, y si no recordaba la contraseña no podía volver a
+ * entrar sin que la junta le mandara un enlace.
+ */
 export async function logout() {
   const supabase = await createServerSupabase();
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: "local" });
   redirect("/login");
 }
 
