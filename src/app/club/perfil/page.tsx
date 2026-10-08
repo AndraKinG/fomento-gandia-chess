@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { usuarioDeSesion } from "@/lib/auth/usuario";
 import { sesionActual } from "@/lib/auth/sesion";
 import { ActivarNotificaciones } from "@/components/PushSubscriber";
 import { InstalarApp } from "@/components/InstalarApp";
@@ -29,7 +30,7 @@ import type { GrupoAviso } from "@/lib/avisos/politica";
 export default async function PerfilPage() {
   const supabase = await createServerSupabase();
   const sesion = await sesionActual();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await usuarioDeSesion(supabase);
   const { data: profile } = await supabase
     .from("profiles")
     .select(

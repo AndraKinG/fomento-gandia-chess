@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sesionActual } from "@/lib/auth/sesion";
+import { sesionVerificada } from "@/lib/auth/sesion";
 import { nombreDePila } from "@/lib/auth/nombre";
 import { instrucciones } from "@/lib/asistente/instrucciones";
 import { declaracionesPara, ejecutar } from "@/lib/asistente/herramientas";
@@ -35,7 +35,7 @@ import { freno } from "@/lib/asistente/limite";
  * sin enseñar el secreto.
  */
 export async function GET() {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.esAdmin) {
     return NextResponse.json({ error: "No autorizado." }, { status: 403 });
   }
@@ -53,7 +53,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion) {
     return NextResponse.json({ error: "Hace falta iniciar sesión." }, { status: 401 });
   }

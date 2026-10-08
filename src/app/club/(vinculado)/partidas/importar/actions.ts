@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { sesionActual } from "@/lib/auth/sesion";
+import { sesionVerificada } from "@/lib/auth/sesion";
 import { aPgnExportable } from "@/lib/partidas/pgn";
 
 export type FilaImportar = {
@@ -35,7 +35,7 @@ export async function importarPartidas(
    */
   privadas = false
 ): Promise<{ guardadas: number; error?: string }> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { guardadas: 0, error: "No tienes una ficha vinculada" };
   if (filas.length === 0) return { guardadas: 0, error: "No has elegido ninguna partida." };
   // Tope por tanda: un historial de Lichess puede traer miles de partidas y una
@@ -76,7 +76,7 @@ export async function importarPartidas(
  * bien las partidas que se metieron a mano en el tablero y no traían ninguna.
  */
 export async function exportarMisPartidas(): Promise<{ pgn?: string; error?: string }> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { error: "No tienes una ficha vinculada" };
 
   const supabase = await createServerSupabase();

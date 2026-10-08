@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { usuarioDeSesion } from "@/lib/auth/usuario";
 import { registro } from "../actions";
 import { Banner } from "@/components/ui/Banner";
 import { Boton } from "@/components/ui/Boton";
@@ -18,9 +19,7 @@ export default async function RegistroPage({
   // aquí, y a quien ya está logueado volver a verle el formulario le dice que
   // la app le ha olvidado — no le había olvidado, solo no miraba.
   const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioDeSesion(supabase);
   if (user) redirect("/club");
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-fondo p-6">

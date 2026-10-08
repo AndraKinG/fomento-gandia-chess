@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { esAdmin } from "@/lib/auth/es-admin";
 import { sesionActual } from "@/lib/auth/sesion";
 import { esCapitanDeMatch } from "@/lib/auth/es-capitan";
 import { formatearFechaMadrid } from "@/lib/fecha-madrid";
@@ -184,7 +183,7 @@ export default async function JornadaPage({
         .eq("match_id", matchId)
         .order("tablero"),
       esCapitanDeMatch(matchId),
-      esAdmin(),
+      sesionActual().then((s) => s?.esAdmin ?? false),
       sesionActual(),
     ]);
   const puedeGestionar = tieneCapitania || admin;

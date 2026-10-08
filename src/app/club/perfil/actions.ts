@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sesionActual } from "@/lib/auth/sesion";
+import { sesionVerificada } from "@/lib/auth/sesion";
 import { esTemaValido } from "@/lib/ajedrez/temas";
 import { esJuegoValido } from "@/lib/ajedrez/piezas";
 import { SITIOS } from "@/lib/asistente/boton";
@@ -110,7 +110,7 @@ export async function elegirTablero(clave: string): Promise<{ error?: string }> 
  * la de la sesión: nadie puede ponerle aperturas a otro.
  */
 export async function guardarAperturas(texto: string): Promise<{ error?: string }> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { error: "Necesitas tener ficha del club." };
 
   // Tope corto y sin saltos de línea: es una línea de la ficha ("Italiana,
@@ -149,7 +149,7 @@ const TIPOS_FOTO = new Set(["image/jpeg", "image/png", "image/webp"]);
  * caducan, así que guardar una URL sería guardar algo que deja de funcionar.
  */
 export async function subirFoto(datos: FormData): Promise<{ error?: string }> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { error: "Necesitas tener ficha del club." };
 
   const foto = datos.get("foto");
@@ -179,7 +179,7 @@ export async function subirFoto(datos: FormData): Promise<{ error?: string }> {
 
 /** Quita la foto de la ficha del socio de la sesión. */
 export async function quitarFoto(): Promise<{ error?: string }> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { error: "Necesitas tener ficha del club." };
 
   const admin = createAdminClient();
@@ -224,7 +224,7 @@ export async function elegirPiezas(clave: string): Promise<{ error?: string }> {
  * en vez de un mensaje entendible.
  */
 export async function elegirAsistente(clave: string): Promise<{ error?: string }> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion) return { error: "No autenticado" };
   if (!SITIOS.some((s) => s.clave === clave)) return { error: "Esa opción no existe." };
 
@@ -256,7 +256,7 @@ export async function elegirAsistente(clave: string): Promise<{ error?: string }
  * solo serviría para que parpadeara la pantalla al soltar.
  */
 export async function moverAsistente(x: number, y: number): Promise<{ error?: string }> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion) return { error: "No autenticado" };
   const valido = (v: number) => Number.isFinite(v) && v >= 0 && v <= 1;
   if (!valido(x) || !valido(y)) return { error: "Posición fuera de la pantalla." };
@@ -286,7 +286,7 @@ export async function moverAsistente(x: number, y: number): Promise<{ error?: st
  * junta aprueba el segundo. Quien pide primero, reserva.
  */
 export async function solicitarMote(mote: string): Promise<{ error?: string; ok?: string }> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { error: "Necesitas tener ficha del club." };
 
   const revisado = validarMote(mote);

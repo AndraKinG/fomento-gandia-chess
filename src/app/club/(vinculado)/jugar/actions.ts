@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sesionActual } from "@/lib/auth/sesion";
+import { sesionVerificada } from "@/lib/auth/sesion";
 import {
   aplicarJugada,
   finPorAbandono,
@@ -302,7 +302,7 @@ export async function retar(datos: {
   incrementoS: number;
   color: string;
 }): Promise<Respuesta> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { error: "Necesitas tener ficha del club." };
   if (datos.aQuien === sesion.playerId) return { error: "No puedes retarte a ti mismo." };
 
@@ -373,7 +373,7 @@ export async function retar(datos: {
  * sortea la primera vez que se ven esos dos y a partir de ahí se alterna.
  */
 export async function aceptarReto(retoId: string): Promise<Respuesta> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { error: "Necesitas tener ficha del club." };
 
   const db = createAdminClient();
@@ -472,7 +472,7 @@ export async function aceptarReto(retoId: string): Promise<Respuesta> {
 }
 
 export async function rechazarReto(retoId: string): Promise<Respuesta> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { error: "No autorizado" };
 
   const db = createAdminClient();
@@ -505,7 +505,7 @@ export async function rechazarReto(retoId: string): Promise<Respuesta> {
 
 /** Mueve. Es la acción que más veces se llama y la que más cosas comprueba. */
 export async function mover(partidaId: string, jugada: Jugada): Promise<Respuesta> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { error: "No autorizado" };
 
   const mia = await miPartida(partidaId, sesion.playerId);
@@ -539,7 +539,7 @@ export async function mover(partidaId: string, jugada: Jugada): Promise<Respuest
 
 /** Abandona. Gana el rival, y se apunta por qué. */
 export async function abandonar(partidaId: string): Promise<Respuesta> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { error: "No autorizado" };
 
   const mia = await miPartida(partidaId, sesion.playerId);
@@ -572,7 +572,7 @@ export async function abandonar(partidaId: string): Promise<Respuesta> {
  * tener forma de deshacerlo. Y cualquier jugada las mata también (ver `aFila`).
  */
 export async function ofrecerTablas(partidaId: string): Promise<Respuesta> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { error: "No autorizado" };
 
   const mia = await miPartida(partidaId, sesion.playerId);
@@ -609,7 +609,7 @@ export async function ofrecerTablas(partidaId: string): Promise<Respuesta> {
  * él solo con dos clics.
  */
 export async function aceptarTablas(partidaId: string): Promise<Respuesta> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { error: "No autorizado" };
 
   const mia = await miPartida(partidaId, sesion.playerId);
@@ -648,7 +648,7 @@ export async function aceptarTablas(partidaId: string): Promise<Respuesta> {
  * No deshace nada por sí sola: deja la petición puesta y decide el otro.
  */
 export async function pedirVolverJugada(partidaId: string): Promise<Respuesta> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { error: "No autorizado" };
 
   const mia = await miPartida(partidaId, sesion.playerId);
@@ -684,7 +684,7 @@ export async function responderVolverJugada(
   partidaId: string,
   acepta: boolean
 ): Promise<Respuesta> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { error: "No autorizado" };
 
   const mia = await miPartida(partidaId, sesion.playerId);
@@ -736,7 +736,7 @@ export async function responderVolverJugada(
  * propietario probando.
  */
 export async function rechazarTablas(partidaId: string): Promise<Respuesta> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { error: "No autorizado" };
 
   const mia = await miPartida(partidaId, sesion.playerId);
@@ -765,7 +765,7 @@ export async function rechazarTablas(partidaId: string): Promise<Respuesta> {
  * aquí se mira el reloj de verdad.
  */
 export async function reclamarPorTiempo(partidaId: string): Promise<Respuesta> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { error: "No autorizado" };
 
   const mia = await miPartida(partidaId, sesion.playerId);
@@ -791,7 +791,7 @@ export async function reclamarPorTiempo(partidaId: string): Promise<Respuesta> {
  * dos mesas de la misma ronda se jugarían a ritmos distintos, y eso no es un torneo.
  */
 export async function jugarEmparejamiento(pairingId: string): Promise<Respuesta> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { error: "No autorizado" };
 
   const db = createAdminClient();

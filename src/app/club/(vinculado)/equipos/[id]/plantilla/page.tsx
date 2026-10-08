@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { esAdmin } from "@/lib/auth/es-admin";
+import { sesionActual } from "@/lib/auth/sesion";
 import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
@@ -19,7 +19,7 @@ export default async function PlantillaPage({
 
   const [{ data: esCapitan }, admin] = await Promise.all([
     supabase.rpc("es_capitan_de", { equipo: id }),
-    esAdmin(),
+    sesionActual().then((s) => s?.esAdmin ?? false),
   ]);
   if (!esCapitan && !admin) redirect("/club/equipos");
 

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { usuarioDeSesion } from "@/lib/auth/usuario";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
@@ -18,9 +19,7 @@ export default async function VincularPage({
   const { error, avisado } = await searchParams;
 
   const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioDeSesion(supabase);
   if (!user) redirect("/login");
 
   // Toda la lectura de esta pantalla va con el cliente de servicio, y es una

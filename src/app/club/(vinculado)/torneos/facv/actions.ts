@@ -5,7 +5,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { avisar } from "@/lib/avisos/enviar";
 import { esJunta } from "@/lib/auth/es-admin";
-import { sesionActual } from "@/lib/auth/sesion";
+import { sesionVerificada } from "@/lib/auth/sesion";
 import { formatearRangoFechas } from "@/lib/torneos/fechas";
 import {
   efectosDeApuntarse,
@@ -450,7 +450,7 @@ export async function crearTorneoManual(datos: {
 
   // Quién lo crea se guarda para que pueda deshacerlo él mismo (`borrarTorneoManual`).
   // La sesión hace falta aquí y no solo el `esJunta()` de arriba, que no dice quién es.
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
 
   const admin = createAdminClient();
   const { error } = await admin.from("tournaments").insert({
@@ -492,7 +492,7 @@ export async function crearTorneoManual(datos: {
  * tenga que ver antes cuánta gente hay apuntada, que es trabajo de la pantalla.
  */
 export async function borrarTorneoManual(tournamentId: string): Promise<Resultado> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.esJunta) return { error: "No autorizado" };
 
   const admin = createAdminClient();

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { sesionActual } from "@/lib/auth/sesion";
+import { sesionVerificada } from "@/lib/auth/sesion";
 import { validarPartida, type DatosPartida } from "@/lib/partidas/validar";
 
 type Resultado = { error?: string; id?: string };
@@ -28,7 +28,7 @@ export async function guardarPartida(
     privada?: boolean;
   }
 ): Promise<Resultado> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { error: "No tienes una ficha vinculada" };
 
   const validacion = validarPartida(datos);
@@ -88,7 +88,7 @@ export async function editarPartida(
   id: string,
   datos: DatosPartida & { tournamentId?: string; rivalId?: string; privada?: boolean }
 ): Promise<Resultado> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { error: "No tienes una ficha vinculada" };
 
   const validacion = validarPartida(datos);
@@ -140,7 +140,7 @@ export async function cambiarFavorita(
   gameId: string,
   favorita: boolean
 ): Promise<Resultado> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion) return { error: "No autorizado" };
 
   const supabase = await createServerSupabase();
@@ -164,7 +164,7 @@ export async function cambiarFavorita(
 
 /** Borra una partida propia. */
 export async function borrarPartida(id: string): Promise<Resultado> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.playerId) return { error: "No tienes una ficha vinculada" };
 
   const supabase = await createServerSupabase();

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { usuarioDeSesion } from "@/lib/auth/usuario";
 import { pedirRecuperacion } from "../actions";
 import { Banner } from "@/components/ui/Banner";
 import { Boton } from "@/components/ui/Boton";
@@ -31,9 +32,7 @@ export default async function RecuperarPage({
 
   // Con sesión abierta esto no pinta nada: la contraseña se cambia desde dentro.
   const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioDeSesion(supabase);
   if (user) redirect("/club");
 
   return (

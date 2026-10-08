@@ -1,15 +1,19 @@
-import { sesionActual } from "@/lib/auth/sesion";
+import { sesionVerificada } from "@/lib/auth/sesion";
 
 /**
  * true si el usuario autenticado en la sesión actual es admin.
  *
- * Delega en `sesionActual()`, que es el punto único donde se decide el rango:
+ * PARA ACCIONES QUE ESCRIBEN: usa `sesionVerificada()`, que pregunta a Supabase si la
+ * sesión sigue viva (ver `src/lib/auth/usuario.ts`). En una PANTALLA, mejor leer
+ * `(await sesionActual())?.esAdmin`, que no hace ese viaje.
+ *
+ * Delega en la sesión de `sesion.ts`, que es el punto único donde se decide el rango:
  * antes esto leía `profiles.is_admin` por su cuenta y no sabía nada del rol
  * `admin` de `member_roles`, así que un admin nombrado por rol pasaba la RLS de
  * Postgres pero era rechazado por todas las acciones de administración.
  */
 export async function esAdmin(): Promise<boolean> {
-  return (await sesionActual())?.esAdmin ?? false;
+  return (await sesionVerificada())?.esAdmin ?? false;
 }
 
 /**
@@ -19,5 +23,5 @@ export async function esAdmin(): Promise<boolean> {
  * que es lo primero que da sentido al rango `junta`.
  */
 export async function esJunta(): Promise<boolean> {
-  return (await sesionActual())?.esJunta ?? false;
+  return (await sesionVerificada())?.esJunta ?? false;
 }

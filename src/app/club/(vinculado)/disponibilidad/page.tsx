@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { usuarioDeSesion } from "@/lib/auth/usuario";
 import { fechaMadrid } from "@/lib/fecha-madrid";
 import { Cabecera } from "@/components/ui/Cabecera";
 import { Tarjeta } from "@/components/ui/Tarjeta";
@@ -21,7 +22,7 @@ function formatearFechaGrupo(fecha: string): string {
 
 export default async function DisponibilidadPage() {
   const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await usuarioDeSesion(supabase);
   const { data: profile } = await supabase
     .from("profiles").select("player_id").eq("id", user!.id).single();
 

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sesionActual } from "@/lib/auth/sesion";
+import { sesionVerificada } from "@/lib/auth/sesion";
 
 type Resultado = { error?: string };
 
@@ -23,7 +23,7 @@ export async function resolverSolicitud(
   estado: "aceptada" | "rechazada",
   notas?: string
 ): Promise<Resultado> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.esJunta) return { error: "No autorizado" };
 
   const admin = createAdminClient();

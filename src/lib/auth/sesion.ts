@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { nombreDeFila } from "@/lib/club/nombre-socio";
+import { usuarioDeSesion, usuarioVerificado } from "@/lib/auth/usuario";
 
 export { nombreDePila } from "@/lib/auth/nombre";
 
@@ -50,11 +51,21 @@ export type Sesion = {
  * de socios y varias acciones dentro de una misma petición; `cache()` deduplica
  * dentro de la petición, no entre peticiones.
  */
-export const sesionActual = cache(async (): Promise<Sesion | null> => {
+/**
+ * DOS VERSIONES, según para qué (ver `src/lib/auth/usuario.ts`, 2026-10-08):
+ * - `sesionActual()` → para LEER (pantallas y layouts). Comprueba la firma del token sin
+ *   preguntar a Supabase.
+ * - `sesionVerificada()` → para ESCRIBIR (acciones y rutas que cambian algo). Pregunta a
+ *   Supabase si la sesión sigue viva. `esAdmin()` y `esJunta()` usan esta.
+ * Las dos dan el mismo resultado salvo con una sesión ya cerrada cuyo token aún no ha
+ * caducado: la primera la da por buena hasta que caduca (como mucho una hora).
+ */
+export const sesionActual = cache((): Promise<Sesion | null> => cargarSesion(false));
+export const sesionVerificada = cache((): Promise<Sesion | null> => cargarSesion(true));
+
+async function cargarSesion(verificar: boolean): Promise<Sesion | null> {
   const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = verificar ? await usuarioVerificado(supabase) : await usuarioDeSesion(supabase);
   if (!user) return null;
 
   const [{ data: profile }, { data: filasRol }] = await Promise.all([
@@ -74,7 +85,7 @@ export const sesionActual = cache(async (): Promise<Sesion | null> => {
 
   return {
     userId: user.id,
-    email: user.email ?? "",
+    email: user.email,
     esJugador: profile?.player_id != null,
     esAdmin,
     // Por acumulación: el admin puede todo lo que puede la junta.
@@ -89,4 +100,4 @@ export const sesionActual = cache(async (): Promise<Sesion | null> => {
       (profile?.players as unknown as { de_prueba?: boolean } | null)?.de_prueba
     ),
   };
-});
+}

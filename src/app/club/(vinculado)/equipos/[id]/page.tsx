@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { esAdmin } from "@/lib/auth/es-admin";
+import { sesionActual } from "@/lib/auth/sesion";
 import { formatearFechaMadrid } from "@/lib/fecha-madrid";
 import { calcularMarcador, formatearPunto, marcadorPreferido } from "@/lib/marcador";
 import { Cabecera } from "@/components/ui/Cabecera";
@@ -70,7 +70,7 @@ export default async function EquipoDetallePage({
 
   const [{ data: esCapitan }, admin, { data: jornadas }, { data: standings }] = await Promise.all([
     supabase.rpc("es_capitan_de", { equipo: id }),
-    esAdmin(),
+    sesionActual().then((s) => s?.esAdmin ?? false),
     supabase
       .from("matches")
       .select("id, ronda, fecha_hora, rival, es_local, sede, estado, marcador_propio, marcador_rival")

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { usuarioDeSesion } from "@/lib/auth/usuario";
 import { cambiarContrasena } from "../actions";
 import { Banner } from "@/components/ui/Banner";
 import { Boton } from "@/components/ui/Boton";
@@ -29,9 +30,7 @@ export default async function NuevaContrasenaPage({
   const { error } = await searchParams;
 
   const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioDeSesion(supabase);
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-fondo p-6">

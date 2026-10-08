@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sesionActual } from "@/lib/auth/sesion";
+import { sesionVerificada } from "@/lib/auth/sesion";
 import type { Rol } from "@/lib/auth/sesion";
 
 type Resultado = { error?: string };
@@ -21,7 +21,7 @@ export async function cambiarRol(
   rol: Rol,
   conceder: boolean
 ): Promise<Resultado> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.esAdmin) return { error: "No autorizado" };
   if (!ROLES.includes(rol)) return { error: "Rango no válido" };
 

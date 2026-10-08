@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { nuevoNonce, politicaCompleta } from "@/lib/seguridad/csp";
+import { usuarioDeSesion } from "@/lib/auth/usuario";
 
 /**
  * Prefijo de la zona de socios. Todo lo que empiece por aquí exige sesión;
@@ -56,12 +57,16 @@ export async function proxy(request: NextRequest) {
   );
 
   // Se llama en todas las rutas, no solo en /club: además de comprobar la
-  // sesión, `getUser()` es lo que refresca las cookies de Supabase cuando el
-  // token está a punto de caducar. Si solo corriera en la zona de socios, a un
-  // socio que se quedara leyendo la web pública se le caducaría la sesión.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // sesión, es lo que refresca las cookies de Supabase cuando el token está a
+  // punto de caducar. Si solo corriera en la zona de socios, a un socio que se
+  // quedara leyendo la web pública se le caducaría la sesión.
+  //
+  // CON `getClaims()` Y NO `getUser()` (2026-10-08): comprueba la firma del token
+  // aquí mismo, sin el viaje a Supabase que hacía `getUser()` en CADA petición.
+  // Renovar sigue igual: `getClaims()` pasa por `getSession()`, que es quien
+  // refresca el token caducado y llama a `setAll` de arriba con las cookies
+  // nuevas. Por qué basta para dejar pasar o no: `src/lib/auth/usuario.ts`.
+  const user = await usuarioDeSesion(supabase);
 
   if (!user && request.nextUrl.pathname.startsWith(ZONA_SOCIOS)) {
     const url = request.nextUrl.clone();

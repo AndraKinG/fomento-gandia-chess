@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { sesionActual } from "@/lib/auth/sesion";
+import { sesionVerificada } from "@/lib/auth/sesion";
 import { ELO_POR_DEFECTO } from "@/lib/club/elo";
 import {
   calendarioLiguilla,
@@ -43,7 +43,7 @@ export async function crearTorneoInterno(datos: {
   /** La página pública del torneo en ChessPairings, si se organiza allí. */
   urlPublica?: string;
 }): Promise<Resultado> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.esJunta) return { error: "No autorizado" };
 
   const nombre = datos.nombre.trim();
@@ -114,7 +114,7 @@ export async function cambiarInscripcion(
   playerId: string,
   inscribir: boolean
 ): Promise<Resultado> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.esJunta) return { error: "No autorizado" };
 
   const supabase = await createServerSupabase();
@@ -165,7 +165,7 @@ export async function cambiarInscripcion(
  * con datos a medias daría un cruce que habría que deshacer.
  */
 export async function generarRonda(tournamentId: string): Promise<Resultado> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.esJunta) return { error: "No autorizado" };
 
   const supabase = await createServerSupabase();
@@ -274,7 +274,7 @@ export async function ponerHoraDeRonda(
   roundId: string,
   fechaHoraISO: string | null
 ): Promise<Resultado> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.esJunta) return { error: "No autorizado" };
 
   // Lo que llega del cliente no es de fiar: una fecha basura se guardaría como null
@@ -307,7 +307,7 @@ export async function anotarResultado(
   pairingId: string,
   resultado: "1" | "0.5" | "0" | null
 ): Promise<Resultado> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.esJunta) return { error: "No autorizado" };
 
   const supabase = await createServerSupabase();
@@ -323,7 +323,7 @@ export async function anotarResultado(
 
 /** Borra la última ronda, para deshacer un emparejamiento que no valía. */
 export async function borrarUltimaRonda(tournamentId: string): Promise<Resultado> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.esJunta) return { error: "No autorizado" };
 
   const supabase = await createServerSupabase();
@@ -372,7 +372,7 @@ export async function borrarUltimaRonda(tournamentId: string): Promise<Resultado
  * Rondas y emparejamientos caen en cascada con el torneo (0015).
  */
 export async function borrarTorneoInterno(tournamentId: string): Promise<Resultado> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.esJunta) return { error: "No autorizado" };
 
   const supabase = await createServerSupabase();
@@ -454,7 +454,7 @@ export async function ponerUrlPublica(
   tournamentId: string,
   url: string
 ): Promise<Resultado> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.esJunta) return { error: "No autorizado" };
 
   const limpia = url.trim();
@@ -503,7 +503,7 @@ export async function cambiarEstadoTorneo(
   tournamentId: string,
   estado: "en_curso" | "terminado"
 ): Promise<Resultado> {
-  const sesion = await sesionActual();
+  const sesion = await sesionVerificada();
   if (!sesion?.esJunta) return { error: "No autorizado" };
 
   const supabase = await createServerSupabase();

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { esAdmin } from "@/lib/auth/es-admin";
+import { sesionActual } from "@/lib/auth/sesion";
 import { esCapitanDeMatch } from "@/lib/auth/es-capitan";
 import { cargarContextoValidacion, type ContextoValidacion } from "@/lib/convocatorias/contexto-bd";
 import { formatearFechaMadrid } from "@/lib/fecha-madrid";
@@ -23,7 +23,7 @@ export default async function ConvocatoriaPage({
 }: { params: Promise<{ id: string; matchId: string }> }) {
   const { id, matchId } = await params;
 
-  const [tieneCapitania, admin] = await Promise.all([esCapitanDeMatch(matchId), esAdmin()]);
+  const [tieneCapitania, admin] = await Promise.all([esCapitanDeMatch(matchId), sesionActual().then((s) => s?.esAdmin ?? false)]);
   if (!tieneCapitania && !admin) redirect(`/club/equipos/${id}`);
 
   let contexto: ContextoValidacion | null = null;
