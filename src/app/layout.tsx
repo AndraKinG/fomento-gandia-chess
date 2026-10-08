@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { URL_APP } from "@/lib/compartir/mensaje";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,6 +29,43 @@ export const metadata: Metadata = {
   // indexarse cuando tenga contenido de verdad: entonces se sobrescribe este
   // `robots` en el metadata de la propia página pública.
   robots: { index: false, follow: false },
+
+  /**
+   * LA TARJETA DE VISTA PREVIA de cualquier enlace del club (WhatsApp, Telegram...).
+   *
+   * No existía (auditoría del 2026-10-08): un enlace compartido salía sin imagen, que es
+   * justo lo contrario de para qué se montó el botón de compartir.
+   *
+   * VA AQUÍ, EN EL LAYOUT RAÍZ, y en ninguna página. Next mezcla los metadatos POR
+   * ENCIMA: si una página define su propio `openGraph`, pierde ENTERO el de aquí, imagen
+   * incluida — está en su documentación. Puesto solo aquí lo heredan todas.
+   *
+   * Y LA QUE MÁS SE VA A VER ES LA DEL LOGIN, no la de la portada: los enlaces que
+   * comparte la app van a `/club/...`, que pide sesión, y el robot de WhatsApp no tiene
+   * sesión — así que le redirigen al login y lee lo que haya allí. Por eso la tarjeta
+   * habla del club en general y no de ninguna pantalla concreta.
+   *
+   * `metadataBase` hace falta para que `/og.jpg` salga como dirección completa: los
+   * robots no saben resolver una ruta relativa.
+   */
+  metadataBase: new URL(URL_APP),
+  openGraph: {
+    type: "website",
+    locale: "es_ES",
+    siteName: "Club de Ajedrez Fomento de Gandia",
+    title: "Club de Ajedrez Fomento de Gandia",
+    description:
+      "Interclubs, torneos, quién va a cada uno y con quién ir. La app del club de ajedrez de Gandia.",
+    images: [
+      {
+        url: "/og.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Club de Ajedrez Fomento de Gandia",
+      },
+    ],
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {
