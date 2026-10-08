@@ -26,6 +26,13 @@ export async function proxy(request: NextRequest) {
   const csp = politicaScripts(nonce, process.env.NODE_ENV === "development");
   request.headers.set("x-nonce", nonce);
   request.headers.set(CABECERA_CSP, csp);
+  // Y TAMBIÉN con el nombre de la CSP que bloquea, pero SOLO EN LA PETICIÓN: el
+  // navegador no ve las cabeceras de la petición, así que esto no bloquea nada. Hace
+  // falta porque en VERCEL (no en local) a la página no le llegaba la de solo informar:
+  // `x-nonce` sí, pero Next no encontraba la CSP y sus scripts salían sin nonce
+  // (comprobado en producción el 2026-10-08). `content-security-policy` es la PRIMERA
+  // que mira Next (`parse-request-headers.js`).
+  request.headers.set("content-security-policy", csp);
 
   let response = NextResponse.next({ request });
   const supabase = createServerClient(
