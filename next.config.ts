@@ -11,13 +11,9 @@ import type { NextConfig } from "next";
  *
  * LO QUE SE PONE ES LO QUE NO PUEDE ROMPER NADA, y cada pieza se comprobó contra el código:
  *
- * - `frame-ancestors 'none'` + `X-Frame-Options: DENY`: nadie nos mete en un iframe. La app
- *   no se carga dentro de ningún sitio a propósito. Van las dos porque la segunda es la que
- *   entienden los navegadores viejos.
- * - `form-action 'self'`: los formularios solo se mandan a nosotros. Comprobado que ninguno
- *   envía a otro dominio ni redirige fuera.
- * - `object-src 'none'` y `base-uri 'self'`: cierran dos trucos clásicos (plugins y cambiar la
- *   base de las URLs relativas) que la app no necesita para nada.
+ * - `X-Frame-Options: DENY`: nadie nos mete en un iframe. La app no se carga dentro de
+ *   ningún sitio a propósito. Su pareja moderna, la CSP `frame-ancestors 'none'` (con
+ *   `form-action`, `object-src` y `base-uri`), YA NO VA AQUÍ: ver abajo.
  * - `nosniff`: el navegador no adivina el tipo de un fichero, así que un texto subido no se
  *   puede ejecutar como script.
  * - `Referrer-Policy`: al pinchar un enlace de fuera (la FACV, ChessPairings) no se manda la
@@ -26,16 +22,13 @@ import type { NextConfig } from "next";
  *   **No** se tocan compartir, portapapeles ni notificaciones, que SÍ usa (`BotonCompartir`,
  *   copiar enlaces, avisos push): cerrarlas los rompería sin un solo error visible.
  *
- * LA CSP DE SCRIPTS (`script-src`) NO VA AQUÍ: necesita un nonce distinto en cada
- * petición, y esta lista es fija. La pone el proxy (`src/proxy.ts`), con la política en
- * `src/lib/seguridad/csp.ts`. Desde el 2026-10-08 está en modo de SOLO INFORMAR: no
- * bloquea nada todavía, solo avisa en Admin → Errores de lo que bloquearía.
+ * NINGUNA CSP VA AQUÍ (desde el 2026-10-08): la pone el proxy (`src/proxy.ts`), una sola
+ * cabecera con todo, política en `src/lib/seguridad/csp.ts`. La base (`frame-ancestors`...)
+ * estaba aquí, pero en VERCEL acababa llegando a la página como cabecera
+ * `content-security-policy` de la PETICIÓN; Next busca el nonce PRIMERO ahí, encontraba
+ * esta (sin `script-src`) y sus scripts salían sin nonce. En local no pasaba.
  */
 const CABECERAS_SEGURIDAD = [
-  {
-    key: "Content-Security-Policy",
-    value: "frame-ancestors 'none'; form-action 'self'; object-src 'none'; base-uri 'self'",
-  },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

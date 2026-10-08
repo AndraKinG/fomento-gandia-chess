@@ -31,6 +31,22 @@
 
 export const RUTA_AVISOS_CSP = "/api/csp";
 
+/**
+ * La CSP BASE (auditoría del 2026-10-08). Estaba en `next.config.ts`, bloqueando; ahora
+ * va DENTRO de la misma cabecera que la de scripts (`politicaCompleta`) porque una
+ * segunda cabecera de CSP le quitaba el nonce a los scripts de Next (ver `src/proxy.ts`).
+ * Eso significa que, mientras la CSP esté en solo informar, la base TAMPOCO bloquea —
+ * contra los iframes sigue `X-Frame-Options: DENY`—, y vuelve a bloquear junto con la de
+ * scripts al activar `CSP_BLOQUEA`.
+ *
+ * - `frame-ancestors 'none'`: nadie nos mete en un iframe (clickjacking).
+ * - `form-action 'self'`: los formularios solo se mandan a nosotros.
+ * - `object-src 'none'` y `base-uri 'self'`: plugins y cambiar la base de las URLs
+ *   relativas, que la app no usa.
+ */
+export const POLITICA_BASE =
+  "frame-ancestors 'none'; form-action 'self'; object-src 'none'; base-uri 'self'";
+
 export function politicaScripts(nonce: string, desarrollo = false): string {
   return [
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'${
@@ -122,4 +138,9 @@ function resumirBloqueado(bloqueado: string): string {
   } catch {
     return bloqueado.slice(0, 40);
   }
+}
+
+/** Lo que va en la cabecera: la base y la de scripts JUNTAS (ver `POLITICA_BASE`). */
+export function politicaCompleta(nonce: string, desarrollo = false): string {
+  return `${POLITICA_BASE}; ${politicaScripts(nonce, desarrollo)}`;
 }

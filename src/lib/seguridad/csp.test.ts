@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { leerAvisoCsp, nuevoNonce, politicaScripts } from "./csp";
+import { POLITICA_BASE, leerAvisoCsp, nuevoNonce, politicaCompleta, politicaScripts } from "./csp";
 
 const PROPIO = "https://fomento-gandia-chess-swart.vercel.app";
 
@@ -18,6 +18,15 @@ describe("politicaScripts", () => {
 
   it("nunca deja scripts en línea sin nonce", () => {
     expect(politicaScripts("x")).not.toContain("unsafe-inline");
+  });
+});
+
+describe("politicaCompleta", () => {
+  it("lleva la base y la de scripts en UNA cabecera, con el nonce", () => {
+    const p = politicaCompleta("abc123");
+    expect(p.startsWith(POLITICA_BASE + "; ")).toBe(true);
+    expect(p).toContain("frame-ancestors 'none'");
+    expect(p).toContain("'nonce-abc123'");
   });
 });
 

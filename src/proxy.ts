@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { nuevoNonce, politicaScripts } from "@/lib/seguridad/csp";
+import { nuevoNonce, politicaCompleta } from "@/lib/seguridad/csp";
 
 /**
  * Prefijo de la zona de socios. Todo lo que empiece por aquí exige sesión;
@@ -13,26 +13,29 @@ import { nuevoNonce, politicaScripts } from "@/lib/seguridad/csp";
  */
 const ZONA_SOCIOS = "/club";
 
-/** Cabecera de la CSP de scripts. Al pasar a bloquear de verdad, se cambia por
- *  `content-security-policy` (ver `src/lib/seguridad/csp.ts`). */
-const CABECERA_CSP = "content-security-policy-report-only";
+/**
+ * Qué hace la CSP: `false` = SOLO INFORMAR (no bloquea nada, avisa en Admin → Errores);
+ * `true` = BLOQUEAR. Se pasa a `true` cuando una semana de uso real no dé avisos de
+ * nuestras pantallas (ver `src/lib/seguridad/csp.ts`).
+ */
+const CSP_BLOQUEA = false;
+const CABECERA_CSP = CSP_BLOQUEA ? "content-security-policy" : "content-security-policy-report-only";
 
 export async function proxy(request: NextRequest) {
-  // CSP de scripts: un nonce nuevo por petición. Va en la cabecera de la PETICIÓN
-  // porque es de ahí de donde lo lee Next para ponerlo en sus scripts, y en `x-nonce`
-  // para el script del tema del layout. Se hace ANTES de crear la respuesta: el
-  // `NextResponse.next({ request })` de abajo reenvía estas cabeceras a la página.
+  // CSP: un nonce nuevo por petición. Va en la cabecera de la PETICIÓN porque es de ahí
+  // de donde lo lee Next para ponerlo en sus scripts, y en `x-nonce` para el script del
+  // tema del layout. Se hace ANTES de crear la respuesta: el `NextResponse.next({ request })`
+  // de abajo reenvía estas cabeceras a la página.
+  //
+  // UNA SOLA CABECERA DE CSP, Y NINGUNA OTRA (lección del 2026-10-08): las cabeceras de la
+  // RESPUESTA acaban copiadas también en la petición que lee Next, y Next busca el nonce
+  // PRIMERO en `content-security-policy`. Con una segunda CSP sin `script-src` (la base
+  // de `next.config.ts` en Vercel, o puesta aquí) Next leía esa, no encontraba nonce y
+  // sus scripts salían sin él. Por eso la base va DENTRO de esta (`politicaCompleta`).
   const nonce = nuevoNonce();
-  const csp = politicaScripts(nonce, process.env.NODE_ENV === "development");
+  const csp = politicaCompleta(nonce, process.env.NODE_ENV === "development");
   request.headers.set("x-nonce", nonce);
   request.headers.set(CABECERA_CSP, csp);
-  // Y TAMBIÉN con el nombre de la CSP que bloquea, pero SOLO EN LA PETICIÓN: el
-  // navegador no ve las cabeceras de la petición, así que esto no bloquea nada. Hace
-  // falta porque en VERCEL (no en local) a la página no le llegaba la de solo informar:
-  // `x-nonce` sí, pero Next no encontraba la CSP y sus scripts salían sin nonce
-  // (comprobado en producción el 2026-10-08). `content-security-policy` es la PRIMERA
-  // que mira Next (`parse-request-headers.js`).
-  request.headers.set("content-security-policy", csp);
 
   let response = NextResponse.next({ request });
   const supabase = createServerClient(
