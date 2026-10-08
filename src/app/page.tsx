@@ -6,7 +6,7 @@ import { Revelar } from "@/components/inicio/Revelar";
 import { Parallax } from "@/components/inicio/Parallax";
 import { TableroMiniatura } from "@/components/inicio/TableroMiniatura";
 import { ScrollSuave } from "@/components/inicio/ScrollSuave";
-import { EscenaHero3D } from "@/components/inicio/EscenaHero3D";
+import { EscenaHero3DDiferida } from "@/components/inicio/EscenaHero3DDiferida";
 import { Linea, TituloHero } from "@/components/inicio/TituloHero";
 
 /**
@@ -52,7 +52,8 @@ export default function PaginaPublica() {
           sigue debajo de todo como color de fondo, para que no haya un salto mientras
           carga la escena y para que el texto tenga contraste desde el primer píxel. */}
       <header className="relative isolate flex min-h-screen items-center overflow-hidden bg-degradado-club px-6 py-20 text-sobre-acento">
-        <EscenaHero3D />
+        {/* DIFERIDA: three.js ya no va en el HTML inicial (ver el componente). */}
+        <EscenaHero3DDiferida />
         {/* LA CAPA NEGRA, sobre TODA la cabecera y no un panel alrededor del texto.
             El primer intento fue un recuadro con desenfoque detrás del título y tapaba
             medio tablero, que era peor que el problema que venía a resolver. Así el
