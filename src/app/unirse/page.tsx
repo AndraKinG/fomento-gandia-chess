@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { FormularioIngreso } from "./FormularioIngreso";
+import { SEDE } from "@/lib/club/sede";
 
 export const metadata: Metadata = {
   title: "Unirse al club · Fomento de Gandia",
@@ -49,11 +50,10 @@ export default function UnirsePage() {
         <div className="mt-6 rounded-2xl border border-borde bg-tarjeta p-5 shadow-sm">
           <h2 className="font-semibold text-tinta">Dónde estamos</h2>
           <p className="mt-2 text-sm text-tinta-suave">
-            Poliesportiu Municipal de Gandia (Sala de Aeróbic) · Avinguda dels
-            Esports, 17 · 46701 Gandia (València)
+            {SEDE.nombre} · {SEDE.referencia}
           </p>
           <a
-            href="https://maps.app.goo.gl/MY2pZb8xebRW6M5BA"
+            href={SEDE.mapa}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-3 inline-flex rounded-xl border border-borde-acento bg-tarjeta-suave px-4 py-2 text-sm font-semibold text-acento-texto transition duration-100 hover:brightness-95 active:scale-[0.97]"

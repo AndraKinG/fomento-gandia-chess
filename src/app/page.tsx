@@ -8,6 +8,7 @@ import { TableroMiniatura } from "@/components/inicio/TableroMiniatura";
 import { ScrollSuave } from "@/components/inicio/ScrollSuave";
 import { EscenaHero3DDiferida } from "@/components/inicio/EscenaHero3DDiferida";
 import { Linea, TituloHero } from "@/components/inicio/TituloHero";
+import { SEDE } from "@/lib/club/sede";
 
 /**
  * Web pública del club. Esqueleto: existe para que la zona de socios pueda vivir
@@ -15,9 +16,8 @@ import { Linea, TituloHero } from "@/components/inicio/TituloHero";
  * enlaces de notificaciones ya enviadas).
  *
  * Datos públicos verificados:
- *   - dirección del local: HECHO (2026-08-07) — sede oficial del listado de sedes
- *     del Interclubs 2026 de la FACV (listado_sedes.php?id=1428), con su enlace de
- *     Google Maps tal cual lo publica la federación.
+ *   - dirección del local: en `src/lib/club/sede.ts` (cambió el 2026-10-08 al
+ *     Centro de Mayores de Corea; ver allí por qué no lleva calle todavía).
  *   - descripción del club: del blog oficial (ajedrezgandia.blogspot.com).
  * PENDIENTE DE DATOS DEL PROPIETARIO (está esperando confirmación del club):
  *   - días y horas de juego
@@ -149,18 +149,15 @@ export default function PaginaPublica() {
       <Revelar className="mx-auto max-w-3xl px-6 pb-12">
         <h2 className="text-2xl font-bold text-tinta">Dónde jugamos</h2>
         <div className="mt-4 rounded-2xl border border-borde bg-tarjeta p-5 shadow-sm">
-          <p className="font-semibold text-tinta">
-            Poliesportiu Municipal de Gandia (Sala de Aeróbic)
-          </p>
-          <p className="mt-1 text-sm text-tinta-suave">
-            Avinguda dels Esports, 17 · 46701 Gandia (València)
-          </p>
+          <p className="font-semibold text-tinta">{SEDE.nombre}</p>
+          <p className="mt-1 text-sm text-tinta-suave">{SEDE.referencia}</p>
+          <p className="mt-3 text-sm text-tinta-suave">{SEDE.detalle}</p>
           <p className="mt-3 text-sm text-tinta-suave">
             Disponemos de material de juego, relojes de competición y una
             biblioteca con libros y revistas especializadas.
           </p>
           <a
-            href="https://maps.app.goo.gl/MY2pZb8xebRW6M5BA"
+            href={SEDE.mapa}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-4 inline-flex rounded-xl border border-borde-acento bg-tarjeta-suave px-4 py-2 text-sm font-semibold text-acento-texto transition duration-100 hover:brightness-95 active:scale-[0.97]"
