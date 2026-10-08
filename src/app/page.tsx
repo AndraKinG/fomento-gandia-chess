@@ -153,8 +153,7 @@ export default function PaginaPublica() {
           <p className="mt-1 text-sm text-tinta-suave">{SEDE.referencia}</p>
           <p className="mt-3 text-sm text-tinta-suave">{SEDE.detalle}</p>
           <p className="mt-3 text-sm text-tinta-suave">
-            Disponemos de material de juego, relojes de competición y una
-            biblioteca con libros y revistas especializadas.
+            Disponemos de material de juego y relojes de competición.
           </p>
           <a
             href={SEDE.mapa}
