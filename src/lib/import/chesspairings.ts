@@ -64,6 +64,78 @@ export function idDesdeEnlace(url: string | null | undefined): number | null {
 }
 
 /**
+ * ¿Es un enlace de ChessPairings? Lo único que el servidor está dispuesto a pedir.
+ *
+ * POR QUÉ HACE FALTA, y es seguridad (auditoría del 2026-10-08): el servidor descarga la
+ * URL que la junta guarda en un torneo, y la descarga OTRA VEZ cada vez que alguien abre
+ * ese torneo. Hasta este cambio la única comprobación era que llevara `?id=` en alguna
+ * parte, así que `http://servicio-interno/?id=1` pasaba: cualquiera con rango de junta
+ * podía usar nuestro servidor para pedir direcciones a las que él no llega (lo que se
+ * llama SSRF). Ahora solo `https://my.chesspairings.org`, y nada más.
+ *
+ * SE MIRA LA URL YA INTERPRETADA, no el texto: `https://my.chesspairings.org@otro.sitio/`
+ * contiene el dominio bueno como texto, pero va a `otro.sitio`. Por eso se rechazan
+ * también usuario/contraseña en la URL y cualquier puerto que no sea el de siempre.
+ */
+export const HOST_CHESSPAIRINGS = "my.chesspairings.org";
+
+export function esEnlaceChessPairings(url: string | null | undefined): boolean {
+  if (!url) return false;
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return false;
+  }
+  return (
+    u.protocol === "https:" &&
+    u.hostname === HOST_CHESSPAIRINGS &&
+    u.username === "" &&
+    u.password === "" &&
+    (u.port === "" || u.port === "443")
+  );
+}
+
+const MAX_SALTOS = 3;
+
+/**
+ * Una petición a ChessPairings que NO PUEDE SALIR de ChessPairings.
+ *
+ * LAS REDIRECCIONES SE SIGUEN A MANO, comprobando cada salto. Con `redirect: "follow"`
+ * —lo que había— bastaba que una URL buena devolviera un 302 hacia otro sitio para que
+ * el servidor lo siguiera sin preguntar: la comprobación del dominio se habría hecho
+ * sobre la primera dirección y la petición de verdad, sobre la última. Medido el
+ * 2026-10-08: su atajo `t.php?c=...` da UN 302 al mismo dominio, y su página pública no
+ * redirige nunca; tres saltos son de sobra.
+ *
+ * Devuelve la respuesta final y su URL, o null si en algún punto se intenta salir.
+ */
+export async function pedirChessPairings(
+  url: string,
+  init: RequestInit & { next?: { revalidate?: number } } = {}
+): Promise<{ respuesta: Response; url: string } | null> {
+  let actual = url;
+  for (let salto = 0; salto <= MAX_SALTOS; salto++) {
+    if (!esEnlaceChessPairings(actual)) return null;
+    const respuesta = await fetch(actual, {
+      ...init,
+      redirect: "manual",
+      headers: {
+        "user-agent": "FomentoGandiaChess/1.0 (+https://fomento-gandia-chess-swart.vercel.app)",
+        ...(init.headers ?? {}),
+      },
+    });
+    const destino = respuesta.headers.get("location");
+    if (respuesta.status >= 300 && respuesta.status < 400 && destino) {
+      actual = new URL(destino, actual).toString();
+      continue;
+    }
+    return { respuesta, url: actual };
+  }
+  return null;
+}
+
+/**
  * El enlace canónico de un torneo, siguiendo el atajo si hace falta.
  *
  * CHESSPAIRINGS REPARTE DOS ENLACES DEL MISMO TORNEO, y el que la gente comparte es el
@@ -84,12 +156,9 @@ export function idDesdeEnlace(url: string | null | undefined): number | null {
 export async function resolverEnlacePublico(url: string): Promise<string> {
   if (idDesdeEnlace(url) !== null) return url;
   try {
-    const r = await fetch(url, {
-      redirect: "follow",
-      headers: { "user-agent": "FomentoGandiaChess/1.0 (+https://fomento-gandia-chess-swart.vercel.app)" },
-      // Sin caché: un atajo puede reapuntarse, y esto solo corre al guardar.
-      cache: "no-store",
-    });
+    // Sin caché: un atajo puede reapuntarse, y esto solo corre al guardar.
+    const r = await pedirChessPairings(url, { cache: "no-store" });
+    if (!r) return url;
     return idDesdeEnlace(r.url) !== null ? r.url : url;
   } catch {
     return url;

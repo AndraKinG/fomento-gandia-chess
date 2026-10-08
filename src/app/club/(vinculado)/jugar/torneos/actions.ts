@@ -12,7 +12,7 @@ import {
 import { estadoParaEmparejar, rondaCompleta } from "@/lib/club/clasificacion";
 import { difundirTorneo } from "@/lib/vivo/difundir";
 import { leerTorneo } from "./datos";
-import { idDesdeEnlace, resolverEnlacePublico } from "@/lib/import/chesspairings";
+import { esEnlaceChessPairings, idDesdeEnlace, resolverEnlacePublico } from "@/lib/import/chesspairings";
 
 type Resultado = {
   error?: string;
@@ -65,12 +65,19 @@ export async function crearTorneoInterno(datos: {
   // de los de siempre, que se juegan aquí.
   const organizadoEn = datos.organizadoEn === "chesspairings" ? "chesspairings" : "app";
   const url = datos.urlPublica?.trim() || null;
-  if (url && !/^https?:\/\//i.test(url)) {
-    return { error: "El enlace tiene que empezar por http:// o https://" };
+  // LA MISMA PUERTA QUE AL CAMBIAR EL ENLACE (`ponerUrlPublica`): solo ChessPairings, y
+  // el atajo que reparte su botón de compartir se resuelve ya al crear. Antes aquí bastaba
+  // con que empezara por http, y el servidor acababa pidiendo esa dirección en cada visita.
+  if (url && organizadoEn === "chesspairings" && !esEnlaceChessPairings(url)) {
+    return {
+      error:
+        "Ese enlace no es de ChessPairings. Copia el que da su botón de compartir: empieza por https://my.chesspairings.org",
+    };
   }
   // Un torneo de la app no lleva enlace de fuera, y guardarlo sería sembrar la duda de
   // quién manda en la clasificación.
-  const urlPublica = organizadoEn === "chesspairings" ? url : null;
+  const urlPublica =
+    organizadoEn === "chesspairings" && url ? await resolverEnlacePublico(url) : null;
 
   const supabase = await createServerSupabase();
   const { data, error } = await supabase
@@ -464,6 +471,14 @@ export async function ponerUrlPublica(
   // EL ATAJO SE RESUELVE ANTES DE JUZGARLO: el enlace que reparte su botón de compartir
   // (`t.php?c=...`) no lleva id, pero redirige al que sí. Rechazarlo sin seguirlo era
   // mandar al organizador a buscar "la buena" cuando ya tenía la buena.
+  // SOLO ENLACES DE CHESSPAIRINGS, y se mira ANTES de pedir nada: si no, el propio
+  // intento de resolverlo ya sería la petición que se quiere evitar.
+  if (limpia && !esEnlaceChessPairings(limpia)) {
+    return {
+      error:
+        "Ese enlace no es de ChessPairings. Copia el que da su botón de compartir: empieza por https://my.chesspairings.org",
+    };
+  }
   const resuelta = limpia ? await resolverEnlacePublico(limpia) : "";
 
   if (resuelta && idDesdeEnlace(resuelta) === null) {

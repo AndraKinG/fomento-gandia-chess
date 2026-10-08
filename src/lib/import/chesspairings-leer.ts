@@ -8,6 +8,7 @@ import {
   type InscritoPublico,
   type MesaPublica,
 } from "@/lib/import/chesspairings-publico";
+import { esEnlaceChessPairings, pedirChessPairings } from "@/lib/import/chesspairings";
 
 /**
  * Traer de ChessPairings la clasificación y los emparejamientos de un torneo del club.
@@ -65,17 +66,20 @@ async function bajar(
   url: string
 ): Promise<{ html: string | null; error: LecturaChessPairings["error"] }> {
   try {
-    const r = await fetch(url, {
+    // POR `pedirChessPairings` Y NO `fetch` A SECAS: esta función se ejecuta cada vez que
+    // alguien abre el torneo, con la URL que haya guardada. Si no es de ChessPairings —o
+    // redirige fuera—, no se pide nada.
+    const pedida = await pedirChessPairings(url, {
       headers: {
         // EL IDIOMA SE FIJA POR LAS DOS VÍAS, en la URL y aquí: su página traduce las
         // cabeceras de las tablas según el `Accept-Language`, y el parser busca las
         // columnas por su nombre en inglés.
         "accept-language": "en",
-        // Quién llama, que es lo cortés con una web ajena que no nos ha pedido nada.
-        "user-agent": "FomentoGandiaChess/1.0 (+https://fomento-gandia-chess-swart.vercel.app)",
       },
       next: { revalidate: CACHE_SEGUNDOS },
     });
+    if (!pedida) return { html: null, error: "no-existe" };
+    const r = pedida.respuesta;
     if (r.status === 404) return { html: null, error: "no-existe" };
     if (!r.ok) return { html: null, error: "red" };
     return { html: await r.text(), error: null };
@@ -89,6 +93,9 @@ export async function leerTorneoChessPairings(
   enlacePublico: string | null
 ): Promise<LecturaChessPairings> {
   if (!enlacePublico) return { ...VACIO, error: "sin-enlace" };
+  // Un enlace guardado antes de existir la comprobación —o metido a mano en la base—
+  // no se pide: se trata como si el torneo no existiera, que para quien mira es verdad.
+  if (!esEnlaceChessPairings(enlacePublico)) return { ...VACIO, error: "no-existe" };
 
   const [c, a, i] = await Promise.all([
     bajar(urlPestana(enlacePublico, "classifica")),
