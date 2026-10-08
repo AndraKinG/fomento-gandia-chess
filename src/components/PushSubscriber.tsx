@@ -45,15 +45,21 @@ export function PushSubscriber() {
 }
 
 type EstadoActivacion =
+  | "comprobando"
   | "idle"
   | "activando"
   | "activado"
+  | "yaEstaban"
   | "denegado"
   | "incompatible"
   | "error";
 
-const MENSAJE: Record<Exclude<EstadoActivacion, "idle" | "activando">, string> = {
+const MENSAJE: Record<
+  Exclude<EstadoActivacion, "idle" | "activando" | "comprobando">,
+  string
+> = {
   activado: "Notificaciones activadas ✓",
+  yaEstaban: "Notificaciones activadas ✓",
   denegado:
     "No has dado permiso. Puedes cambiarlo en los ajustes de notificaciones de tu navegador.",
   incompatible:
@@ -62,7 +68,48 @@ const MENSAJE: Record<Exclude<EstadoActivacion, "idle" | "activando">, string> =
 };
 
 export function ActivarNotificaciones() {
-  const [estado, setEstado] = useState<EstadoActivacion>("idle");
+  const [estado, setEstado] = useState<EstadoActivacion>("comprobando");
+
+  /**
+   * MIRAR SI YA ESTÁN ACTIVADAS, que es lo que faltaba.
+   *
+   * Antes esto arrancaba en "idle" y solo cambiaba al pulsar, así que el botón decía
+   * "Activar notificaciones" SIEMPRE — estuvieran activas o no. El propietario lo contó
+   * como un fallo del móvil: "cada x días se me quitan las notificaciones y tengo que
+   * volver a activarlas". No se le quitaban: sus avisos se entregaban sin un fallo
+   * (comprobado en la base, estado `entregado`). Lo que no había era forma de verlo, así
+   * que cada visita al perfil parecía una desactivación.
+   *
+   * SE MIRAN LAS DOS COSAS, permiso y suscripción, porque pueden ir por separado: el
+   * permiso puede seguir dado y la suscripción haberse perdido (un service worker nuevo,
+   * datos del sitio borrados), y entonces el botón SÍ tiene que salir.
+   */
+  useEffect(() => {
+    let vivo = true;
+    async function mirar() {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+        if (vivo) setEstado("incompatible");
+        return;
+      }
+      if (Notification.permission === "denied") {
+        if (vivo) setEstado("denegado");
+        return;
+      }
+      if (Notification.permission !== "granted") {
+        if (vivo) setEstado("idle");
+        return;
+      }
+      const reg = await navigator.serviceWorker.getRegistration();
+      const sub = await reg?.pushManager.getSubscription();
+      if (vivo) setEstado(sub ? "yaEstaban" : "idle");
+    }
+    mirar().catch(() => {
+      if (vivo) setEstado("idle");
+    });
+    return () => {
+      vivo = false;
+    };
+  }, []);
 
   // Antes este flujo tenía un `.catch(() => {})` que se comía cualquier fallo:
   // el socio pulsaba, no pasaba nada visible y no había forma de saber por qué.
@@ -88,6 +135,11 @@ export function ActivarNotificaciones() {
     }
   }
 
+  // Mientras se comprueba no se enseña nada: un botón que aparece diciendo "activar" y
+  // medio segundo después se convierte en "ya están activadas" invita a pulsarlo antes
+  // de que termine de decidirse.
+  if (estado === "comprobando") return null;
+
   if (estado !== "idle" && estado !== "activando") {
     return (
       <p
@@ -95,6 +147,17 @@ export function ActivarNotificaciones() {
         className="rounded-xl border border-borde bg-tarjeta p-3 text-center text-sm text-tinta"
       >
         {MENSAJE[estado]}
+        {/* SALIDA POR SI ACASO: si de verdad dejan de llegar, desde aquí se vuelve a
+            suscribir sin tener que buscar nada en los ajustes del móvil. */}
+        {estado === "yaEstaban" && (
+          <button
+            type="button"
+            onClick={() => setEstado("idle")}
+            className="ml-1 font-semibold text-acento-texto underline"
+          >
+            ¿No te llegan? Vuelve a activarlas
+          </button>
+        )}
         {estado === "error" && (
           <button
             type="button"

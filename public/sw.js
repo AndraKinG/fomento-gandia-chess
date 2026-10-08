@@ -65,6 +65,57 @@ self.addEventListener("push", (event) => {
   );
 });
 
+/**
+ * CUANDO EL NAVEGADOR CAMBIA LA SUSCRIPCIÓN POR SU CUENTA.
+ *
+ * Chrome y Firefox pueden invalidar una suscripción push y darte otra sin que el socio
+ * haga nada —al actualizarse el service worker, al rotar sus claves, tras mucho tiempo
+ * sin usarla—. Si nadie recoge ese evento, la suscripción vieja queda muerta en nuestra
+ * base y la nueva no llega nunca: los avisos dejan de aparecer EN SILENCIO y el socio
+ * solo sabe que "se le han quitado las notificaciones".
+ *
+ * SE RESUSCRIBE AQUÍ MISMO y se manda el resultado al servidor. La app ya reintenta la
+ * suscripción cada vez que se abre (`PushSubscriber`), pero eso solo sirve si el socio
+ * entra: entre medias se pierden los avisos, y el que avisa de una convocatoria o de una
+ * ronda que empieza en una hora es justo el que no puede esperar a la próxima visita.
+ *
+ * LA CLAVE SE PIDE AL SERVIDOR (`/api/push/clave`) en vez de escribirla aquí: un service
+ * worker no ve las variables del build, y dejarla a mano significaría que el día que se
+ * roten las claves VAPID este rescate suscribiría contra la vieja — fallando justo cuando
+ * intenta recuperarse. Primero se intenta reutilizar la del propio navegador
+ * (`oldSubscription.options`), que es la que ya estaba en uso.
+ */
+self.addEventListener("pushsubscriptionchange", (event) => {
+  event.waitUntil(
+    (async () => {
+      try {
+        const vieja =
+          event.oldSubscription || (await self.registration.pushManager.getSubscription());
+        let clave = vieja && vieja.options && vieja.options.applicationServerKey;
+        if (!clave) {
+          const r = await fetch("/api/push/clave");
+          const { clave: base64 } = await r.json();
+          clave = base64;
+        }
+        const nueva =
+          event.newSubscription ||
+          (await self.registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: clave,
+          }));
+        await fetch("/api/push/subscribe", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(nueva.toJSON()),
+        });
+      } catch {
+        // En silencio: si falla, `PushSubscriber` lo reintenta la próxima vez que el
+        // socio abra la app. Mejor eso que un service worker que revienta.
+      }
+    })()
+  );
+});
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = event.notification.data?.url || "/";
