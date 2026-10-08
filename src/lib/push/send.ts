@@ -1,6 +1,7 @@
 import webpush from "web-push";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { tratarFallo, type ResultadoDispositivo } from "@/lib/avisos/politica";
+import { esServicioPush } from "@/lib/push/servicios";
 
 // Re-exportado con el nombre histórico de este módulo: la forma del dato vive
 // en `politica.ts` (junto a `estadoPushDeAviso`, que es quien la consume),
@@ -68,6 +69,19 @@ export async function intentarPush(
 
   return Promise.all(
     subs.map(async (s): Promise<ResultadoDispositivo> => {
+      // Solo a servicios de push conocidos (`servicios.ts`). Es AQUÍ donde manda esta
+      // comprobación y no en `/api/push/subscribe`: la RLS de `push_subscriptions`
+      // deja a cada socio escribir sus filas directamente, sin pasar por la ruta. Una
+      // dirección de otro sitio no es un dispositivo al que se pueda avisar, así que se
+      // trata como una suscripción muerta: `no_tocaba` y se borra.
+      if (!esServicioPush(s.endpoint)) {
+        try {
+          await admin.from("push_subscriptions").delete().eq("endpoint", s.endpoint);
+        } catch {
+          // Igual que abajo: se volverá a intentar en el próximo envío.
+        }
+        return { entregado: false, estado: "no_tocaba" };
+      }
       try {
         await webpush.sendNotification(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
