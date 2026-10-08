@@ -48,6 +48,12 @@ const ENLACES = [
     detalle: "Socios activos, visitas, tiempo de uso, actividad y preguntas a la IA",
   },
   {
+    href: "/club/admin/errores",
+    icono: "🩺",
+    titulo: "Errores",
+    detalle: "Lo que ha fallado en la app, agrupado, para arreglarlo",
+  },
+  {
     href: "/club/admin/push",
     icono: "🔔",
     titulo: "Notificaciones",
@@ -67,22 +73,34 @@ export default async function AdminPage() {
   // Administración distingue "Vinculaciones" con trabajo pendiente de sin él, y
   // el push solo llega al aparato donde alguien aceptó las notificaciones.
   const supabase = await createServerSupabase();
-  const { count: pendientes } = await supabase
-    .from("link_requests")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "pendiente");
+  // Y los errores abiertos, por lo mismo: el aviso de error nuevo solo sale la primera
+  // vez, así que esta cifra es lo que queda si ese aviso se pierde.
+  const [{ count: pendientes }, { count: errores }] = await Promise.all([
+    supabase
+      .from("link_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pendiente"),
+    supabase
+      .from("errores")
+      .select("id", { count: "exact", head: true })
+      .eq("resuelto", false),
+  ]);
 
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       <Cabecera titulo="Administración" medida="panel" />
       <Contenedor medida="panel">
         <nav aria-label="Secciones de administración">
-          {/* Nueve opciones en una sola columna obligan a recorrer la pantalla de
+          {/* Diez opciones en una sola columna obligan a recorrer la pantalla de
               arriba abajo; en tres columnas se ven todas de un vistazo. */}
           <Rejilla columnas={3}>
             {ENLACES.map((enlace) => {
               const aviso =
-                enlace.href === "/club/vinculaciones" ? (pendientes ?? 0) : 0;
+                enlace.href === "/club/vinculaciones"
+                  ? (pendientes ?? 0)
+                  : enlace.href === "/club/admin/errores"
+                    ? (errores ?? 0)
+                    : 0;
               return (
                 <Link key={enlace.href} href={enlace.href}>
                   <Tarjeta className="flex h-full items-center gap-3 transition hover:border-borde-acento">

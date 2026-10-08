@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { URL_APP } from "@/lib/compartir/mensaje";
+import { CapturarErrores } from "@/components/CapturarErrores";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -103,6 +104,7 @@ export default function RootLayout({
             __html: `try{const t=localStorage.tema;const s=window.matchMedia("(prefers-color-scheme: dark)").matches;if(t==="oscuro"||(t!=="claro"&&s))document.documentElement.classList.add("dark")}catch(e){}`,
           }}
         />
+        <CapturarErrores />
         {children}
       </body>
     </html>

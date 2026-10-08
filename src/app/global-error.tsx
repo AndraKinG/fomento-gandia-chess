@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
+import { informarError } from "@/lib/errores/informar";
+
 /**
  * Lo que se ve si algo se rompe de verdad.
  *
@@ -29,6 +32,9 @@ export default function ErrorGlobal({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // A la lista de errores del admin (`/club/admin/errores`). Si trae `digest` es del
+  // servidor y ya está apuntado: `informarError` no lo repite.
+  useEffect(() => informarError(error), [error]);
   return (
     <html lang="es">
       <body

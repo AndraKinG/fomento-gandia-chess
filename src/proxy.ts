@@ -56,9 +56,12 @@ export async function proxy(request: NextRequest) {
  * nominal se queda desactualizada en cuanto se añade uno. Cada petición que llega
  * aquí gasta una llamada a `getUser()` contra Supabase, así que dejar pasar los
  * iconos es gastar por nada.
+ *
+ * `api/errores` tampoco pasa: recibe los fallos del navegador sin sesión a propósito (puede
+ * fallar el login), así que comprobarla ahí sería una llamada a Supabase por cada error.
  */
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|manifest.json|sw.js|robots.txt|api/cron|api/push|.*\\.(?:png|jpg|jpeg|svg|ico|webmanifest)$).*)",
+    "/((?!_next/static|_next/image|manifest.json|sw.js|robots.txt|api/cron|api/push|api/errores|.*\\.(?:png|jpg|jpeg|svg|ico|webmanifest)$).*)",
   ],
 };

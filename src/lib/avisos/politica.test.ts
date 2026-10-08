@@ -73,8 +73,9 @@ describe("debePush", () => {
       "vinculacion",
       "fichas_nuevas",
       "ficha_no_encontrada",
+      "error_nuevo",
     ];
-    expect(tipos.length).toBe(15);
+    expect(tipos.length).toBe(16);
     for (const tipo of tipos) {
       expect(GRUPO_DE[tipo]).toBeDefined();
     }

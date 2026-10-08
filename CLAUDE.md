@@ -26,7 +26,7 @@ Complementan las **Reglas duras** del CLAUDE.md común (`~/proyectos/CLAUDE.md`)
 
 1. **Migraciones SQL**: la skill `aplicar-migracion-sql` describe el procedimiento y las
    dos trampas duras (guarda por FORMA; cualificar columnas en policies). Aplicadas
-   hasta ahora: 0001→0050. Regla nueva (2026-08-10): los avisos se mandan SIEMPRE con
+   hasta ahora: 0001→0052. Regla nueva (2026-08-10): los avisos se mandan SIEMPRE con
    `avisar()` (`src/lib/avisos/enviar.ts`), nunca con push directo — el único sitio que
    sigue mandando push directo es el botón de prueba del admin (`/club/admin/push`), a
    propósito, porque no genera fila en la bandeja.
@@ -104,6 +104,7 @@ lo que aquí resumo, manda `decisiones.md`.
 - **Permisos en 3 capas**: RLS dura + actions re-verifican + UI oculta. Matriz en anexo del plan 1B (+ adenda 1C). [→](docs/decisiones.md#permisos-en-3-capas)
 - **Rangos** (0011): 4 roles **acumulables** (admin/capitan/jugador/junta). Helpers `is_admin()`, `tiene_rol()`, `es_junta()`, `esta_vinculado()`. `tiene_rol()` DEBE ser `security definer` o hay recursión. [→](docs/decisiones.md#rangos)
 - **Acceso al club**: registro solo con código (tabla `access_codes`, uno activo), cuentas creadas con `auth.admin.createUser` ya confirmadas. **Interruptor "Allow new users to sign up" de Supabase DEBE estar desactivado**. [→](docs/decisiones.md#acceso-al-club)
+- **Errores, con monitorización propia** (0052): servidor por `src/instrumentation.ts` (`onRequestError`), navegador por `/api/errores` (público, con topes EN LA BASE); se agrupan por firma (`src/lib/errores/firma.ts`) y avisan con `error_nuevo` solo la primera vez o si reaparecen. Nada de quién ni IP. Lista en `/club/admin/errores`. [→](docs/decisiones.md#errores-con-monitorización-propia)
 - **fide.com bloquea IPs de datacenter**: ELO FIDE solo desde local. Cron director en Vercel (diario 9:00 UTC, multiplexado); pg_cron en Supabase para lo que no cabe en Vercel Hobby. Sync semanal son tres pasos en cadena, orden = dependencia. [→](docs/decisiones.md#fidecom-bloquea-ips-de-datacenter)
 
 ## Estado y pendientes

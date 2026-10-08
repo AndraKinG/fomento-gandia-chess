@@ -24,7 +24,8 @@ export type TipoAviso =
   | "alta_socio"
   | "vinculacion"
   | "fichas_nuevas"
-  | "ficha_no_encontrada";
+  | "ficha_no_encontrada"
+  | "error_nuevo";
 
 /** A qué grupo pertenece cada tipo (tabla de la spec): así se silencia por grupo. */
 export const GRUPO_DE: Record<TipoAviso, GrupoAviso> = {
@@ -52,6 +53,8 @@ export const GRUPO_DE: Record<TipoAviso, GrupoAviso> = {
   alta_socio: "gestion",
   vinculacion: "gestion",
   fichas_nuevas: "gestion",
+  // Un fallo de la app (monitorización propia, 0052). Solo les llega a los admins.
+  error_nuevo: "gestion",
 };
 
 /**

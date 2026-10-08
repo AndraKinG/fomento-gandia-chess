@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { informarError } from "@/lib/errores/informar";
 import { Contenedor } from "@/components/ui/Contenedor";
 import { EstadoVacio } from "@/components/ui/EstadoVacio";
 
@@ -24,6 +26,9 @@ export default function ErrorDelClub({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // A la lista de errores del admin (`/club/admin/errores`). Si trae `digest` es del
+  // servidor y ya está apuntado: `informarError` no lo repite.
+  useEffect(() => informarError(error), [error]);
   return (
     <main className="min-h-dvh bg-fondo pb-10">
       <Contenedor medida="lectura">
