@@ -85,16 +85,47 @@ let errores = 0;
 // FIDE y ningun rating todavia -- estan federados pero no han jugado nada valido. Son
 // justo los que necesitan el ELO estimado que pone la junta a mano.
 let sinElo = 0;
-for (const p of players) {
-  try {
-    const perfil = await fetch(`https://ratings.fide.com/profile/${p.fide_id}`, {
+
+/**
+ * UNA PÁGINA VACÍA NO ES "SIN ELO", y confundirlas mentía en el registro (2026-10-08).
+ *
+ * Ese día la FIDE devolvió HTTP 200 con 3 bytes para dos socios que la víspera se leyeron
+ * sin problema, y el registro los apuntó como "sin ELO FIDE todavía" — lo mismo que pone
+ * para los juveniles que de verdad no tienen. Leyéndolo, parecía que habían perdido el
+ * ELO. No era así: la red de seguridad de abajo no escribió nada y sus ELOs siguieron
+ * intactos. Minutos después la FIDE ya devolvía sus perfiles completos.
+ *
+ * SE RECONOCE POR LO QUE FALTA, no por el tamaño exacto: un perfil de verdad lleva el
+ * `<title>` con "FIDE Profile". Sin eso es una respuesta rota, se reintenta una vez tras
+ * una pausa, y si sigue rota se cuenta APARTE — así el resumen dice "la FIDE no contestó"
+ * y no "este socio no tiene ELO".
+ */
+const PAUSA_REINTENTO_MS = 5000;
+let vacias = 0;
+async function pedirPerfil(fideId) {
+  for (let intento = 1; intento <= 2; intento++) {
+    const r = await fetch(`https://ratings.fide.com/profile/${fideId}`, {
       headers: { "user-agent": "FomentoGandiaClubApp/1.0" },
     });
-    if (!perfil.ok) {
+    if (!r.ok) return { estado: r.status, html: null };
+    const html = await r.text();
+    if (/FIDE Profile/i.test(html)) return { estado: r.status, html };
+    if (intento === 1) await new Promise((ok) => setTimeout(ok, PAUSA_REINTENTO_MS));
+  }
+  return { estado: 200, html: null, vacia: true };
+}
+
+for (const p of players) {
+  try {
+    const perfil = await pedirPerfil(p.fide_id);
+    if (perfil.vacia) {
+      vacias++;
+      console.log(`  ${p.nombre}: la FIDE devolvió una página vacía (dos intentos); no se toca su ELO`);
+    } else if (!perfil.html) {
       errores++;
-      console.error(`  ${p.nombre}: HTTP ${perfil.status}`);
+      console.error(`  ${p.nombre}: HTTP ${perfil.estado}`);
     } else {
-      const r = parsearPerfilFide(await perfil.text());
+      const r = parsearPerfilFide(perfil.html);
       if (r.clasicas.elo === null && r.rapidas.elo === null && r.blitz.elo === null) {
         // NO SE ESCRIBE NADA en este caso, a propósito: si la FIDE rediseñara la página
         // o devolviera un error con HTTP 200, machacar los ELOs con null borraría datos
@@ -135,7 +166,10 @@ for (const p of players) {
   await new Promise((r) => setTimeout(r, 500)); // cortesía con el servidor FIDE
 }
 
-console.log(`Hecho: ${actualizados} actualizados, ${sinElo} sin ELO todavía, ${errores} errores`);
+console.log(
+  `Hecho: ${actualizados} actualizados, ${sinElo} sin ELO todavía, ` +
+    `${vacias} sin respuesta de la FIDE (se reintentan mañana), ${errores} errores`
+);
 
 // SOLO ES FALLO SI NO SE ACTUALIZÓ NADIE. Con cero actualizados y 46 fichas, o la FIDE
 // ha cambiado la página o no hay red: eso sí hay que verlo en el registro de la tarea

@@ -92,6 +92,19 @@ $t = Get-ScheduledTask -TaskName "Fomento - ELO FIDE"; $t.Settings.DisallowStart
 "Fomento - ELO FIDE"`, esperar un minuto, y mirar que `LastTaskResult` sea `0` **y** que
 `logs/elo-fide.log` tenga cabecera nueva. Lo primero solo dice que arrancó.
 
+**"sin respuesta de la FIDE" no es "sin ELO"** (desde el 2026-10-08). A veces la FIDE
+devuelve HTTP 200 con una página vacía —pasó con dos socios durante unos minutos—. El
+script lo reconoce porque falta el título "FIDE Profile", reintenta una vez a los 5 s y,
+si sigue igual, lo cuenta aparte en el resumen y NO toca ese ELO. Es pasajero: al día
+siguiente se lee normal. Solo preocupa si se repite varios días con los mismos socios
+(entonces mirar si su ID FIDE ha cambiado).
+
+Las dos tareas ("Fomento - ELO FIDE" y "Fomento - Copia de seguridad") corren en modo
+**S4U** desde el 2026-10-08: sin sesión iniciada y sin ventana. Funciona porque node
+está en el PATH del SISTEMA; si algún día se reinstala node solo para el usuario, en
+S4U no lo encontrarían. Registrar o cambiar una tarea S4U pide PowerShell de
+administrador.
+
 **`variacion_fide` a null en TODAS las fichas no es un fallo.** La FIDE solo publica
 variación pendiente de quien ha jugado valorado en el mes en curso; fuera de temporada es
 normal que no la tenga nadie.
