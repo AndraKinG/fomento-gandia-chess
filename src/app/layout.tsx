@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { URL_APP } from "@/lib/compartir/mensaje";
@@ -86,9 +87,17 @@ export const viewport: Viewport = {
  * Con la zona de socios en su propio segmento, la estructura de carpetas ya dice
  * quién necesita qué y ese truco desaparece.
  */
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // El nonce de la CSP de scripts, que genera el proxy en cada petición (ver
+  // `src/lib/seguridad/csp.ts`). Lo lleva el script del tema de abajo, que es el ÚNICO
+  // script en línea nuestro; los de Next lo reciben solos.
+  //
+  // LEER LAS CABECERAS HACE DINÁMICAS TODAS LAS PÁGINAS, a propósito: una página
+  // generada de antemano no puede llevar un nonce que cambia en cada visita. Afecta a
+  // la portada, `/unirse` y el 404, que eran las tres únicas estáticas.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html
       lang="es"
@@ -97,6 +106,7 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col">
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             // Sin elección guardada —o con la vieja "sistema", que ya no se ofrece— manda
             // el sistema; con elección, manda ella. Va aquí y no en React para que no haya

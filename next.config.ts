@@ -26,12 +26,10 @@ import type { NextConfig } from "next";
  *   **No** se tocan compartir, portapapeles ni notificaciones, que SÍ usa (`BotonCompartir`,
  *   copiar enlaces, avisos push): cerrarlas los rompería sin un solo error visible.
  *
- * LO QUE NO SE PONE TODAVÍA, Y ES A PROPÓSITO: una CSP que limite los SCRIPTS (`script-src`).
- * La app tiene un script en línea en el layout (el del tema claro/oscuro, para que no
- * parpadee), habla con Supabase por WebSocket, carga three.js y el motor de ajedrez en
- * WebAssembly. Una CSP de scripts mal medida rompe la app entera SIN AVISAR — el navegador
- * simplemente no ejecuta lo que no le dejan — así que va aparte, primero en modo de solo
- * informar y probándola pantalla a pantalla.
+ * LA CSP DE SCRIPTS (`script-src`) NO VA AQUÍ: necesita un nonce distinto en cada
+ * petición, y esta lista es fija. La pone el proxy (`src/proxy.ts`), con la política en
+ * `src/lib/seguridad/csp.ts`. Desde el 2026-10-08 está en modo de SOLO INFORMAR: no
+ * bloquea nada todavía, solo avisa en Admin → Errores de lo que bloquearía.
  */
 const CABECERAS_SEGURIDAD = [
   {
