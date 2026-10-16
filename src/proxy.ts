@@ -18,8 +18,17 @@ const ZONA_SOCIOS = "/club";
  * Qué hace la CSP: `false` = SOLO INFORMAR (no bloquea nada, avisa en Admin → Errores);
  * `true` = BLOQUEAR. Se pasa a `true` cuando una semana de uso real no dé avisos de
  * nuestras pantallas (ver `src/lib/seguridad/csp.ts`).
+ *
+ * BLOQUEANDO DESDE EL 2026-10-16, decisión del propietario. La condición que se puso el
+ * 2026-10-08 se cumplió: ocho días de uso real con socios dentro y CERO avisos de CSP en
+ * Admin → Errores, con la tubería demostradamente viva (los cinco avisos del fallo del
+ * nonce llegaron por ahí ese mismo día).
+ *
+ * SI ALGO SE ROMPE: un script sin nonce ya no avisa, se queda sin ejecutar y la pantalla
+ * no da ningún error — un botón que no hace nada, el tablero que no se mueve. Se vuelve
+ * atrás poniendo esto a `false` y desplegando; no hay nada más que deshacer.
  */
-const CSP_BLOQUEA = false;
+const CSP_BLOQUEA = true;
 const CABECERA_CSP = CSP_BLOQUEA ? "content-security-policy" : "content-security-policy-report-only";
 
 export async function proxy(request: NextRequest) {
