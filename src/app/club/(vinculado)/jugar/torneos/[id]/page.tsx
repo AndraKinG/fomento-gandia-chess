@@ -16,10 +16,13 @@ import { nombreVisible } from "@/lib/club/nombre-socio";
 
 export default async function TorneoInternoPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ vista?: string }>;
 }) {
   const { id } = await params;
+  const { vista } = await searchParams;
   const supabase = await createServerSupabase();
   const sesion = await sesionActual();
 
@@ -159,7 +162,11 @@ export default async function TorneoInternoPage({
             Si su página no responde, el componente enseña el enlace y no rompe nada. */}
         {torneo.organizadoEn === "chesspairings" && (
           <div className="space-y-4">
-            <TorneoChessPairings urlPublica={torneo.urlPublica} />
+            <TorneoChessPairings
+              urlPublica={torneo.urlPublica}
+              ruta={`/club/jugar/torneos/${torneo.id}`}
+              vista={vista === "ronda" || vista === "clasificacion" ? vista : null}
+            />
           </div>
         )}
 
