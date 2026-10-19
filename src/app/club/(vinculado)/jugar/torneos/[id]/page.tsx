@@ -121,7 +121,17 @@ export default async function TorneoInternoPage({
         {/* Rondas y clasificación en paralelo desde `lg`, igual que en el detalle de
             equipo: la tabla es estrecha, y apilada empujaba las rondas fuera de la
             vista además de dejar medio monitor vacío a su lado. */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {/* EN UNO DE CHESSPAIRINGS NO HAY REPARTO EN COLUMNAS AQUÍ: las rondas propias
+            van vacías, así que la columna ancha se quedaba con una tarjeta de texto y los
+            datos de verdad apretados a la derecha. Allí todo va a lo ancho y es el
+            componente de ChessPairings el que pone tabla y ronda lado a lado. */}
+        <div
+          className={
+            torneo.organizadoEn === "chesspairings"
+              ? "space-y-4"
+              : "grid grid-cols-1 gap-4 lg:grid-cols-3"
+          }
+        >
         <div className="lg:col-span-2">
         <GestionTorneo
           tournamentId={torneo.id}

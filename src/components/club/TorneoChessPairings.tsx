@@ -110,7 +110,12 @@ export async function TorneoChessPairings({ urlPublica }: { urlPublica: string |
           60 s, pero eso no repinta una pantalla ya abierta. */}
       <RefrescarCada segundos={60} />
 
-      <section className="space-y-2">
+      {/* CLASIFICACIÓN A LA IZQUIERDA Y RONDA A LA DERECHA desde `lg` (petición del
+          propietario, 2026-10-19): apiladas estiraban la página y dejaban medio monitor
+          vacío. En el móvil va primero la ronda, que es lo que se busca el viernes
+          ("¿contra quién juego?"); la tabla, debajo. */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+      <section className="order-2 space-y-2 lg:order-1">
         <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-tinta-suave">
             Clasificación
@@ -214,7 +219,7 @@ export async function TorneoChessPairings({ urlPublica }: { urlPublica: string |
       </section>
 
       {lectura.emparejamientos.length > 0 && (
-        <section className="space-y-2">
+        <section className="order-1 space-y-2 lg:order-2">
           <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
             {lectura.ronda ? `Ronda ${lectura.ronda}` : "Emparejamientos"}
           </h2>
@@ -244,6 +249,7 @@ export async function TorneoChessPairings({ urlPublica }: { urlPublica: string |
           </Tarjeta>
         </section>
       )}
+      </div>
 
       <p className="px-1 text-xs text-tinta-suave">
         Datos de ChessPairings, que es donde se lleva el torneo. Se actualizan cada minuto
