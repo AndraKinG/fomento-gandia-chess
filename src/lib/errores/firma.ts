@@ -126,6 +126,12 @@ export function mensajeParaFirma(mensaje: string): string {
  *   redirigir y para el 404; son su manera de funcionar, no fallos.
  * - Cortes de red (`Failed to fetch`, `Load failed`, `NetworkError`): el socio se quedó
  *   sin cobertura. Pasa mil veces al día en un móvil y no tiene arreglo en el código.
+ * - `Server Action "…" was not found on the server` (2026-11-06): una pestaña abierta
+ *   DURANTE un despliegue llama a una acción con el identificador de la versión anterior,
+ *   que en la nueva ya no existe. Se arregla sola al recargar, y el service worker no
+ *   guarda páginas (solo la de sin conexión), así que no puede durar más que esa pestaña.
+ *   Como el identificador cambia en cada versión, cada despliegue con alguien dentro
+ *   mandaba un aviso "Error nuevo" que no hay forma de arreglar.
  */
 const RUIDO = [
   /ResizeObserver loop/i,
@@ -133,6 +139,7 @@ const RUIDO = [
   /(chrome|moz|safari(-web)?)-extension:\/\//i,
   /NEXT_(REDIRECT|NOT_FOUND|HTTP_ERROR)/,
   /^(TypeError: )?(Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.?)$/i,
+  /Server Action "[0-9a-f]+" was not found on the server/i,
 ];
 
 export function esRuido(mensaje: string, detalle?: string | null): boolean {

@@ -91,6 +91,15 @@ describe("esRuido", () => {
     expect(esRuido(mensaje)).toBe(true);
   });
 
+  it("descarta la acción que no existe tras un despliegue (pestaña abierta de la versión anterior)", () => {
+    // Mensaje REAL del 2026-11-06, a las 18:10, justo al terminar el despliegue de las 18:09.
+    expect(
+      esRuido(
+        'Server Action "401247bac33dbb0400534478db87950ab9fc556547" was not found on the server. \nRead more: https://nextjs.org/docs/messages/failed-to-find-server-action'
+      )
+    ).toBe(true);
+  });
+
   it("descarta lo que viene de una extensión del navegador", () => {
     expect(esRuido("x is undefined", "at f (chrome-extension://abc/content.js:1:1)")).toBe(true);
   });
