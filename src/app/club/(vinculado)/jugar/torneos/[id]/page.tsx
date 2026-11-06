@@ -16,10 +16,15 @@ import { nombreVisible } from "@/lib/club/nombre-socio";
 
 export default async function TorneoInternoPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ ronda?: string }>;
 }) {
-  const { id } = await params;
+  const [{ id }, { ronda: rondaPedida }] = await Promise.all([params, searchParams]);
+  // La ronda que se quiere ver de un torneo de ChessPairings (`?ronda=2`). Cualquier cosa
+  // que no sea un número entero positivo se ignora y sale la en curso.
+  const ronda = /^\d{1,3}$/.test(rondaPedida ?? "") ? Number(rondaPedida) : undefined;
   const supabase = await createServerSupabase();
   const sesion = await sesionActual();
 
@@ -169,7 +174,11 @@ export default async function TorneoInternoPage({
             Si su página no responde, el componente enseña el enlace y no rompe nada. */}
         {torneo.organizadoEn === "chesspairings" && (
           <div className="space-y-4">
-            <TorneoChessPairings urlPublica={torneo.urlPublica} />
+            <TorneoChessPairings
+              urlPublica={torneo.urlPublica}
+              rutaTorneo={`/club/jugar/torneos/${torneo.id}`}
+              ronda={ronda}
+            />
           </div>
         )}
 

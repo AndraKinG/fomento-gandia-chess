@@ -5,6 +5,7 @@ import {
   parsearClasificacionPublica,
   parsearEmparejamientosPublicos,
   parsearInscritosPublicos,
+  parsearRondaMostrada,
   texto,
   urlPestana,
 } from "./chesspairings-publico";
@@ -35,6 +36,40 @@ describe("urlPestana", () => {
 
   it("no arrastra el ancla de la URL", () => {
     expect(urlPestana("https://x/y?id=1#abajo", "iscritti")).not.toContain("#");
+  });
+
+  it("pide una ronda concreta con `turno`, como sus botones Previous/Next", () => {
+    const u = urlPestana("https://my.chesspairings.org/pubblico/torneo.php?id=1&token=x", "abbinamenti", 2);
+    expect(u).toContain("tab=abbinamenti&turno=2");
+    expect(u).toContain("lang=en");
+  });
+
+  it("sin ronda, o con una que no es un número válido, no añade `turno`", () => {
+    for (const turno of [undefined, 0, -1, 1.5, Number.NaN]) {
+      expect(urlPestana("https://x/y?id=1", "abbinamenti", turno)).not.toContain("turno");
+    }
+  });
+});
+
+/**
+ * HTML REAL del Social Fomento 2026 (ChessPairings, torneo 7001), leído el 2026-11-06 con
+ * tres rondas jugadas y pidiendo `turno=1`. La cabecera de ARRIBA es la del torneo y dice la
+ * ronda en curso; la de la TARJETA dice la ronda que se está enseñando.
+ */
+const CABECERA_TORNEO = '<path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg> Round 3 of 6 </span> <span class="pub-badge pub-badge-in_corso"> In progress';
+const TARJETA_RONDA_1 = '<div class="pub-card-header"> <span>Round 1 of 6</span> <div class="pub-round-nav"> <a href="?id=7001&token=x&tab=abbinamenti&turno=2" class="pub-round-btn">Next &raquo;</a> </div> </div>';
+
+describe("parsearRondaMostrada", () => {
+  it("lee la ronda de la tarjeta, no la del torneo", () => {
+    expect(parsearRondaMostrada(CABECERA_TORNEO + TARJETA_RONDA_1)).toBe(1);
+  });
+
+  it("y la del torneo sigue diciendo la ronda en curso", () => {
+    expect(parsearCabeceraPublica(CABECERA_TORNEO + TARJETA_RONDA_1).ronda).toBe(3);
+  });
+
+  it("sin tarjeta de ronda (torneo sin emparejar), null", () => {
+    expect(parsearRondaMostrada(CABECERA_TORNEO)).toBeNull();
   });
 });
 
@@ -124,6 +159,28 @@ describe("parsearEmparejamientosPublicos", () => {
     expect(bye[0].esBye).toBe(true);
     expect(bye[0].resultado).toBeNull();
     expect(bye[0].negras).toBeNull();
+  });
+
+  it("el BYE de verdad de su página: «BYE» en negras y «+-» de resultado", () => {
+    // Fila REAL de la ronda 1 del Social Fomento 2026 (2026-11-06), con el token cambiado.
+    // Leída como partida salía "Juanvi — Juanvi": "BYE" se tomaba por el nombre de las
+    // negras y heredaban el id de las blancas.
+    const fila =
+      '<tr> <td class="text-center" style="font-weight:700;color:var(--color-text-light)">9</td> <td style="text-align:right"> <a href="giocatore.php?id=7001&token=x&id_giocatore=105984" class="pub-player-link"> Sanfélix Domínguez Dominguez, Juan Vicente <small style="color:var(--color-text-light)">(1736)</small> </a> </td> <td class="text-center" style="color:var(--color-text-light);font-size:0.82rem">0.0</td> <td class="text-center" style="font-weight:800">+-</td> <td class="text-center" style="color:var(--color-text-light);font-size:0.82rem"></td> <td> <em style="color:var(--color-text-light)">BYE</em> </td> </tr>';
+    const [m] = parsearEmparejamientosPublicos(EMPAREJAMIENTOS.replace("</table>", fila + "</table>")).slice(-1);
+    expect(m.mesa).toBe(9);
+    expect(m.esBye).toBe(true);
+    expect(m.negras).toBeNull();
+    expect(m.blancas?.idJugador).toBe(105984);
+  });
+
+  it("las negras nunca heredan el id de las blancas", () => {
+    const [m] = parsearEmparejamientosPublicos(
+      '<table><tr><th>Bd</th><th>White</th><th>Result</th><th>Black</th></tr>' +
+      '<tr><td>1</td><td><a href="giocatore.php?id_giocatore=5">Uno, Blancas</a></td><td>1-0</td><td>Dos, Negras</td></tr></table>'
+    );
+    expect(m.blancas?.idJugador).toBe(5);
+    expect(m.negras?.idJugador).toBeNull();
   });
 });
 

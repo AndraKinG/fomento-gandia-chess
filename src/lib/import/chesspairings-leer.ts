@@ -3,6 +3,7 @@ import {
   parsearClasificacionPublica,
   parsearEmparejamientosPublicos,
   parsearInscritosPublicos,
+  parsearRondaMostrada,
   urlPestana,
   type FilaClasificacionPublica,
   type InscritoPublico,
@@ -44,8 +45,14 @@ const CACHE_SEGUNDOS = 60;
 export type LecturaChessPairings = {
   /** El nombre que el torneo tiene ALLÍ, y en qué ronda va. */
   nombre: string | null;
+  /** La ronda EN CURSO del torneo. */
   ronda: number | null;
   rondasTotales: number | null;
+  /**
+   * La ronda de `emparejamientos`. Es la en curso salvo que se haya pedido otra; y si se
+   * pidió una que aún no existe, ChessPairings devuelve la en curso y esto lo dice.
+   */
+  rondaMostrada: number | null;
   clasificacion: FilaClasificacionPublica[];
   emparejamientos: MesaPublica[];
   inscritos: InscritoPublico[];
@@ -56,6 +63,7 @@ const VACIO: LecturaChessPairings = {
   nombre: null,
   ronda: null,
   rondasTotales: null,
+  rondaMostrada: null,
   clasificacion: [],
   emparejamientos: [],
   inscritos: [],
@@ -88,9 +96,17 @@ async function bajar(
   }
 }
 
-/** La clasificación, los emparejamientos y los inscritos de su página pública. */
+/**
+ * La clasificación, los emparejamientos y los inscritos de su página pública.
+ *
+ * `ronda` pide los emparejamientos de UNA RONDA ANTERIOR (2026-11-06, petición del
+ * propietario: poder ver las rondas pasadas y no solo la actual). La clasificación es
+ * siempre la de ahora: es la tabla que importa, y la de "después de la ronda 2" no la
+ * enseña su página pública. Cada ronda se guarda en caché por su lado, 60 s como el resto.
+ */
 export async function leerTorneoChessPairings(
-  enlacePublico: string | null
+  enlacePublico: string | null,
+  ronda?: number
 ): Promise<LecturaChessPairings> {
   if (!enlacePublico) return { ...VACIO, error: "sin-enlace" };
   // Un enlace guardado antes de existir la comprobación —o metido a mano en la base—
@@ -99,7 +115,7 @@ export async function leerTorneoChessPairings(
 
   const [c, a, i] = await Promise.all([
     bajar(urlPestana(enlacePublico, "classifica")),
-    bajar(urlPestana(enlacePublico, "abbinamenti")),
+    bajar(urlPestana(enlacePublico, "abbinamenti", ronda)),
     bajar(urlPestana(enlacePublico, "iscritti")),
   ]);
 
@@ -135,6 +151,7 @@ export async function leerTorneoChessPairings(
     nombre: cabecera.nombre,
     ronda: cabecera.ronda,
     rondasTotales: cabecera.rondasTotales,
+    rondaMostrada: (a.html ? parsearRondaMostrada(a.html) : null) ?? cabecera.ronda,
     clasificacion,
     emparejamientos,
     inscritos,

@@ -30,10 +30,20 @@ import { RefrescarCada } from "@/components/club/RefrescarCada";
 /** "1", "0.5", "0" → lo que se pinta en la mesa, desde las blancas. */
 const MARCA: Record<string, string> = { "1": "1–0", "0.5": "½–½", "0": "0–1" };
 
-export async function TorneoChessPairings({ urlPublica }: { urlPublica: string | null }) {
+export async function TorneoChessPairings({
+  urlPublica,
+  rutaTorneo,
+  ronda,
+}: {
+  urlPublica: string | null;
+  /** La ruta de esta pantalla, para los enlaces de las rondas (`?ronda=N`). */
+  rutaTorneo: string;
+  /** La ronda pedida en la dirección; sin ella, la en curso. */
+  ronda?: number;
+}) {
   if (!urlPublica) return null;
 
-  const lectura = await leerTorneoChessPairings(urlPublica);
+  const lectura = await leerTorneoChessPairings(urlPublica, ronda);
 
   if (lectura.error) {
     // SE DICE QUÉ PASA Y QUÉ HACER: un hueco en blanco donde debería estar la
@@ -220,9 +230,23 @@ export async function TorneoChessPairings({ urlPublica }: { urlPublica: string |
 
       {lectura.emparejamientos.length > 0 && (
         <section className="order-1 space-y-2 lg:order-2">
-          <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-tinta-suave">
-            {lectura.ronda ? `Ronda ${lectura.ronda}` : "Emparejamientos"}
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-tinta-suave">
+              {lectura.rondaMostrada ? `Ronda ${lectura.rondaMostrada}` : "Emparejamientos"}
+              {lectura.rondaMostrada &&
+                lectura.ronda &&
+                lectura.rondaMostrada < lectura.ronda && (
+                  <span className="ml-2 font-normal normal-case tracking-normal">· jugada</span>
+                )}
+            </h2>
+            {lectura.ronda && lectura.ronda > 1 && (
+              <SelectorRonda
+                rutaTorneo={rutaTorneo}
+                enCurso={lectura.ronda}
+                mostrada={lectura.rondaMostrada ?? lectura.ronda}
+              />
+            )}
+          </div>
           <Tarjeta compacta>
             <ul className="divide-y divide-borde">
               {lectura.emparejamientos.map((m) => {
@@ -264,5 +288,51 @@ export async function TorneoChessPairings({ urlPublica }: { urlPublica: string |
         </a>
       </p>
     </div>
+  );
+}
+
+/**
+ * Los botones para cambiar de ronda: 1 · 2 · 3, hasta la EN CURSO (2026-11-06, petición del
+ * propietario). Las que aún no se han emparejado no salen: allí no hay nada que ver.
+ *
+ * SON ENLACES, NO ESTADO DEL NAVEGADOR: la ronda va en la dirección (`?ronda=2`), así que
+ * se puede compartir, "atrás" en el móvil vuelve a la anterior y el refresco de cada minuto
+ * (`RefrescarCada`) se queda en la ronda que se estaba mirando. La en curso enlaza a la
+ * dirección limpia, que es la que se comparte del torneo.
+ *
+ * `scroll={false}`: la ronda está a media pantalla; sin esto, cada toque subiría arriba del
+ * todo y habría que volver a bajar a buscarla.
+ */
+function SelectorRonda({
+  rutaTorneo,
+  enCurso,
+  mostrada,
+}: {
+  rutaTorneo: string;
+  enCurso: number;
+  mostrada: number;
+}) {
+  return (
+    <nav aria-label="Cambiar de ronda" className="flex flex-wrap gap-1">
+      {Array.from({ length: enCurso }, (_, i) => i + 1).map((n) => {
+        const activa = n === mostrada;
+        return (
+          <Link
+            key={n}
+            href={n === enCurso ? rutaTorneo : `${rutaTorneo}?ronda=${n}`}
+            scroll={false}
+            aria-current={activa ? "page" : undefined}
+            aria-label={`Ronda ${n}${n === enCurso ? " (en curso)" : ""}`}
+            className={`min-w-9 rounded-lg px-2.5 py-1 text-center text-sm font-semibold tabular-nums transition duration-100 ${
+              activa
+                ? "bg-acento-fuerte text-sobre-acento"
+                : "border border-borde bg-tarjeta text-tinta-suave hover:bg-tarjeta-suave"
+            }`}
+          >
+            {n}
+          </Link>
+        );
+      })}
+    </nav>
   );
 }

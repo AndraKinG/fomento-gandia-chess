@@ -67,11 +67,22 @@ export type InscritoPublico = {
   fideId: string | null;
 };
 
-/** La URL de una pestaña, con el idioma fijado. */
-export function urlPestana(enlacePublico: string, pestana: PestanaPublica): string {
+/**
+ * La URL de una pestaña, con el idioma fijado.
+ *
+ * `turno` pide UNA RONDA CONCRETA de los emparejamientos (`&turno=N`). Es el parámetro de
+ * los botones "Previous / Next" de su propia página, visto en el Social Fomento 2026 el
+ * 2026-11-06 con tres rondas jugadas. Sin él, la página enseña la ronda en curso.
+ */
+export function urlPestana(
+  enlacePublico: string,
+  pestana: PestanaPublica,
+  turno?: number
+): string {
   const limpio = enlacePublico.split("#")[0];
   const separador = limpio.includes("?") ? "&" : "?";
-  return `${limpio}${separador}tab=${pestana}&lang=en`;
+  const ronda = turno && Number.isInteger(turno) && turno > 0 ? `&turno=${turno}` : "";
+  return `${limpio}${separador}tab=${pestana}${ronda}&lang=en`;
 }
 
 /** Texto de un trozo de HTML: sin etiquetas, sin entidades y sin espacios de sobra. */
@@ -176,7 +187,11 @@ export function parsearEmparejamientosPublicos(html: string): MesaPublica[] {
     const c = celdas(fila);
     if (c.length === 0) continue;
     const nombreB = sinSufijo(iBlancas >= 0 ? (c[iBlancas] ?? "") : "");
-    const nombreN = sinSufijo(iNegras >= 0 ? (c[iNegras] ?? "") : "");
+    const celdaN = sinSufijo(iNegras >= 0 ? (c[iNegras] ?? "") : "");
+    // SU MARCA DE DESCANSO ES LA PALABRA "BYE" EN LA COLUMNA DE NEGRAS (`<em>BYE</em>`),
+    // con "+-" de resultado — visto en la ronda 1 del Social Fomento 2026. No es un rival:
+    // leída como un nombre, salía "Juanvi — Juanvi" en vez de "descansa".
+    const nombreN = /^bye$/i.test(celdaN) ? "" : celdaN;
     if (!nombreB && !nombreN) continue;
     const ids = idsDeJugador(fila);
     const bruto = (iRes >= 0 ? c[iRes] : "") ?? "";
@@ -187,7 +202,11 @@ export function parsearEmparejamientosPublicos(html: string): MesaPublica[] {
     salida.push({
       mesa: aNumero(iMesa >= 0 ? c[iMesa] : undefined) ?? salida.length + 1,
       blancas: nombreB ? { idJugador: ids[0] ?? null, nombre: nombreB } : null,
-      negras: nombreN ? { idJugador: ids[1] ?? ids[0] ?? null, nombre: nombreN } : null,
+      // EL ID DE LAS NEGRAS ES EL SEGUNDO ENLACE DE LA FILA, o el primero si no hay
+      // blancas. Antes caía al primero también cuando sí había blancas, y una fila con un
+      // solo enlace le daba a las negras el id de las blancas: el cruce por FIDE ID las
+      // convertía en el mismo socio.
+      negras: nombreN ? { idJugador: (nombreB ? ids[1] : ids[0]) ?? null, nombre: nombreN } : null,
       resultado: bye ? null : resultadoDesdeBlancas(bruto),
       esBye: bye,
     });
@@ -241,4 +260,18 @@ export function parsearCabeceraPublica(html: string): {
     ronda: ronda ? Number(ronda[1]) : null,
     rondasTotales: ronda ? Number(ronda[2]) : null,
   };
+}
+
+/**
+ * Qué ronda enseña DE VERDAD su pestaña de emparejamientos.
+ *
+ * HACE FALTA PORQUE SU PÁGINA NO DICE QUE NO: si se le pide una ronda que todavía no
+ * existe (`turno=9` con tres jugadas), devuelve la ronda en curso sin más. Lo que manda es
+ * la cabecera de SU tarjeta, `<div class="pub-card-header"> <span>Round 1 of 6</span>`,
+ * que sí cambia con la ronda pedida — la de arriba de la página, que lee
+ * `parsearCabeceraPublica`, es la del torneo y dice siempre la ronda en curso.
+ */
+export function parsearRondaMostrada(html: string): number | null {
+  const m = /pub-card-header[^>]*>\s*<span>\s*Round\s+(\d+)\s+of\s+\d+/i.exec(html);
+  return m ? Number(m[1]) : null;
 }
