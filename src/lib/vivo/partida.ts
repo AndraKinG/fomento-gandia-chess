@@ -120,7 +120,10 @@ export function aplicarJugada(
     return {
       ok: false,
       error: "Se te ha acabado el tiempo.",
-      estado: { ...estado, resultado: fin.resultado, motivo: fin.motivo },
+      // El reloj se PARA, igual que en `reclamarTiempo`: este también es un final por
+      // tiempo, y sin parar el reloj el tablero final enseñaba al que perdió con el
+      // tiempo que tenía en su última jugada.
+      estado: { ...estado, reloj: parado(estado.reloj, ahora), resultado: fin.resultado, motivo: fin.motivo },
     };
   }
 
@@ -167,6 +170,34 @@ export function reclamarTiempo(estado: Estado, ahora: number): Estado | null {
     resultado: fin.resultado,
     motivo: fin.motivo,
   };
+}
+
+/**
+ * Margen antes de que el cron dé por abandonada una partida con la bandera caída.
+ *
+ * NO ES PARA QUE EL RESULTADO SEA OTRO: con la bandera caída la partida está perdida y
+ * ninguna jugada la salva (`aplicarJugada` mira la bandera antes que la jugada). Es para
+ * el jugador que SÍ está: si la bandera acaba de caer, le toca a él pulsar "reclamar" y
+ * verlo en su mesa, no que el cron se le adelante a la vez. Una hora sobra.
+ */
+export const MARGEN_ABANDONO_MS = 60 * 60 * 1000;
+
+/**
+ * ¿Hay que cerrar esta partida porque la han abandonado?
+ *
+ * Mira LO MISMO que `reclamarTiempo` —sin resultado y con la bandera caída— pero
+ * contándolo un margen atrás. El cierre lo hace después `reclamarTiempo`, la misma
+ * función que usa el botón: el cron no tiene reglas propias, hace lo que habría hecho
+ * quien esperaba si hubiera pulsado.
+ *
+ * UNA PARTIDA CUYO RELOJ NUNCA HA ARRANCADO NO SE CIERRA por aquí: el reloj no arranca
+ * hasta la primera jugada, así que la bandera no puede caer y no hay a quién darle la
+ * partida. Ojo, no es lo mismo que "sin jugadas": si se devuelve la primera jugada, la
+ * lista queda vacía pero el reloj ya corre, y esa sí se puede cerrar (igual que con el
+ * botón).
+ */
+export function abandonadaPorTiempo(estado: Estado, ahora: number): boolean {
+  return estado.resultado === null && banderaCaida(estado.reloj, ahora - MARGEN_ABANDONO_MS);
 }
 
 /**

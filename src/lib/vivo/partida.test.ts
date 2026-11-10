@@ -6,6 +6,8 @@ import {
   finPorReglas,
   finPorTiempo,
   partidaNueva,
+  abandonadaPorTiempo,
+  MARGEN_ABANDONO_MS,
   posicionDe,
   reclamarTiempo,
   type Estado,
@@ -62,6 +64,15 @@ describe("aplicarJugada", () => {
     if (r.ok) return;
     expect(r.estado?.resultado).toBe("0-1");
     expect(r.estado?.motivo).toBe("tiempo");
+  });
+
+  it("si la bandera cae al mover, el reloj queda PARADO y a cero", () => {
+    // Igual que al reclamar (`reclamarTiempo`): sin parar el reloj, la fila se quedaba
+    // con los 5:00 de la última jugada y el tablero final enseñaba tiempo de sobra a
+    // quien acababa de perder por bandera.
+    const r = aplicarJugada(enJuego(), "w", { desde: "e2", hasta: "e4" }, T0 + 400_000);
+    expect(r.estado?.reloj.blancasMs).toBe(0);
+    expect(r.estado?.reloj.ultimaJugadaEn).toBeNull();
   });
 
   it("descuenta el tiempo de quien mueve", () => {
@@ -156,6 +167,56 @@ describe("reclamarTiempo", () => {
   it("no toca una partida ya terminada", () => {
     const acabada: Estado = { ...enJuego(), resultado: "1-0", motivo: "mate" };
     expect(reclamarTiempo(acabada, T0 + 400_000)).toBeNull();
+  });
+});
+
+describe("abandonadaPorTiempo", () => {
+  // Bandera de las blancas: le quedan 5:00 desde T0, así que cae en T0 + 300.000.
+  const CAE = T0 + 300_000;
+
+  it("es abandonada si la bandera cayó hace más del margen", () => {
+    // El caso que la motivó: dos socios se van de un reto y nadie pulsa "reclamar".
+    expect(abandonadaPorTiempo(enJuego(), CAE + MARGEN_ABANDONO_MS + 1)).toBe(true);
+  });
+
+  it("no lo es mientras dura el margen, aunque la bandera ya haya caído", () => {
+    // El margen es para el que SÍ está: que reclame él, sin que el cron le pise.
+    expect(abandonadaPorTiempo(enJuego(), CAE + 1)).toBe(false);
+    expect(abandonadaPorTiempo(enJuego(), CAE + MARGEN_ABANDONO_MS - 1)).toBe(false);
+  });
+
+  it("no lo es si a quien mueve aún le queda tiempo", () => {
+    expect(abandonadaPorTiempo(enJuego(), T0 + 10_000)).toBe(false);
+  });
+
+  it("no lo es si nadie ha movido: el reloj no ha arrancado", () => {
+    // Antes de la primera jugada no corre el tiempo (reloj.ts), así que una partida sin
+    // jugadas no se puede cerrar por tiempo, ni a mano ni sola, por vieja que sea.
+    const sinEmpezar = partidaNueva(CADENCIA, relojInicial(CADENCIA));
+    expect(abandonadaPorTiempo(sinEmpezar, T0 + 30 * 86_400_000)).toBe(false);
+  });
+
+  it("no lo es si ya tiene resultado", () => {
+    const acabada: Estado = { ...enJuego(), resultado: "1-0", motivo: "mate" };
+    expect(abandonadaPorTiempo(acabada, CAE + MARGEN_ABANDONO_MS + 1)).toBe(false);
+  });
+
+  it("la que la motivó: una jugada de blancas y las negras no volvieron", () => {
+    // 5+0, 1.e4 y nada más, seis días después. Al cerrarla gana el que sí jugó, que es
+    // lo mismo que habría pasado si hubiera pulsado "reclamar".
+    const cadencia: Cadencia = { baseMs: 5 * 60_000, incrementoMs: 0 };
+    const tras1e4: Estado = {
+      ...partidaNueva(cadencia, {
+        blancasMs: 300_000,
+        negrasMs: 300_000,
+        ultimaJugadaEn: T0,
+        turno: "b",
+      }),
+      jugadas: ["e4"],
+    };
+    const seisDias = T0 + 6 * 86_400_000;
+    expect(abandonadaPorTiempo(tras1e4, seisDias)).toBe(true);
+    expect(reclamarTiempo(tras1e4, seisDias)).toMatchObject({ resultado: "1-0", motivo: "tiempo" });
   });
 });
 

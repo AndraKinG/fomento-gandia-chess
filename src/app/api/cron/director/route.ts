@@ -5,6 +5,7 @@ import {
   sincronizarSemanalCore,
 } from "@/lib/import/sync-semanal";
 import { reintentarAvisosFallidos } from "@/lib/avisos/reintentar";
+import { cerrarPartidasAbandonadas } from "@/lib/vivo/abandonadas";
 
 export const maxDuration = 300;
 
@@ -33,7 +34,8 @@ const DIAS_VENTANA_PRUEBA = 60;
  *   el resultado, por si el primero llama y no recoge info").
  * - **Jueves (4): recuerda** a quien no ha contestado la disponibilidad (2 días antes de
  *   la jornada del sábado).
- * - Resto de días: solo el reintento de avisos.
+ * - Resto de días: solo las dos redes de seguridad de abajo (reintento de avisos y
+ *   cierre de partidas en vivo abandonadas), que corren TODOS los días.
  *
  * POR QUÉ DOS PASADAS Y NO DOS CRONES DE VERCEL: el plan Hobby permite UNA ejecución al
  * día, así que un segundo cron no existe. Pero un día puede hacer dos cosas, y sale
@@ -78,23 +80,28 @@ export async function GET(request: NextRequest) {
   // no puede tumbar la acción del día, así que va suelta y antes que nada.
   const avisos = await reintentarAvisosFallidos();
 
+  // Partidas en vivo abandonadas (bandera caída y nadie ha reclamado): MISMO TRATO que
+  // los avisos —todos los días y en cada pasada— porque tampoco tienen día de la semana.
+  // Nunca lanza (ver `abandonadas.ts`), así que tampoco tumba la tarea del día.
+  const partidas = await cerrarPartidasAbandonadas();
+
   if (forzar === "pedir") {
     const resultado = await pedirDisponibilidadSemana(DIAS_VENTANA_PRUEBA);
-    return NextResponse.json({ accion: "pedir", forzado: true, avisos, ...resultado });
+    return NextResponse.json({ accion: "pedir", forzado: true, avisos, partidas, ...resultado });
   }
   if (forzar === "recordar") {
     const resultado = await recordarPendientes(DIAS_VENTANA_PRUEBA);
-    return NextResponse.json({ accion: "recordar", forzado: true, avisos, ...resultado });
+    return NextResponse.json({ accion: "recordar", forzado: true, avisos, partidas, ...resultado });
   }
   if (forzar === "sync") {
     const resultado = await sincronizarSemanalCore();
-    return NextResponse.json({ accion: "sync", forzado: true, avisos, ...resultado });
+    return NextResponse.json({ accion: "sync", forzado: true, avisos, partidas, ...resultado });
   }
   // LA PASADA CORTA, la que llama pg_cron el sábado por la noche: solo resultados y
   // actas, que es lo único que cambia recién acabada la jornada. Ver la migración 0049.
   if (forzar === "resultados") {
     const resultado = await sincronizarResultadosYActas();
-    return NextResponse.json({ accion: "resultados", forzado: true, avisos, ...resultado });
+    return NextResponse.json({ accion: "resultados", forzado: true, avisos, partidas, ...resultado });
   }
 
   const dia = new Date().getUTCDay();
@@ -102,7 +109,7 @@ export async function GET(request: NextRequest) {
     case 0: {
       // Domingo: el día después de la jornada. Primera pasada por los resultados.
       const resultado = await sincronizarSemanalCore();
-      return NextResponse.json({ dia, accion: "sync", avisos, ...resultado });
+      return NextResponse.json({ dia, accion: "sync", avisos, partidas, ...resultado });
     }
     case 1: {
       // Lunes: la disponibilidad de la semana Y la segunda pasada de la sync.
@@ -112,14 +119,14 @@ export async function GET(request: NextRequest) {
       // pediría disponibilidad para una jornada que todavía no existe en la base.
       const sync = await sincronizarSemanalCore();
       const resultado = await pedirDisponibilidadSemana();
-      return NextResponse.json({ dia, accion: "pedir+sync", avisos, sync, ...resultado });
+      return NextResponse.json({ dia, accion: "pedir+sync", avisos, partidas, sync, ...resultado });
     }
     case 4: {
       // Jueves: recordar a quien no ha contestado, dos días antes del sábado.
       const resultado = await recordarPendientes();
-      return NextResponse.json({ dia, accion: "recordar", avisos, ...resultado });
+      return NextResponse.json({ dia, accion: "recordar", avisos, partidas, ...resultado });
     }
     default:
-      return NextResponse.json({ dia, accion: "nada", avisos });
+      return NextResponse.json({ dia, accion: "nada", avisos, partidas });
   }
 }

@@ -3,18 +3,20 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sesionVerificada } from "@/lib/auth/sesion";
-import {
-  aplicarJugada,
-  finPorAbandono,
-  reclamarTiempo,
-  type Estado,
-  type Jugada,
-} from "@/lib/vivo/partida";
+import { aplicarJugada, finPorAbandono, reclamarTiempo, type Jugada } from "@/lib/vivo/partida";
 import { parado, relojInicial } from "@/lib/vivo/reloj";
 import { blancasEnAmistosa } from "@/lib/vivo/colores";
-import { aPgn } from "@/lib/vivo/partida";
 import { avisar } from "@/lib/avisos/enviar";
-import { difundirAviso, difundirChat, difundirPartida, difundirTorneo } from "@/lib/vivo/difundir";
+import { difundirAviso } from "@/lib/vivo/difundir";
+import {
+  aEstado,
+  aFila,
+  apuntarEnElChat,
+  cerrarEnElTorneo,
+  guardarYAvisar,
+  nombreDe,
+  type Fila,
+} from "@/lib/vivo/guardar";
 
 /**
  * Todo lo que cambia una partida en vivo.
@@ -31,173 +33,6 @@ import { difundirAviso, difundirChat, difundirPartida, difundirTorneo } from "@/
 
 type Respuesta = { error?: string; id?: string };
 
-/** Fila tal como se guarda, para no repetir el mapeo en cada acción. */
-type Fila = {
-  id: string;
-  blancas_id: string;
-  negras_id: string;
-  jugadas: string[];
-  turno: "w" | "b";
-  blancas_ms: number;
-  negras_ms: number;
-  base_ms: number;
-  incremento_ms: number;
-  ultima_jugada_en: string | null;
-  resultado: string | null;
-  motivo: string | null;
-  club_pairing_id: string | null;
-  tablas_ofrecidas_por: string | null;
-  vuelta_pedida_por: string | null;
-};
-
-function aEstado(f: Fila): Estado {
-  return {
-    jugadas: f.jugadas ?? [],
-    cadencia: { baseMs: f.base_ms, incrementoMs: f.incremento_ms },
-    reloj: {
-      blancasMs: f.blancas_ms,
-      negrasMs: f.negras_ms,
-      turno: f.turno,
-      ultimaJugadaEn: f.ultima_jugada_en ? Date.parse(f.ultima_jugada_en) : null,
-    },
-    resultado: (f.resultado as Estado["resultado"]) ?? null,
-    motivo: (f.motivo as Estado["motivo"]) ?? null,
-  };
-}
-
-/** Lo que hay que escribir de un estado. Se guarda entero para que la fila y la
- *  lógica no puedan discrepar. */
-function aFila(e: Estado) {
-  return {
-    jugadas: e.jugadas,
-    turno: e.reloj.turno,
-    blancas_ms: e.reloj.blancasMs,
-    negras_ms: e.reloj.negrasMs,
-    // AL TERMINAR, EL RELOJ SE PARA. `ultima_jugada_en` es lo que le dice al
-    // navegador "sigue contando desde aquí": dejarla puesta en una partida acabada
-    // hacía que el tablero final enseñara los milisegundos del instante de la última
-    // jugada, o sea más tiempo del que quedaba de verdad.
-    ultima_jugada_en:
-      e.resultado !== null || e.reloj.ultimaJugadaEn === null
-        ? null
-        : new Date(e.reloj.ultimaJugadaEn).toISOString(),
-    resultado: e.resultado,
-    motivo: e.motivo,
-    terminada_en: e.resultado ? new Date().toISOString() : null,
-    // Cualquier jugada mata una oferta de tablas viva: aceptar unas tablas que se
-    // ofrecieron hace cinco jugadas no es lo que nadie espera. Lo mismo con la
-    // petición de volver: si la partida ha seguido, ya no hay nada que deshacer.
-    tablas_ofrecidas_por: null,
-    vuelta_pedida_por: null,
-  };
-}
-
-/**
- * Lo que hay que hacer cuando una partida de TORNEO se acaba: escribir el resultado
- * en el emparejamiento y dejar el PGN en el repositorio.
- *
- * SE LLAMA DESDE TODOS LOS FINALES —mate, tiempo, abandono, tablas—, porque una
- * partida se puede acabar de muchas maneras y el torneo tiene que enterarse de
- * todas. El ELO del club no hay que tocarlo: se recalcula solo desde los
- * emparejamientos.
- *
- * Es idempotente: si el emparejamiento ya tiene resultado no se pisa, porque el
- * organizador puede haberlo corregido a mano y su palabra vale más que esto.
- */
-async function cerrarEnElTorneo(
-  db: ReturnType<typeof createAdminClient>,
-  fila: Fila,
-  resultado: string
-): Promise<void> {
-  if (!fila.club_pairing_id) return;
-
-  const { data: par } = await db
-    .from("club_pairings")
-    .select("id, resultado, game_id, round_id")
-    .eq("id", fila.club_pairing_id)
-    .maybeSingle();
-  if (!par || par.resultado !== null) return;
-
-  // `club_pairings.resultado` se guarda DESDE LAS BLANCAS, igual que en toda la app.
-  const desdeBlancas = resultado === "1-0" ? "1" : resultado === "0-1" ? "0" : "0.5";
-
-  // El PGN, al repositorio. La partida se guarda a nombre del jugador de blancas:
-  // la base lleva una fila por dueño, y duplicarla para los dos dejaría la misma
-  // partida dos veces en las búsquedas.
-  const { data: nombres } = await db
-    .from("players")
-    .select("id, nombre")
-    .in("id", [fila.blancas_id, fila.negras_id]);
-  const nombre = new Map((nombres ?? []).map((n) => [n.id, n.nombre as string]));
-
-  const { data: ronda } = await db
-    .from("club_rounds")
-    .select("numero, tournament_id, club_tournaments(nombre)")
-    .eq("id", par.round_id)
-    .maybeSingle();
-  const nombreTorneo =
-    (ronda?.club_tournaments as unknown as { nombre: string } | null)?.nombre ??
-    "Torneo del club";
-  const hoy = new Date().toISOString().slice(0, 10);
-
-  // EL RESULTADO SE PASA A MANO. `fila` es la partida tal como estaba ANTES de
-  // cerrarla, así que su `resultado` todavía es null y el PGN salía con `[Result
-  // "*"]` y terminado en asterisco — una partida ganada guardada como inacabada.
-  // Pasó de verdad con la primera partida de prueba.
-  const estadoFinal: Estado = {
-    ...aEstado(fila),
-    resultado: resultado as Estado["resultado"],
-  };
-
-  const pgn = aPgn(estadoFinal, {
-    blancas: nombre.get(fila.blancas_id) ?? "Socio",
-    negras: nombre.get(fila.negras_id) ?? "Socio",
-    fecha: hoy,
-    evento: nombreTorneo,
-  });
-
-  const { data: guardada, error: errorPgn } = await db
-    .from("games")
-    .insert({
-      player_id: fila.blancas_id,
-      fecha: hoy,
-      ronda: ronda?.numero ?? null,
-      rival_nombre: nombre.get(fila.negras_id) ?? "Socio",
-      rival_id: fila.negras_id,
-      color: "blancas",
-      resultado: desdeBlancas,
-      torneo_texto: nombreTorneo,
-      pgn,
-    })
-    .select("id")
-    .single();
-
-  // EL RESULTADO SE APUNTA AUNQUE EL PGN FALLE: la clasificación del torneo no
-  // puede quedarse esperando a que el repositorio funcione. Pero el fallo se
-  // TRAZA — antes se tragaba en silencio ("Importante — Silencios" de la
-  // auditoría del 2026-08-10) y "el torneo tiene resultado pero no partida" era
-  // indistinguible de un torneo al que nadie subió nada.
-  if (errorPgn || !guardada) {
-    console.error(
-      "[torneo] el resultado quedó apuntado pero el PGN no entró en el repositorio",
-      fila.club_pairing_id,
-      errorPgn?.message ?? "insert sin fila devuelta"
-    );
-  }
-
-  await db
-    .from("club_pairings")
-    .update({ resultado: desdeBlancas, game_id: guardada?.id ?? par.game_id })
-    .eq("id", par.id);
-
-  // A quien esté MIRANDO la pantalla del torneo, en vivo: el revalidate de abajo
-  // solo refresca la siguiente navegación, no al que ya la tiene delante.
-  if (ronda?.tournament_id) await difundirTorneo(ronda.tournament_id);
-
-  revalidatePath("/club/jugar/torneos");
-  revalidatePath("/club/jugar/torneos/ranking");
-}
-
 /**
  * Refresca las pantallas de servidor.
  *
@@ -207,59 +42,9 @@ async function cerrarEnElTorneo(
  * real, que para eso está. Solo se refresca cuando la partida CAMBIA DE ESTADO
  * —empieza o termina—, que es lo que ven las listas.
  */
-/**
- * Deja constancia en el chat de algo que ha pasado en la partida.
- *
- * POR QUÉ SE GUARDA Y NO SE PINTA Y YA: si el rival dice que no a unas tablas, la
- * tarjeta desaparece y sin esto no queda ni rastro — parece que el mensaje se haya
- * perdido. Escrito en el chat, los dos ven qué se pidió y qué se contestó, y sigue
- * ahí al volver a la partida.
- *
- * Lo escribe el SERVIDOR con clave de servicio, así que la política del chat no
- * cambia: el cliente sigue sin poder escribir en nombre de nadie.
- */
-async function apuntarEnElChat(
-  db: ReturnType<typeof createAdminClient>,
-  partidaId: string,
-  evento: string,
-  texto: string
-): Promise<void> {
-  try {
-    const { data } = await db
-      .from("live_chat")
-      .insert({ live_game_id: partidaId, player_id: null, evento, texto })
-      .select("id, player_id, texto, evento, creado_en")
-      .single();
-    if (data) await difundirChat(partidaId, data as Record<string, unknown>);
-  } catch {
-    // Que no se pueda apuntar no puede tumbar la jugada, que ya está hecha.
-  }
-}
-
 function refrescar(id: string): void {
   revalidatePath("/club/jugar");
   revalidatePath(`/club/jugar/${id}`);
-}
-
-/**
- * Guarda el cambio y AVISA a la mesa por difusión.
- *
- * Las dos cosas juntas y en una sola función para que no se pueda escribir un
- * cambio sin avisarlo: cada vez que eso pasara, los dos jugadores se quedarían
- * esperando al reintento sin saber por qué.
- */
-async function guardarYAvisar(
-  db: ReturnType<typeof createAdminClient>,
-  partidaId: string,
-  cambio: Record<string, unknown>
-): Promise<void> {
-  const { data } = await db
-    .from("live_games")
-    .update(cambio)
-    .eq("id", partidaId)
-    .select("*")
-    .maybeSingle();
-  if (data) await difundirPartida(partidaId, data as Record<string, unknown>);
 }
 
 /**
@@ -273,15 +58,6 @@ async function guardarYAvisar(
 function relojParado(fila: Fila) {
   const r = parado(aEstado(fila).reloj, Date.now());
   return { blancas_ms: r.blancasMs, negras_ms: r.negrasMs, ultima_jugada_en: null };
-}
-
-/** Nombre de una ficha, para escribirlo en el chat. */
-async function nombreDe(
-  db: ReturnType<typeof createAdminClient>,
-  playerId: string
-): Promise<string> {
-  const { data } = await db.from("players").select("nombre").eq("id", playerId).maybeSingle();
-  return (data?.nombre as string | undefined) ?? "Un socio";
 }
 
 /** Carga la partida y dice de qué color juega esta persona, o null si no es suya. */
@@ -520,6 +296,10 @@ export async function mover(partidaId: string, jugada: Jugada): Promise<Respuest
   if (!r.ok) {
     if (r.estado) {
       await guardarYAvisar(mia.db, partidaId, aFila(r.estado));
+      // ESTE TAMBIÉN ES UN FINAL, y faltaba (revisión del 2026-11-10): en una partida de
+      // torneo, perder por tiempo al mover tarde dejaba el emparejamiento SIN RESULTADO,
+      // y el cierre de abandonadas no lo rescata porque la partida ya está cerrada.
+      if (r.estado.resultado) await cerrarEnElTorneo(mia.db, mia.fila, r.estado.resultado);
       refrescar(partidaId);
     }
     return { error: r.error };
