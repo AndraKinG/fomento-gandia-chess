@@ -119,4 +119,4 @@ En [ESTADO.md](ESTADO.md).
 
 - [2026-08-26](docs/auditorias/2026-08-26.md): bajas visibles, 404, Next.
 - [2026-10-08](docs/auditorias/2026-10-08.md): región de Vercel (−52 a −75 % en todas las pantallas), SSRF, cabeceras, cierre de sesión global.
-- [2026-11-10](docs/auditorias/2026-11-10.md): Next 16.4.6 (tres avisos, dos críticos), correo de un socio fuera de ESTADO.md; pendientes: 3D en móvil, robots.txt, partidas en vivo que no se cierran.
+- [2026-11-10](docs/auditorias/2026-11-10.md): Next 16.4.6 (tres avisos, dos críticos), correo de un socio fuera de ESTADO.md; partidas en vivo abandonadas (se cierran o se anulan solas) y volver jugada; pendientes: 3D en móvil, robots.txt, ELO FIDE parado desde el 6 de noviembre.
