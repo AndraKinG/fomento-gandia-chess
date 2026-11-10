@@ -173,6 +173,33 @@ export function reclamarTiempo(estado: Estado, ahora: number): Estado | null {
 }
 
 /**
+ * Aplica una petición de volver jugada ACEPTADA. Devuelve null si no hay nada que volver.
+ *
+ * LA BANDERA SE MIRA ANTES, igual que en `aplicarJugada` y por el mismo motivo: quien
+ * acepta es quien tiene el turno y el reloj corriendo, y si se le ha acabado el tiempo la
+ * partida ya estaba perdida. Antes, aceptar le devolvía el turno al rival y la derrota
+ * desaparecía (revisión del 2026-11-10). Ahora sale cerrada por tiempo, sin volver nada.
+ *
+ * EL TIEMPO PENSADO NO SE DEVUELVE: se descuenta lo que llevaba pensando quien acepta y
+ * solo entonces se pasa el turno. Antes se reiniciaba la marca del reloj sin descontar
+ * nada, así que pensar cuatro minutos y aceptar salía gratis — y eso abría la puerta a
+ * ganar tiempo pidiendo volver jugadas, justo lo que el comentario de la acción decía
+ * que no pasaba.
+ */
+export function volverJugada(estado: Estado, ahora: number): Estado | null {
+  if (estado.resultado !== null) return null;
+  const porTiempo = reclamarTiempo(estado, ahora);
+  if (porTiempo) return porTiempo;
+  if (estado.jugadas.length === 0) return null;
+  const congelado = parado(estado.reloj, ahora);
+  return {
+    ...estado,
+    jugadas: estado.jugadas.slice(0, -1),
+    reloj: { ...congelado, turno: estado.reloj.turno === "w" ? "b" : "w", ultimaJugadaEn: ahora },
+  };
+}
+
+/**
  * Margen antes de que el cron dé por abandonada una partida con la bandera caída.
  *
  * NO ES PARA QUE EL RESULTADO SEA OTRO: con la bandera caída la partida está perdida y

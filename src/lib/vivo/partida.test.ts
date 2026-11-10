@@ -11,6 +11,7 @@ import {
   MARGEN_ABANDONO_MS,
   posicionDe,
   reclamarTiempo,
+  volverJugada,
   type Estado,
 } from "./partida";
 import { relojInicial, type Cadencia } from "./reloj";
@@ -262,6 +263,48 @@ describe("destinoDeAbandonada", () => {
   it("con resultado: nada, la mire quien la mire", () => {
     const acabada: Estado = { ...enJuego(["e4"], "b"), resultado: "1-0", motivo: "tiempo" };
     expect(destinoDeAbandonada(acabada, ABIERTA, CAE + MARGEN_ABANDONO_MS + 1)).toBe("nada");
+  });
+});
+
+describe("volverJugada", () => {
+  // La pide quien hizo la última jugada; la acepta el otro, que es quien tiene el turno y
+  // el reloj corriendo. En estos casos: 1.e4 en T0, y le toca a las negras.
+
+  it("deshace la jugada y devuelve el turno a quien la pidió", () => {
+    const v = volverJugada(enJuego(["e4"], "b"), T0 + 60_000);
+    expect(v?.jugadas).toEqual([]);
+    expect(v?.reloj.turno).toBe("w");
+    expect(v?.resultado).toBeNull();
+  });
+
+  it("NO DEVUELVE el tiempo que pensó quien acepta", () => {
+    // Antes se reiniciaba la marca sin descontar nada: pensar cuatro minutos y aceptar
+    // salía gratis. Es lo contrario de lo que decía el propio comentario del código.
+    const v = volverJugada(enJuego(["e4"], "b"), T0 + 60_000);
+    expect(v?.reloj.negrasMs).toBe(300_000 - 60_000);
+    expect(v?.reloj.blancasMs).toBe(300_000);
+  });
+
+  it("el reloj empieza a correrle a quien vuelve a tener el turno, desde ya", () => {
+    const v = volverJugada(enJuego(["e4"], "b"), T0 + 60_000);
+    expect(v?.reloj.ultimaJugadaEn).toBe(T0 + 60_000);
+  });
+
+  it("CON LA BANDERA CAÍDA no se vuelve nada: pierde por tiempo quien tenía el turno", () => {
+    // El agujero: aceptar devolvía el turno al rival y la derrota desaparecía. La bandera
+    // se mira ANTES, igual que en `aplicarJugada`.
+    const v = volverJugada(enJuego(["e4"], "b"), T0 + 400_000);
+    expect(v?.resultado).toBe("1-0");
+    expect(v?.motivo).toBe("tiempo");
+    expect(v?.jugadas).toEqual(["e4"]);
+    expect(v?.reloj.negrasMs).toBe(0);
+    expect(v?.reloj.ultimaJugadaEn).toBeNull();
+  });
+
+  it("no hace nada en una partida terminada ni sin jugadas", () => {
+    const acabada: Estado = { ...enJuego(["e4"], "b"), resultado: "1-0", motivo: "mate" };
+    expect(volverJugada(acabada, T0 + 60_000)).toBeNull();
+    expect(volverJugada(enJuego([], "w"), T0 + 60_000)).toBeNull();
   });
 });
 

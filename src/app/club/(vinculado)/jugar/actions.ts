@@ -3,7 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sesionVerificada } from "@/lib/auth/sesion";
-import { aplicarJugada, finPorAbandono, reclamarTiempo, type Jugada } from "@/lib/vivo/partida";
+import {
+  aplicarJugada,
+  finPorAbandono,
+  reclamarTiempo,
+  volverJugada,
+  type Jugada,
+} from "@/lib/vivo/partida";
 import { parado, relojInicial } from "@/lib/vivo/reloj";
 import { blancasEnAmistosa } from "@/lib/vivo/colores";
 import { avisar } from "@/lib/avisos/enviar";
@@ -455,10 +461,15 @@ export async function pedirVolverJugada(partidaId: string): Promise<Respuesta> {
  * NO PUEDE RESPONDERLA QUIEN LA PIDIÓ, igual que con las tablas: si no, cualquiera
  * se desharía sus propias jugadas con dos clics.
  *
- * QUÉ PASA CON EL RELOJ al aceptar: los tiempos se quedan como están. El que pensó
- * esos segundos los pensó, y devolvérselos abriría la puerta a ganar tiempo pidiendo
- * volver jugadas. Lo único que se reinicia es la marca, para que el reloj empiece a
- * correrle a quien vuelve a tener el turno.
+ * LA BANDERA SE MIRA ANTES QUE LA RESPUESTA, se acepte o no: quien responde es quien
+ * tiene el turno, y si se le ha acabado el tiempo la partida ya estaba perdida. Antes,
+ * aceptar le devolvía el turno al rival y la derrota desaparecía (revisión del
+ * 2026-11-10). Ahora se cierra por tiempo, como al mover tarde.
+ *
+ * QUÉ PASA CON EL RELOJ al aceptar: se DESCUENTA lo que pensó quien acepta y entonces
+ * se pasa el turno (`volverJugada`). El que pensó esos segundos los pensó, y
+ * devolvérselos abriría la puerta a ganar tiempo pidiendo volver jugadas — que es lo
+ * que pasaba: el código reiniciaba la marca del reloj sin descontar nada.
  */
 export async function responderVolverJugada(
   partidaId: string,
@@ -475,6 +486,21 @@ export async function responderVolverJugada(
   if (!quienPidio) return { error: "Nadie ha pedido volver ninguna jugada." };
   if (quienPidio === sesion.playerId) return { error: "La has pedido tú." };
 
+  const porTiempo = reclamarTiempo(aEstado(mia.fila), Date.now());
+  if (porTiempo?.resultado) {
+    const sinTiempo = mia.fila.turno === "w" ? mia.fila.blancas_id : mia.fila.negras_id;
+    await apuntarEnElChat(
+      mia.db,
+      partidaId,
+      "tiempo",
+      `Se acabó el tiempo de ${await nombreDe(mia.db, sinTiempo)} antes de responder a la petición.`
+    );
+    await guardarYAvisar(mia.db, partidaId, aFila(porTiempo));
+    await cerrarEnElTorneo(mia.db, mia.fila, porTiempo.resultado);
+    refrescar(partidaId);
+    return { error: "Se acabó el tiempo: la partida ha terminado." };
+  }
+
   if (!acepta) {
     await guardarYAvisar(mia.db, partidaId, { vuelta_pedida_por: null });
     await apuntarEnElChat(
@@ -486,8 +512,9 @@ export async function responderVolverJugada(
     return {};
   }
 
-  const jugadas = [...(mia.fila.jugadas ?? [])];
-  const deshecha = jugadas.pop();
+  const vuelta = volverJugada(aEstado(mia.fila), Date.now());
+  if (!vuelta) return { error: "No hay ninguna jugada que volver." };
+  const deshecha = (mia.fila.jugadas ?? []).at(-1);
   await apuntarEnElChat(
     mia.db,
     partidaId,
@@ -496,14 +523,9 @@ export async function responderVolverJugada(
       deshecha ? ` (${deshecha})` : ""
     }.`
   );
-  await guardarYAvisar(mia.db, partidaId, {
-    jugadas,
-    // El turno vuelve al que la hizo, que es quien la pidió.
-    turno: mia.fila.turno === "w" ? "b" : "w",
-    ultima_jugada_en: new Date().toISOString(),
-    vuelta_pedida_por: null,
-    tablas_ofrecidas_por: null,
-  });
+  // `aFila` lo escribe TODO —también los dos relojes, que es lo que faltaba— y de paso
+  // limpia la petición y cualquier oferta de tablas viva.
+  await guardarYAvisar(mia.db, partidaId, aFila(vuelta));
   return {};
 }
 
