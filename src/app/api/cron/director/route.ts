@@ -5,7 +5,7 @@ import {
   sincronizarSemanalCore,
 } from "@/lib/import/sync-semanal";
 import { reintentarAvisosFallidos } from "@/lib/avisos/reintentar";
-import { cerrarPartidasAbandonadas } from "@/lib/vivo/abandonadas";
+import { atenderPartidasAbandonadas } from "@/lib/vivo/abandonadas";
 
 export const maxDuration = 300;
 
@@ -35,7 +35,7 @@ const DIAS_VENTANA_PRUEBA = 60;
  * - **Jueves (4): recuerda** a quien no ha contestado la disponibilidad (2 días antes de
  *   la jornada del sábado).
  * - Resto de días: solo las dos redes de seguridad de abajo (reintento de avisos y
- *   cierre de partidas en vivo abandonadas), que corren TODOS los días.
+ *   partidas en vivo abandonadas: cerrar o anular), que corren TODOS los días.
  *
  * POR QUÉ DOS PASADAS Y NO DOS CRONES DE VERCEL: el plan Hobby permite UNA ejecución al
  * día, así que un segundo cron no existe. Pero un día puede hacer dos cosas, y sale
@@ -80,10 +80,11 @@ export async function GET(request: NextRequest) {
   // no puede tumbar la acción del día, así que va suelta y antes que nada.
   const avisos = await reintentarAvisosFallidos();
 
-  // Partidas en vivo abandonadas (bandera caída y nadie ha reclamado): MISMO TRATO que
+  // Partidas en vivo abandonadas (se cierran por tiempo, o se anulan si no llegaron a
+  // empezar; ver `abandonadas.ts`): MISMO TRATO que
   // los avisos —todos los días y en cada pasada— porque tampoco tienen día de la semana.
   // Nunca lanza (ver `abandonadas.ts`), así que tampoco tumba la tarea del día.
-  const partidas = await cerrarPartidasAbandonadas();
+  const partidas = await atenderPartidasAbandonadas();
 
   if (forzar === "pedir") {
     const resultado = await pedirDisponibilidadSemana(DIAS_VENTANA_PRUEBA);

@@ -200,6 +200,38 @@ export function abandonadaPorTiempo(estado: Estado, ahora: number): boolean {
   return estado.resultado === null && banderaCaida(estado.reloj, ahora - MARGEN_ABANDONO_MS);
 }
 
+/** Lo que el cron hace con una partida abierta: nada, cerrarla por tiempo o anularla. */
+export type DestinoAbandonada = "nada" | "cerrar" | "anular";
+
+/**
+ * ¿Qué hay que hacer con esta partida si la han abandonado?
+ *
+ * UNA PARTIDA NO HA EMPEZADO MIENTRAS ALGUNO DE LOS DOS NO HAYA HECHO SU PRIMERA JUGADA
+ * (decisión del propietario, 2026-11-10; es la regla de Lichess). Abandonada así, se
+ * ANULA y se borra: darle la victoria a uno por un 1.e4 sin respuesta no dice nada de
+ * quién juega mejor. Las que sí empezaron se CIERRAN por tiempo con la regla del botón
+ * (`abandonadaPorTiempo` + `reclamarTiempo`).
+ *
+ * "Abandonada" es lo mismo en los dos casos: a quien le toca mover se le habría acabado
+ * el tiempo, más el margen. Si nadie ha movido el reloj no ha arrancado, así que se
+ * cuenta desde que se abrió la mesa (`creadaEn`), como si hubiera arrancado entonces.
+ *
+ * OJO, EL BOTÓN NO CAMBIA: si en una partida sin empezar el que está pulsa "reclamar"
+ * cuando al otro se le acaba el tiempo, gana. Esto es solo lo que hace el cron con las
+ * que nadie ha reclamado.
+ */
+export function destinoDeAbandonada(
+  estado: Estado,
+  creadaEn: number,
+  ahora: number
+): DestinoAbandonada {
+  if (estado.resultado !== null) return "nada";
+  if (estado.jugadas.length >= 2) return abandonadaPorTiempo(estado, ahora) ? "cerrar" : "nada";
+  const reloj =
+    estado.reloj.ultimaJugadaEn === null ? { ...estado.reloj, ultimaJugadaEn: creadaEn } : estado.reloj;
+  return banderaCaida(reloj, ahora - MARGEN_ABANDONO_MS) ? "anular" : "nada";
+}
+
 /**
  * PGN de la partida, para que acabe en el repositorio como una más.
  *

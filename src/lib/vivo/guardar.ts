@@ -25,6 +25,8 @@ import { difundirChat, difundirPartida, difundirTorneo } from "@/lib/vivo/difund
 /** Fila tal como se guarda, para no repetir el mapeo en cada acción. */
 export type Fila = {
   id: string;
+  /** Cuándo se abrió la mesa. Es la referencia del cron cuando nadie ha movido. */
+  creada_en: string;
   blancas_id: string;
   negras_id: string;
   jugadas: string[];

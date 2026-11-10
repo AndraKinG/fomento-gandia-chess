@@ -7,6 +7,7 @@ import {
   finPorTiempo,
   partidaNueva,
   abandonadaPorTiempo,
+  destinoDeAbandonada,
   MARGEN_ABANDONO_MS,
   posicionDe,
   reclamarTiempo,
@@ -201,10 +202,11 @@ describe("abandonadaPorTiempo", () => {
     expect(abandonadaPorTiempo(acabada, CAE + MARGEN_ABANDONO_MS + 1)).toBe(false);
   });
 
-  it("la que la motivó: una jugada de blancas y las negras no volvieron", () => {
-    // 5+0, 1.e4 y nada más, seis días después. Al cerrarla gana el que sí jugó, que es
-    // lo mismo que habría pasado si hubiera pulsado "reclamar".
-    const cadencia: Cadencia = { baseMs: 5 * 60_000, incrementoMs: 0 };
+  it("la que la motivó: el botón le da la partida a quien la reclama", () => {
+    // 5+3, 1.e4 y nada más, seis días después. Si las blancas pulsan "reclamar", ganan:
+    // eso no cambia. Lo que hace el CRON con ella es otra cosa (ver `destinoDeAbandonada`):
+    // las negras nunca movieron, así que no llegó a empezar y se anula.
+    const cadencia: Cadencia = { baseMs: 5 * 60_000, incrementoMs: 3_000 };
     const tras1e4: Estado = {
       ...partidaNueva(cadencia, {
         blancasMs: 300_000,
@@ -217,6 +219,49 @@ describe("abandonadaPorTiempo", () => {
     const seisDias = T0 + 6 * 86_400_000;
     expect(abandonadaPorTiempo(tras1e4, seisDias)).toBe(true);
     expect(reclamarTiempo(tras1e4, seisDias)).toMatchObject({ resultado: "1-0", motivo: "tiempo" });
+  });
+});
+
+describe("destinoDeAbandonada", () => {
+  // Una partida "empieza" cuando los DOS han hecho su primera jugada (regla del
+  // propietario, la de Lichess): hasta entonces, abandonarla la anula.
+  const ABIERTA = T0 - 10 * 86_400_000; // la mesa se abrió hace mucho: no influye si hay jugadas
+  const CAE = T0 + 300_000; // con el reloj arrancado en T0, la bandera cae aquí
+
+  it("empezada y con la bandera caída hace más del margen: se CIERRA por tiempo", () => {
+    expect(destinoDeAbandonada(enJuego(["e4", "e5"]), ABIERTA, CAE + MARGEN_ABANDONO_MS + 1)).toBe("cerrar");
+  });
+
+  it("empezada pero dentro del margen: nada todavía", () => {
+    expect(destinoDeAbandonada(enJuego(["e4", "e5"]), ABIERTA, CAE + 1)).toBe("nada");
+  });
+
+  it("una sola jugada y el otro no volvió: se ANULA, no se le da a nadie", () => {
+    expect(destinoDeAbandonada(enJuego(["e4"], "b"), ABIERTA, CAE + MARGEN_ABANDONO_MS + 1)).toBe("anular");
+  });
+
+  it("una sola jugada pero al otro aún le queda tiempo: nada", () => {
+    expect(destinoDeAbandonada(enJuego(["e4"], "b"), ABIERTA, T0 + 10_000)).toBe("nada");
+  });
+
+  it("nadie ha movido: se cuenta desde que se abrió la mesa", () => {
+    // El reloj no ha arrancado, así que la referencia es la apertura: anulada cuando a
+    // las blancas se les habría acabado el tiempo, más el margen.
+    const sinMover = partidaNueva(CADENCIA, relojInicial(CADENCIA));
+    expect(destinoDeAbandonada(sinMover, T0, T0 + 300_000 + MARGEN_ABANDONO_MS + 1)).toBe("anular");
+    expect(destinoDeAbandonada(sinMover, T0, T0 + 300_000 + MARGEN_ABANDONO_MS - 1)).toBe("nada");
+  });
+
+  it("se devolvió la primera jugada y nadie siguió: se anula con el reloj que ya corría", () => {
+    // Lista vacía pero el reloj arrancado: manda el reloj, no la hora de apertura.
+    const devuelta: Estado = { ...enJuego([]), jugadas: [] };
+    expect(destinoDeAbandonada(devuelta, ABIERTA, CAE + MARGEN_ABANDONO_MS + 1)).toBe("anular");
+    expect(destinoDeAbandonada(devuelta, ABIERTA, CAE + 1)).toBe("nada");
+  });
+
+  it("con resultado: nada, la mire quien la mire", () => {
+    const acabada: Estado = { ...enJuego(["e4"], "b"), resultado: "1-0", motivo: "tiempo" };
+    expect(destinoDeAbandonada(acabada, ABIERTA, CAE + MARGEN_ABANDONO_MS + 1)).toBe("nada");
   });
 });
 
